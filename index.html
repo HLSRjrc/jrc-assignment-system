@@ -1448,7 +1448,7 @@ function kConfirm(){
   document.getElementById('k-confirm').style.display = 'none';
   document.getElementById('k-done').style.display = 'block';
   pendingJr = null;
-  saveState();
+  saveStateNow();
 }
 
 function kClockOut(){
@@ -1460,7 +1460,7 @@ function kClockOut(){
   pendingJr.checkedIn = false;
   // Keep pendingJr.assignment so they stay in the slot card
   clockedOut[pendingJr.id] = true;
-  saveState();
+  saveStateNow();
   document.getElementById('kdo-name').textContent = (pendingJr.hasHat ? '🤠 ' : '') + pendingJr.name;
   document.getElementById('k-clockout').style.display = 'none';
   document.getElementById('k-clockout-done').style.display = 'block';
@@ -3418,7 +3418,7 @@ function markSent(slotId){
   });
   renderOfficer();
   renderBoard();
-  saveState();
+  saveStateNow();
 }
 
 function undoSent(slotId){
@@ -3600,7 +3600,17 @@ function saveState(){
   saveTimer = setTimeout(function(){ _doSave(); }, 1500);
 }
 
+function saveStateNow(){
+  if(saveTimer) clearTimeout(saveTimer);
+  _doSave();
+}
+
+var lastSaveTime = 0;
+var isSaving = false;
+
 function _doSave(){
+  isSaving = true;
+  lastSaveTime = Date.now();
   var payload = {
     state: {
       clockedOut: clockedOut,
@@ -3625,9 +3635,12 @@ function _doSave(){
     body: JSON.stringify(payload)
   }).then(function(r){
     if(!r.ok) throw new Error('Save failed: ' + r.status);
+    lastSyncTime = Date.now();
+    isSaving = false;
   }).catch(function(e){
     console.warn('Neon save failed, localStorage only:', e.message);
     DB_AVAILABLE = false;
+    isSaving = false;
   });
 }
 
@@ -3737,6 +3750,8 @@ function stopPolling(){
 
 function pollForUpdates(){
   if(!DB_AVAILABLE) return;
+  if(isSaving) return; // don't poll while saving
+  if(Date.now() - lastSaveTime < 3000) return; // wait 3s after a save before polling
   fetch('/.netlify/functions/state?since=' + lastSyncTime)
     .then(function(r){ return r.json(); })
     .then(function(data){
