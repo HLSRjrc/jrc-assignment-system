@@ -3589,100 +3589,137 @@ function updateBoardClock(){
 
 
 // ============================================================
-// LOCAL STORAGE — persists data across refreshes and deploys
+// DATABASE — Neon (Postgres) via Netlify Functions, localStorage fallback
 // ============================================================
 var LS_KEY = 'jrc_app_state_v1';
+var DB_AVAILABLE = true;
+var saveTimer = null;
 
 function saveState(){
-  try {
-    var state = {
-      // Roster changes (ageout flags, shiftLog, phone/email edits, hat, notes)
-      juniorOverrides: {},
-      // Session state
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(function(){ _doSave(); }, 1500);
+}
+
+function _doSave(){
+  var payload = {
+    state: {
       clockedOut: clockedOut,
       onShiftJuniors: Array.from(onShiftJuniors),
       onShiftSlots: Array.from(onShiftSlots),
-      activeSlots: activeSlots,
-      committeeRequests: committeeRequests,
       currentDate: currentDate,
       currentShift: currentShift,
       checkInOrder: checkInOrder,
       lockedJuniors: Array.from(lockedJuniors),
       simTimeEnabled: simTimeEnabled,
       simTimeOffset: simTimeOffset,
-    };
-    // Save per-junior overrides (things that change from defaults)
-    juniors.forEach(function(j){
-      state.juniorOverrides[j.id] = {
-        ageout: j.ageout,
-        hasHat: j.hasHat,
-        notes: j.notes || '',
-        phone: j.phone || '',
-        email: j.email || '',
-        shiftLog: j.shiftLog || [],
-        checkedIn: j.checkedIn,
-        assignment: j.assignment,
-        last: j.last,
-        order: j.order,
-        checkInShift: j.checkInShift || '',
-        shiftAssignments: j.shiftAssignments || {},
-        plannedShifts: j.plannedShifts || [],
-        history: j.history || [],
-      };
-    });
-    localStorage.setItem(LS_KEY, JSON.stringify(state));
-  } catch(e){ console.warn('saveState failed:', e); }
+    },
+    juniors: juniors,
+    activeSlots: activeSlots,
+    committeeRequests: committeeRequests,
+  };
+  try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch(e){}
+  if(!DB_AVAILABLE) return;
+  fetch('/.netlify/functions/state', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  }).then(function(r){
+    if(!r.ok) throw new Error('Save failed: ' + r.status);
+  }).catch(function(e){
+    console.warn('Neon save failed, localStorage only:', e.message);
+    DB_AVAILABLE = false;
+  });
 }
 
 function loadState(){
+  if(!DB_AVAILABLE){ _loadFromLocalStorage(); return; }
+  fetch('/.netlify/functions/state')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      _applyState(data);
+      console.log('State loaded from Neon');
+      renderOfficer(); renderRoster(); renderSetup(); updateHeaderDate();
+    })
+    .catch(function(e){
+      console.warn('Neon load failed, using localStorage:', e.message);
+      DB_AVAILABLE = false;
+      _loadFromLocalStorage();
+    });
+}
+
+function _loadFromLocalStorage(){
   try {
     var raw = localStorage.getItem(LS_KEY);
-    if(!raw) return;
-    var state = JSON.parse(raw);
-
-    // Restore junior overrides on top of default roster
-    if(state.juniorOverrides){
-      juniors.forEach(function(j){
-        var o = state.juniorOverrides[j.id];
-        if(!o) return;
-        j.ageout = o.ageout;
-        j.hasHat = o.hasHat;
-        j.notes = o.notes;
-        j.phone = o.phone;
-        j.email = o.email;
-        j.shiftLog = o.shiftLog || [];
-        j.checkedIn = o.checkedIn || false;
-        j.assignment = o.assignment || null;
-        j.last = o.last || 'None';
-        j.order = o.order || 0;
-        j.checkInShift = o.checkInShift || '';
-        j.shiftAssignments = o.shiftAssignments || {};
-        j.plannedShifts = o.plannedShifts || [];
-        j.history = o.history || [];
-      });
-    }
-
-    if(state.clockedOut) clockedOut = state.clockedOut;
-    if(state.onShiftJuniors) onShiftJuniors = new Set(state.onShiftJuniors);
-    if(state.onShiftSlots) onShiftSlots = new Set(state.onShiftSlots);
-    if(state.activeSlots) activeSlots = state.activeSlots;
-    if(state.committeeRequests) committeeRequests = state.committeeRequests;
-    if(state.currentDate) currentDate = state.currentDate;
-    if(state.currentShift) currentShift = state.currentShift;
-    if(state.checkInOrder) checkInOrder = state.checkInOrder;
-    if(state.lockedJuniors) lockedJuniors = new Set(state.lockedJuniors);
-    if(state.simTimeEnabled !== undefined) simTimeEnabled = state.simTimeEnabled;
-    if(state.simTimeOffset !== undefined) simTimeOffset = state.simTimeOffset;
-
+    if(!raw){ console.log('No saved state'); return; }
+    _applyState(JSON.parse(raw));
     console.log('State loaded from localStorage');
-  } catch(e){ console.warn('loadState failed:', e); }
+  } catch(e){ console.warn('localStorage load failed:', e); }
+}
+
+function _applyState(data){
+  if(!data) return;
+  var state = data.state || data;
+  var jRows = data.juniors;
+  if(jRows && Array.isArray(jRows)){
+    jRows.forEach(function(row){
+      var jr = juniors.find(function(j){ return j.id === row.id; });
+      if(!jr) return;
+      jr.ageout           = row.ageout           !== undefined ? row.ageout           : jr.ageout;
+      jr.hasHat           = row.has_hat           !== undefined ? row.has_hat          : (row.hasHat !== undefined ? row.hasHat : jr.hasHat);
+      jr.notes            = row.notes             !== undefined ? row.notes            : (jr.notes||'');
+      jr.phone            = row.phone             !== undefined ? row.phone            : (jr.phone||'');
+      jr.email            = row.email             !== undefined ? row.email            : (jr.email||'');
+      jr.shiftLog         = row.shift_log         || row.shiftLog         || [];
+      jr.checkedIn        = row.checked_in        !== undefined ? row.checked_in       : (row.checkedIn||false);
+      jr.assignment       = row.assignment        || null;
+      jr.last             = row.last_assignment   || row.last             || 'None';
+      jr.order            = row.check_in_order    || row.order            || 0;
+      jr.checkInShift     = row.check_in_shift    || row.checkInShift     || '';
+      jr.shiftAssignments = row.shift_assignments || row.shiftAssignments || {};
+      jr.plannedShifts    = row.planned_shifts    || row.plannedShifts    || [];
+      jr.history          = row.history           || [];
+    });
+  } else if(state.juniorOverrides){
+    juniors.forEach(function(j){
+      var o = state.juniorOverrides[j.id]; if(!o) return;
+      j.ageout=o.ageout; j.hasHat=o.hasHat; j.notes=o.notes||'';
+      j.phone=o.phone||''; j.email=o.email||'';
+      j.shiftLog=o.shiftLog||[]; j.checkedIn=o.checkedIn||false;
+      j.assignment=o.assignment||null; j.last=o.last||'None';
+      j.order=o.order||0; j.checkInShift=o.checkInShift||'';
+      j.shiftAssignments=o.shiftAssignments||{};
+      j.plannedShifts=o.plannedShifts||[]; j.history=o.history||[];
+    });
+  }
+  if(data.activeSlots && data.activeSlots.length){
+    activeSlots = data.activeSlots.map(function(s){
+      return {
+        id: s.id, name: s.name, shift: s.shift, capacity: s.capacity||4,
+        assigned: s.assigned||[], hat: s.hat||false,
+        liaison: s.liaison||'', liaisonPhone: s.liaison_phone||s.liaisonPhone||'',
+        location: s.location||'', duties: s.duties||'',
+        notes: s.slot_notes||s.notes||'', custom: s.custom||false,
+      };
+    });
+  }
+  if(data.committeeRequests && data.committeeRequests.length){
+    committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
+  }
+  if(state.clockedOut)    clockedOut    = state.clockedOut;
+  if(state.onShiftJuniors) onShiftJuniors = new Set(state.onShiftJuniors);
+  if(state.onShiftSlots)   onShiftSlots   = new Set(state.onShiftSlots);
+  if(state.currentDate)    currentDate    = state.currentDate;
+  if(state.currentShift)   currentShift   = state.currentShift;
+  if(state.checkInOrder)   checkInOrder   = state.checkInOrder;
+  if(state.lockedJuniors)  lockedJuniors  = new Set(state.lockedJuniors);
+  if(state.simTimeEnabled !== undefined) simTimeEnabled = state.simTimeEnabled;
+  if(state.simTimeOffset  !== undefined) simTimeOffset  = state.simTimeOffset;
 }
 
 function clearSavedState(){
   localStorage.removeItem(LS_KEY);
   console.log('Saved state cleared');
 }
-
 // ============================================================
 // INIT — runs after login, not on page load
 // ============================================================
