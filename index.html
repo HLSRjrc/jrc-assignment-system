@@ -3720,11 +3720,48 @@ function clearSavedState(){
   localStorage.removeItem(LS_KEY);
   console.log('Saved state cleared');
 }
+
+// ── Real-time sync polling ────────────────────────────────────────────────────
+var pollTimer = null;
+var lastSyncTime = 0;
+
+function startPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(function(){ pollForUpdates(); }, 5000); // every 5 seconds
+}
+
+function stopPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+function pollForUpdates(){
+  if(!DB_AVAILABLE) return;
+  fetch('/.netlify/functions/state?since=' + lastSyncTime)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data || data.error) return;
+      lastSyncTime = Date.now();
+      _applyState(data);
+      // Re-render current tab quietly
+      var activePanel = document.querySelector('.panel[style*="display: block"], .panel[style*="display:block"]');
+      if(activePanel){
+        var id = activePanel.id;
+        if(id === 'panel-officer') renderOfficer();
+        if(id === 'panel-roster') renderRoster();
+        if(id === 'panel-board') renderBoard();
+        if(id === 'panel-kiosk') renderKiosk();
+      }
+      updateHeaderDate();
+    })
+    .catch(function(){ /* silent fail — don't spam console */ });
+}
 // ============================================================
 // INIT — runs after login, not on page load
 // ============================================================
 function initApp(){
   loadState();
+  startPolling();
   updateHeaderDate();
   if(document.getElementById('lib-count')) renderLibrary();
   renderSetup();
