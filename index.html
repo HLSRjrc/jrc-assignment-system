@@ -3445,9 +3445,16 @@ function undoSent(slotId){
 
 
 function getJuniorStatus(jr){
-  if(!jr.checkedIn && clockedOut && clockedOut[jr.id]) return 'checked-out';
+  if(!jr.checkedIn && clockedOut && (clockedOut[jr.id] || clockedOut[String(jr.id)])) return 'checked-out';
   if(!jr.checkedIn) return null;
+  // Check onShiftJuniors set
   if(onShiftJuniors.has(jr.id) || onShiftJuniors.has(String(jr.id))) return 'on-shift';
+  // Also check via slot data — more reliable after DB sync
+  var inSentSlot = activeSlots.some(function(s){
+    return (onShiftSlots.has(String(s.id)) || onShiftSlots.has(s.id)) &&
+           (s.assigned.indexOf(jr.id) >= 0 || s.assigned.indexOf(String(jr.id)) >= 0);
+  });
+  if(inSentSlot) return 'on-shift';
   if(jr.assignment) return 'assigned';
   return 'checked-in';
 }
