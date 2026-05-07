@@ -1,8 +1,0 @@
-{
-  "name": "jrc-rodeo-functions",
-  "version": "1.0.0",
-  "description": "Netlify functions for JRC Rodeo app",
-  "dependencies": {
-    "@neondatabase/serverless": "^0.9.0"
-  }
-}
