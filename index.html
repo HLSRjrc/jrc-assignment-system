@@ -2087,6 +2087,8 @@ function pickSlot(jid, slotId){
   sl.assigned.push(jr.id);
   activePick = null;
   renderOfficer();
+  saveStateNow();
+  saveStateNow();
 }
 
 function doManualAssign(jid, slotId, sel){
@@ -2098,6 +2100,8 @@ function doManualAssign(jid, slotId, sel){
   sl.assigned.push(jr.id);
   sel.value = '';
   renderOfficer();
+  saveStateNow();
+  saveStateNow();
 }
 
 function doUnassign(jid, slotId){
@@ -3555,7 +3559,12 @@ function renderBoard(){
       (function(){
         var sorted = outList.slice().sort(function(a,b){ return (a.assignment||'').localeCompare(b.assignment||''); });
         var grouped = {};
-        sorted.forEach(function(j){ var k = j.assignment||'Unassigned'; if(!grouped[k]) grouped[k]=[]; grouped[k].push(j); });
+        sorted.forEach(function(j){
+          // Use shiftAssignments for the current shift as fallback (age-outs pre-assigned)
+          var committee = j.assignment || (j.shiftAssignments && j.shiftAssignments[sh]) || 'Unassigned';
+          if(!grouped[committee]) grouped[committee]=[];
+          grouped[committee].push(j);
+        });
         var html = '<div class="board-col"><div class="board-col-hdr out">&#9650; Out on Shift (' + outList.length + ')</div>';
         if(outList.length === 0){
           html += '<div class="board-empty">None sent yet</div>';
