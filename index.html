@@ -1317,7 +1317,18 @@ function updateHeaderDate(){
   document.getElementById('hdr-info').innerHTML =
     (ds ? '<strong style="color:#fff">' + ds + '</strong> &bull; ' : '') +
     (dow ? '<span style="color:#99BBDD">' + dow + '</span><br>' : '') +
-    fmtDate(d) + '<br>' + SL[currentShift];
+    fmtDate(d) + '<br><span id="hdr-clock"></span>';
+  updateHeaderClock();
+}
+
+function updateHeaderClock(){
+  var el = document.getElementById('hdr-clock');
+  if(!el) return;
+  var now = getSimTime();
+  var h = now.getHours(), m = now.getMinutes();
+  var ampm = h >= 12 ? 'PM' : 'AM';
+  h = h % 12 || 12;
+  el.textContent = h + ':' + String(m).padStart(2,'0') + ' ' + ampm + (simTimeEnabled ? ' ⏱' : '');
 }
 function applySimTime(){
   var h = parseInt(document.getElementById('sim-hour').value);
@@ -1361,6 +1372,7 @@ function applySimDate(){
   renderOfficer();
   updateHeaderDate();
   updateBoardClock();
+  saveStateNow();
   updateBoardClock();
 }
 
@@ -3805,9 +3817,13 @@ function clearSavedState(){
 var pollTimer = null;
 var lastSyncTime = 0;
 
+var headerClockTimer = null;
+
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(function(){ pollForUpdates(); }, 5000); // every 5 seconds
+  pollTimer = setInterval(function(){ pollForUpdates(); }, 5000);
+  if(headerClockTimer) clearInterval(headerClockTimer);
+  headerClockTimer = setInterval(updateHeaderClock, 10000); // update every 10s
 }
 
 function stopPolling(){
