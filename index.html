@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <title>JRC Assignment System</title>
 <style>
 @font-face {
@@ -797,6 +798,26 @@ position:relative;z-index:1}
       <button class="btn btn-primary" onclick="applySimDate()">&#9201; Apply</button>
       <button class="btn" onclick="clearSimTime();currentDate=new Date().toISOString().slice(0,10);updateHeaderDate();document.getElementById('sim-status').textContent='Using real date &amp; time';">Use Real Time</button>
       <span id="sim-status" style="font-size:12px;color:#667788">Not set &mdash; using real time</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-lbl" style="margin-bottom:8px">Roster Import</div>
+    <div style="font-size:13px;color:#667788;margin-bottom:12px;line-height:1.6">
+      Upload an HLSR roster export (.xlsx) to update member names, IDs, phone numbers, emails, and age-out flags. Existing shift logs and history are preserved.
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <input type="file" id="roster-file-input" accept=".xlsx" style="display:none" onchange="handleRosterUpload(event)">
+      <button class="btn btn-primary" onclick="document.getElementById('roster-file-input').click()">&#128196; Choose Roster .xlsx</button>
+      <span id="roster-upload-status" style="font-size:12px;color:#667788"></span>
+    </div>
+    <div id="roster-preview" style="margin-top:12px;display:none">
+      <div style="font-size:12px;font-weight:600;margin-bottom:6px" id="roster-preview-title"></div>
+      <div id="roster-preview-list" style="max-height:200px;overflow-y:auto;font-size:12px;border:1px solid var(--gray-200);border-radius:6px;padding:8px"></div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn btn-primary" onclick="applyRosterImport()">&#10003; Apply Import</button>
+        <button class="btn" onclick="cancelRosterImport()">Cancel</button>
+      </div>
     </div>
   </div>
 
@@ -3932,6 +3953,172 @@ function exportHoursCSV(){
   a.href = URL.createObjectURL(blob);
   a.download = 'jrc_hours_' + currentDate + '.csv';
   a.click();
+}
+
+
+// ============================================================
+// ROSTER IMPORT — reads HLSR .xlsx export in browser
+// ============================================================
+var pendingRosterImport = null;
+
+function handleRosterUpload(event){
+  var file = event.target.files[0];
+  if(!file) return;
+  var statusEl = document.getElementById('roster-upload-status');
+  statusEl.textContent = 'Reading file...';
+
+  var reader = new FileReader();
+  reader.onload = function(e){
+    try {
+      var data = new Uint8Array(e.target.result);
+      var workbook = XLSX.read(data, {type:'array'});
+      var sheet = workbook.Sheets[workbook.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(sheet, {header:1});
+
+      // Find header row
+      var headers = rows[0];
+      var colIdx = {};
+      headers.forEach(function(h, i){
+        if(!h) return;
+        var k = String(h).toLowerCase().trim();
+        if(k.includes('customer') || k.includes('number')) colIdx.id = i;
+        if(k.includes('first')) colIdx.first = i;
+        if(k.includes('last') && !k.includes('assignment')) colIdx.last = i;
+        if(k.includes('preferred')) colIdx.preferred = i;
+        if(k.includes('title')) colIdx.title = i;
+        if(k.includes('phone')) colIdx.phone = i;
+        if(k.includes('email')) colIdx.email = i;
+        if(k === 'age out' || k.includes('age out') || k.includes('ageout')) colIdx.ageout = i;
+        if(k.includes('permission')) colIdx.permission = i;
+      });
+
+      var members = [];
+      for(var i = 1; i < rows.length; i++){
+        var row = rows[i];
+        if(!row || !row[colIdx.id]) continue;
+        var idRaw = row[colIdx.id];
+        var id = String(Math.round(parseFloat(idRaw)));
+        var firstName = (row[colIdx.preferred] || row[colIdx.first] || '').trim();
+        var lastName = (row[colIdx.last] || '').trim();
+        var name = firstName + ' ' + lastName;
+        if(!name.trim() || name.trim() === '') continue;
+
+        var phoneRaw = row[colIdx.phone] || '';
+        var phone = '';
+        if(phoneRaw){
+          var digits = String(Math.round(parseFloat(phoneRaw))).replace(/\D/g,'');
+          if(digits.length === 11 && digits[0] === '1') digits = digits.slice(1);
+          if(digits.length === 10) phone = '(' + digits.slice(0,3) + ') ' + digits.slice(3,6) + '-' + digits.slice(6);
+        }
+
+        var email = String(row[colIdx.email] || '').trim();
+        if(email === 'undefined' || email === 'null') email = '';
+
+        var ageout = false;
+        if(colIdx.ageout !== undefined){
+          var av = String(row[colIdx.ageout] || '').trim().toUpperCase();
+          ageout = av === 'Y' || av === 'YES' || av === 'TRUE';
+        }
+
+        var title = String(row[colIdx.title] || 'Committeeman').trim();
+        var permission = String(row[colIdx.permission] || '').toLowerCase();
+        var isAdult = permission.includes('administrator') || permission.includes('chairman') || permission.includes('vice president') || permission.includes('officer');
+
+        members.push({id:id, name:name, title:title, phone:phone, email:email, ageout:ageout, isAdult:isAdult});
+      }
+
+      if(!members.length){
+        statusEl.textContent = 'No members found — check file format.';
+        return;
+      }
+
+      pendingRosterImport = members;
+
+      // Preview
+      var newCount = 0, updateCount = 0, adultCount = 0;
+      members.forEach(function(m){
+        if(m.isAdult){ adultCount++; return; }
+        var existing = juniors.find(function(j){ return j.id === m.id; });
+        if(existing) updateCount++; else newCount++;
+      });
+
+      document.getElementById('roster-preview-title').textContent =
+        members.length + ' members found — ' + newCount + ' new juniors, ' + updateCount + ' updates, ' + adultCount + ' adults';
+
+      document.getElementById('roster-preview-list').innerHTML = members.slice(0,50).map(function(m){
+        var existing = !m.isAdult && juniors.find(function(j){ return j.id === m.id; });
+        var badge = m.isAdult ? '<span class="badge" style="background:#EEE;color:#555;font-size:9px">Adult</span>' :
+                    m.ageout ? '<span class="badge b-ageout" style="font-size:9px">AO</span>' : '';
+        var change = existing ? '<span style="color:#2A7D2A">update</span>' : '<span style="color:#4A6CF7">new</span>';
+        return '<div style="padding:2px 0;border-bottom:1px solid #F0F0F0">' +
+          (m.isAdult ? '' : change + ' ') + badge + ' ' +
+          '<strong>' + m.name + '</strong> &mdash; ' + m.id +
+          (m.phone ? ' &bull; ' + m.phone : '') +
+        '</div>';
+      }).join('') + (members.length > 50 ? '<div style="color:#888;padding:4px 0">...and ' + (members.length-50) + ' more</div>' : '');
+
+      document.getElementById('roster-preview').style.display = 'block';
+      statusEl.textContent = '';
+    } catch(err){
+      statusEl.textContent = 'Error reading file: ' + err.message;
+      console.error(err);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function applyRosterImport(){
+  if(!pendingRosterImport) return;
+  var added = 0, updated = 0;
+
+  pendingRosterImport.forEach(function(m){
+    if(m.isAdult){
+      // Update or add to adults array
+      var existing = adults.find(function(a){ return a.id === m.id; });
+      if(existing){
+        existing.name = m.name; existing.phone = m.phone; existing.email = m.email; existing.title = m.title;
+      } else {
+        adults.push({id:m.id, name:m.name, title:m.title, phone:m.phone, email:m.email});
+      }
+      return;
+    }
+
+    var existing = juniors.find(function(j){ return j.id === m.id; });
+    if(existing){
+      // Update — preserve shift log, checkedIn, assignments
+      existing.name    = m.name;
+      existing.phone   = m.phone;
+      existing.email   = m.email;
+      existing.title   = m.title;
+      existing.ageout  = m.ageout;
+      updated++;
+    } else {
+      // New member
+      juniors.push({
+        id: m.id, name: m.name, title: m.title,
+        phone: m.phone, email: m.email,
+        ageout: m.ageout, hasHat: false, notes: '',
+        checkedIn: false, assignment: null, last: 'None',
+        order: 0, checkInShift: '',
+        shiftAssignments: {}, plannedShifts: [], shiftLog: [], history: []
+      });
+      added++;
+    }
+  });
+
+  saveStateNow();
+  renderRoster();
+  cancelRosterImport();
+  document.getElementById('roster-upload-status').textContent =
+    '&#10003; Import complete: ' + added + ' added, ' + updated + ' updated.';
+  document.getElementById('roster-file-input').value = '';
+}
+
+function cancelRosterImport(){
+  pendingRosterImport = null;
+  document.getElementById('roster-preview').style.display = 'none';
+  document.getElementById('roster-preview-title').textContent = '';
+  document.getElementById('roster-preview-list').innerHTML = '';
 }
 
 // ============================================================
