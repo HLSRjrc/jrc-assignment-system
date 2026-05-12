@@ -904,6 +904,31 @@ position:relative;z-index:1}
   <div id="board-content"></div>
 </div>
 
+<!-- HOURS REPORT -->
+<div id="panel-hours" class="panel">
+  <div class="card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div class="section-lbl">Hours Report</div>
+      <div style="display:flex;gap:8px">
+        <input class="finput" id="hours-search" placeholder="Search name..." oninput="renderHours()" style="max-width:180px">
+        <select class="finput" id="hours-sort" onchange="renderHours()" style="max-width:160px">
+          <option value="name">Sort by Name</option>
+          <option value="hours-desc">Most Hours First</option>
+          <option value="hours-asc">Least Hours First</option>
+        </select>
+        <button class="btn" onclick="exportHoursCSV()">&#11015; Export CSV</button>
+      </div>
+    </div>
+    <div id="hours-summary" style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap"></div>
+    <table class="roster-table" style="width:100%">
+      <thead><tr>
+        <th>Name</th><th>Title</th><th>Total Hours</th><th>Shifts Worked</th><th>No-Shows</th><th>Early Departures</th>
+      </tr></thead>
+      <tbody id="hours-body"></tbody>
+    </table>
+  </div>
+</div>
+
 </div><!-- /app -->
 
 <!-- DROP-OFF REPORT MODAL -->
@@ -1333,6 +1358,7 @@ function switchTab(t, el){
   if(t === 'requests') renderRequests();
   if(t === 'reqform') renderReqForm();
   if(t === 'board') renderBoard();
+  if(t === 'hours') renderHours();
 }
 
 // ============================================================
@@ -2882,7 +2908,7 @@ var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'
 
 // Tabs each role can see
 var ROLE_TABS = {
-  admin:       ['officer','kiosk','roster','setup','requests','reqform','simulate','board'],
+  admin:       ['officer','kiosk','roster','setup','requests','reqform','simulate','board','hours'],
   officer:     ['officer','setup','kiosk'],
   scheduling:  ['reqform','requests','setup'],
   kiosk:       ['kiosk'],
@@ -3417,7 +3443,7 @@ function markSent(slotId){
       if(!jr.shiftLog) jr.shiftLog = [];
       // Avoid duplicate entries for same date+shift+committee
       var exists = jr.shiftLog.some(function(e){ return e.date===date && e.shift===sl.shift && e.committee===sl.name; });
-      if(!exists) jr.shiftLog.push({date:date, shift:sl.shift, committee:sl.name});
+      if(!exists) jr.shiftLog.push({date:date, shift:sl.shift, committee:sl.name, hours:4, note:'', noshow:false});
     }
   });
   renderOfficer();
@@ -3787,6 +3813,127 @@ function pollForUpdates(){
     })
     .catch(function(){ /* silent fail — don't spam console */ });
 }
+
+// ============================================================
+// HOURS REPORT
+// ============================================================
+
+function getTotalHours(jr){
+  if(!jr.shiftLog || !jr.shiftLog.length) return 0;
+  return jr.shiftLog.reduce(function(sum, e){ return sum + (e.hours !== undefined ? e.hours : 4); }, 0);
+}
+
+function renderHours(){
+  var el = document.getElementById('hours-body');
+  var summaryEl = document.getElementById('hours-summary');
+  if(!el) return;
+
+  var q = (document.getElementById('hours-search').value || '').toLowerCase();
+  var sort = document.getElementById('hours-sort').value;
+
+  var list = juniors.filter(function(j){ return !q || j.name.toLowerCase().includes(q); });
+
+  // Sort
+  list.sort(function(a, b){
+    if(sort === 'hours-desc') return getTotalHours(b) - getTotalHours(a);
+    if(sort === 'hours-asc') return getTotalHours(a) - getTotalHours(b);
+    return a.name.localeCompare(b.name);
+  });
+
+  // Summary stats
+  var totalShifts = juniors.reduce(function(s, j){ return s + (j.shiftLog ? j.shiftLog.length : 0); }, 0);
+  var totalHours  = juniors.reduce(function(s, j){ return s + getTotalHours(j); }, 0);
+  var noShows     = juniors.reduce(function(s, j){ return s + (j.shiftLog ? j.shiftLog.filter(function(e){ return e.noshow; }).length : 0); }, 0);
+  var earlyOuts   = juniors.reduce(function(s, j){ return s + (j.shiftLog ? j.shiftLog.filter(function(e){ return !e.noshow && e.hours < 4; }).length : 0); }, 0);
+
+  summaryEl.innerHTML =
+    '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">Total Shifts</div><div class="stat-val">' + totalShifts + '</div></div>' +
+    '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">Total Hours</div><div class="stat-val">' + totalHours + '</div></div>' +
+    '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">No-Shows</div><div class="stat-val" style="color:var(--red)">' + noShows + '</div></div>' +
+    '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">Early Departures</div><div class="stat-val" style="color:var(--orange)">' + earlyOuts + '</div></div>';
+
+  el.innerHTML = list.map(function(j){
+    var hrs = getTotalHours(j);
+    var log = j.shiftLog || [];
+    var noShowCount = log.filter(function(e){ return e.noshow; }).length;
+    var earlyCount  = log.filter(function(e){ return !e.noshow && e.hours < 4; }).length;
+
+    // Expandable shift log rows
+    var logRows = log.length === 0 ? '<tr><td colspan="6" style="font-size:11px;color:var(--gray-400);padding:4px 12px">No shifts recorded</td></tr>' :
+      log.map(function(e, ei){
+        var ri = juniors.indexOf(j);
+        return '<tr style="background:#F8F9FA">' +
+          '<td colspan="2" style="font-size:11px;padding:3px 12px;color:var(--gray-500)">' +
+            fmtDate(e.date) + ' &mdash; ' + SL[e.shift] + ' &mdash; ' + e.committee +
+          '</td>' +
+          '<td style="font-size:11px;padding:3px 8px">' +
+            '<select class="finput" style="font-size:11px;padding:1px 4px;width:70px" onchange="updateShiftHours(' + ri + ',' + ei + ',this.value)">' +
+              [0,1,2,3,4].map(function(h){ return '<option value="' + h + '"' + (e.hours === h ? ' selected' : '') + '>' + h + ' hr' + (h !== 1 ? 's' : '') + '</option>'; }).join('') +
+            '</select>' +
+          '</td>' +
+          '<td style="font-size:11px;padding:3px 8px">' +
+            '<label style="display:flex;align-items:center;gap:4px;font-size:11px"><input type="checkbox"' + (e.noshow ? ' checked' : '') + ' onchange="updateShiftNoShow(' + ri + ',' + ei + ',this.checked)"> No-show</label>' +
+          '</td>' +
+          '<td colspan="2" style="font-size:11px;padding:3px 8px">' +
+            '<input class="finput" style="font-size:11px;padding:1px 6px;width:100%" placeholder="Note..." value="' + (e.note||'') + '" onchange="updateShiftNote(' + ri + ',' + ei + ',this.value)">' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+
+    return '<tr style="cursor:pointer" onclick="var s=this.nextElementSibling;s.style.display=s.style.display===\'none\'?\'\':\'none\'">' +
+      '<td style="font-weight:600;color:var(--navy)">' + j.name + (j.ageout ? ' <span class="badge b-ageout" style="font-size:9px">AO</span>' : '') + '</td>' +
+      '<td style="font-size:12px">' + j.title.replace('Junior ','') + '</td>' +
+      '<td style="font-weight:700;color:' + (hrs >= 8 ? 'var(--green)' : hrs > 0 ? 'var(--navy)' : 'var(--gray-400)') + '">' + hrs + ' hrs</td>' +
+      '<td style="font-size:12px">' + log.length + '</td>' +
+      '<td style="font-size:12px;color:' + (noShowCount > 0 ? 'var(--red)' : 'var(--gray-400)') + '">' + (noShowCount || '—') + '</td>' +
+      '<td style="font-size:12px;color:' + (earlyCount > 0 ? 'var(--orange)' : 'var(--gray-400)') + '">' + (earlyCount || '—') + '</td>' +
+    '</tr>' +
+    '<tr style="display:none"><td colspan="6" style="padding:0"><table style="width:100%;border-collapse:collapse">' + logRows + '</table></td></tr>';
+  }).join('');
+}
+
+function updateShiftHours(jri, ei, val){
+  if(juniors[jri] && juniors[jri].shiftLog[ei] !== undefined){
+    juniors[jri].shiftLog[ei].hours = parseInt(val);
+    renderHours();
+    saveState();
+  }
+}
+
+function updateShiftNoShow(jri, ei, val){
+  if(juniors[jri] && juniors[jri].shiftLog[ei] !== undefined){
+    juniors[jri].shiftLog[ei].noshow = val;
+    if(val) juniors[jri].shiftLog[ei].hours = 0;
+    renderHours();
+    saveState();
+  }
+}
+
+function updateShiftNote(jri, ei, val){
+  if(juniors[jri] && juniors[jri].shiftLog[ei] !== undefined){
+    juniors[jri].shiftLog[ei].note = val;
+    saveState();
+  }
+}
+
+function exportHoursCSV(){
+  var rows = [['Name','Title','Age-Out','Total Hours','Shifts Worked','No-Shows','Early Departures','Shift Detail']];
+  juniors.forEach(function(j){
+    var log = j.shiftLog || [];
+    var hrs = getTotalHours(j);
+    var noShows = log.filter(function(e){ return e.noshow; }).length;
+    var early   = log.filter(function(e){ return !e.noshow && e.hours < 4; }).length;
+    var detail  = log.map(function(e){ return fmtDate(e.date) + ' ' + SL[e.shift] + ': ' + e.committee + ' (' + (e.hours||4) + 'h)' + (e.noshow ? ' [NO-SHOW]' : '') + (e.note ? ' Note: ' + e.note : ''); }).join(' | ');
+    rows.push([j.name, j.title, j.ageout ? 'Yes' : 'No', hrs, log.length, noShows, early, detail]);
+  });
+  var csv = rows.map(function(r){ return r.map(function(c){ return '"' + String(c).replace(/"/g,'""') + '"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv], {type:'text/csv'});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'jrc_hours_' + currentDate + '.csv';
+  a.click();
+}
+
 // ============================================================
 // INIT — runs after login, not on page load
 // ============================================================
