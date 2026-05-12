@@ -2002,20 +2002,35 @@ function renderOfficer(search){
       var jr = juniors.find(function(j){ return j.id === jid; });
       if(!jr) return '';
       var isOut = clockedOut[jid] || clockedOut[jr.id];
-      return '<span class="pill' + (jr.ageout ? ' ao' : '') + (jr.hasHat ? ' has-hat' : '') + '" ' +
-             'style="' + (isOut ? 'opacity:.5;text-decoration:line-through;' : '') + '" ' +
-             'title="' + (jr.notes ? 'Note: ' + jr.notes : '') + (isOut ? ' [Clocked out]' : '') + '">' +
-             (jr.hasHat ? '🤠 ' : '') + jr.name +
-             (jr.ageout ? ' <span class="badge b-ageout" style="font-size:9px;padding:1px 5px">AO</span>' : '') +
-             (jr.notes ? ' <span style="font-size:11px;color:var(--orange);font-weight:700">&#9432;</span>' : '') +
-             (isOut ? ' <span style="font-size:10px;color:#888">(out)</span>' : '') +
-             ' <button class="pill-x" onclick="doUnassign(\'' + jid + '\',' + s.id + ')">&#x2715;</button>' +
-             '</span>';
+      return '<span class="pill' + (jr.ageout ? ' ao' : '') + (jr.hasHat ? ' has-hat' : '') + '" style="' + (isOut ? 'opacity:.5;text-decoration:line-through;' : '') + '" title="' + (jr.notes ? 'Note: ' + jr.notes : '') + (isOut ? ' [Clocked out]' : '') + '">' +
+        (jr.hasHat ? '🤠 ' : '') + jr.name +
+        (jr.ageout ? ' <span class="badge b-ageout" style="font-size:9px;padding:1px 5px">AO</span>' : '') +
+        (jr.notes ? ' <span style="font-size:11px;color:var(--orange);font-weight:700">&#9432;</span>' : '') +
+        (isOut ? ' <span style="font-size:10px;color:#888">(out)</span>' : '') +
+        ' <button class="pill-x" onclick="doUnassign(' + JSON.stringify(jid) + ',' + s.id + ')">&#x2715;</button>' +
+        '</span>';
     }).join('');
 
     var sentBanner = isSent ? '<div style="background:#E8F5ED;color:#155724;font-size:11px;font-weight:600;text-align:center;padding:4px 10px;border-radius:4px;margin-bottom:8px;letter-spacing:.05em">Out on Shift</div>' : '';
-
     var cardStyle = 'slot-card' + (full ? ' full' : '') + (isSent ? ' sent' : '');
+
+    var manualDropdown = (!full && avail.length > 0) ?
+      '<div style="margin-top:8px"><select class="finput" style="font-size:12px" onchange="doManualAssign(this.value,' + s.id + ',this)">' +
+        '<option value="">+ Assign a junior manually&hellip;</option>' +
+        avail.map(function(j){
+          var rep = j.last === s.name;
+          return '<option value="' + j.id + '">' + (j.ageout ? '[Age-out] ' : '') + (j.hasHat ? '🤠 ' : '') + j.name + (j.notes ? ' [NOTE]' : '') + ' — last: ' + j.last + (rep ? ' (repeat!)' : '') + '</option>';
+        }).join('') +
+      '</select></div>' : '';
+
+    var sentStyle = isSent ? 'background:var(--green);color:#fff;border-color:var(--green)' : 'border-color:var(--navy);color:var(--navy)';
+    var sentFn = isSent ? 'undoSent' : 'markSent';
+    var sentLabel = isSent ? '&#9989; Out on Shift &mdash; undo' : '&#128228; Mark Sent';
+    var actionButtons = s.assigned.length > 0 ?
+      '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">' +
+        '<button class="btn btn-sm" style="border-color:#4A6CF7;color:#4A6CF7" onclick="printDropOffReport(' + s.id + ')">&#128438; Drop-Off Report</button>' +
+        '<button class="btn btn-sm" style="' + sentStyle + '" onclick="' + sentFn + '(' + s.id + ')">' + sentLabel + '</button>' +
+      '</div>' : '';
 
     return '<div class="' + cardStyle + '" data-slotid="' + s.id + '" style="' + (isSent ? 'border:1px solid #97C459;border-left:3px solid #27AE60;background:#F7FDF9;' : '') + '">' +
       sentBanner +
@@ -2034,24 +2049,11 @@ function renderOfficer(search){
         (s.assigned.length === 0 ? '<span style="font-size:12px;color:var(--gray-400)">No one assigned yet</span>' : '') +
         pillsHtml +
       '</div>' +
-      (!full && avail.length > 0 ?
-        '<div style="margin-top:8px"><select class="finput" style="font-size:12px" onchange="doManualAssign(this.value,' + s.id + ',this)">' +
-          '<option value="">+ Assign a junior manually&hellip;</option>' +
-          avail.map(function(j){
-            var rep = j.last === s.name;
-            return '<option value="' + j.id + '">' + (j.ageout ? '[Age-out] ' : '') + (j.hasHat ? '🤠 ' : '') + j.name + (j.notes ? ' [NOTE]' : '') + ' — last: ' + j.last + (rep ? ' (repeat!)' : '') + '</option>';
-          }).join('') +
-        '</select></div>' : '') +
-      (s.assigned.length > 0 ?
-        '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">' +
-          '<button class="btn btn-sm" style="border-color:#4A6CF7;color:#4A6CF7" onclick="printDropOffReport(' + s.id + ')">&#128438; Drop-Off Report</button>' +
-          '<button class="btn btn-sm" style="' + (isSent ? 'background:var(--green);color:#fff;border-color:var(--green)' : 'border-color:var(--navy);color:var(--navy)') + '" onclick="' + (isSent ? 'undoSent' : 'markSent') + '(' + s.id + ')" title="' + (isSent ? 'Click to undo' : 'Mark juniors as out on shift') + '">' +
-          (isSent ? '&#9989; Out on Shift &mdash; undo' : '&#128228; Mark Sent') +
-          '</button></div>' : '') +
+      manualDropdown +
+      actionButtons +
     '</div>';
   }).join('');
 }
-
 
 function renderTabs(activeTab){
   var bar = document.getElementById('tab-bar');
@@ -3538,9 +3540,9 @@ function renderBoard(){
     var slotsForShift = activeSlots.filter(function(s){ return s.shift === sh; });
     var checkedInForShift = juniors.filter(function(j){
       if(!j.checkedIn) return false;
-      if(clockedOut[j.id]) return false; // clocked out — don't show on board
-      var jShift = j.checkInShift || currentShift;
-      return jShift === sh;
+      if(clockedOut[j.id] || clockedOut[String(j.id)]) return false;
+      if(j.checkInShift) return j.checkInShift === sh;
+      return sh === currentShift;
     });
 
     var ciList    = checkedInForShift.filter(function(j){ return getJuniorStatus(j) === 'checked-in'; });
