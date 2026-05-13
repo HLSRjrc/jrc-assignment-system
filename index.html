@@ -1016,138 +1016,10 @@ function clearSimTime(){
 var pendingJr = null;
 
 // ROSTER — junior leaders sample
-var juniors = [
-  {id:'2027198',name:'Kirby Crow',title:'Junior Chairman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1009',email:'kirby.crow@hlsr.com'},
-  {id:'2045143',name:'Santiago Barrachina',title:'Junior Vice Chairman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1010',email:'santiago.barrachina@hlsr.com'},
-  {id:'2006326',name:'Sophia Dykes',title:'Junior Vice Chairman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1011',email:'sophia.dykes@hlsr.com'},
-  {id:'2026560',name:'Pierce Houston',title:'Junior Vice Chairman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1012',email:'pierce.houston@hlsr.com'},
-  {id:'2043362',name:'Gavin Jones',title:'Junior Vice Chairman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1013',email:'gavin.jones@hlsr.com'},
-  {id:'2029446',name:'Luke Stewart',title:'Junior Vice Chairman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1014',email:'luke.stewart@hlsr.com'},
-  {id:'2021155',name:'Tara Swasey',title:'Junior Vice Chairman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1015',email:'tara.swasey@hlsr.com'},
-  {id:'1359562',name:'Taylor West',title:'Junior Vice Chairman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1016',email:'taylor.west@hlsr.com'},
-  {id:'1326438',name:'Megan Begley',title:'Junior Captain',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1017',email:'megan.begley@hlsr.com'},
-  {id:'2058306',name:'Salo Carpetillo',title:'Junior Captain',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1018',email:'viktor.carpetillo@hlsr.com'},
-  {id:'2057516',name:'Isabella Castillo',title:'Junior Captain',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1019',email:'isabella.castillo@hlsr.com'},
-  {id:'2058946',name:'Lily Chuoke',title:'Junior Captain',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1020',email:'lily.chuoke@hlsr.com'},
-  {id:'2044155',name:'Kelsey Cornell',title:'Junior Captain',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1021',email:'kelsey.cornell@hlsr.com'},
-  {id:'2013779',name:'Cody Cox',title:'Junior Captain',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1022',email:'cody.cox@hlsr.com'},
-  {id:'2007637',name:'Nate Davis',title:'Junior Captain',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1023',email:'nathan.davis@hlsr.com'},
-  {id:'2075741',name:'Ava Pannagl',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1024',email:'=LOWER(G27 & "." & H27 & "@hlsr.com")'},
-  {id:'2072313',name:'Shayleigh Thomas',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1025',email:'=LOWER(G28 & "." & H28 & "@hlsr.com")'},
-  {id:'2073376',name:'Presley White',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1026',email:'=LOWER(G29 & "." & H29 & "@hlsr.com")'},
-  {id:'2074156',name:'Zury Acosta',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1027',email:'=LOWER(G30 & "." & H30 & "@hlsr.com")'},
-  {id:'2073410',name:'Chloe Bradley',title:'Junior Committeeman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1028',email:'=LOWER(G31 & "." & H31 & "@hlsr.com")'},
-  {id:'2073242',name:'Guadalupe Cruz',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1029',email:'=LOWER(G32 & "." & H32 & "@hlsr.com")'},
-  {id:'2075955',name:'Avery Glauser',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1030',email:'=LOWER(G33 & "." & H33 & "@hlsr.com")'},
-  {id:'2073722',name:'Kay Hayes',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1031',email:'=LOWER(G34 & "." & H34 & "@hlsr.com")'},
-  {id:'2071930',name:'Novalee Martinez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1032',email:'=LOWER(G35 & "." & H35 & "@hlsr.com")'},
-  {id:'2073529',name:'Carly Jo Thompson',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1033',email:'=LOWER(G36 & "." & H36 & "@hlsr.com")'},
-  {id:'2071246',name:'Rebekah Wood',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1034',email:'=LOWER(G37 & "." & H37 & "@hlsr.com")'},
-  {id:'2077561',name:'Faith Ashworth',title:'Junior Committeeman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1035',email:'=LOWER(G38 & "." & H38 & "@hlsr.com")'},
-  {id:'2071276',name:'Riley Boulais',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1036',email:'=LOWER(G39 & "." & H39 & "@hlsr.com")'},
-  {id:'2073278',name:'Anne Castillo',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1037',email:'=LOWER(G40 & "." & H40 & "@hlsr.com")'},
-  {id:'2071454',name:'Samantha Flores',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1038',email:'=LOWER(G41 & "." & H41 & "@hlsr.com")'},
-  {id:'2072032',name:'Ford Herrin',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1039',email:'=LOWER(G42 & "." & H42 & "@hlsr.com")'},
-  {id:'2071101',name:'Joseph Ledet',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1040',email:'=LOWER(G43 & "." & H43 & "@hlsr.com")'},
-  {id:'2073300',name:'Maria Ostiguin-Campos',title:'Junior Committeeman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1041',email:'=LOWER(G44 & "." & H44 & "@hlsr.com")'},
-  {id:'2074029',name:'Christian Puente',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1042',email:'=LOWER(G45 & "." & H45 & "@hlsr.com")'},
-  {id:'2075430',name:'Liston Johnson',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1043',email:'=LOWER(G46 & "." & H46 & "@hlsr.com")'},
-  {id:'2074086',name:'Nina Ozuna',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1044',email:'=LOWER(G47 & "." & H47 & "@hlsr.com")'},
-  {id:'2073906',name:'Kurt Pastrana',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1045',email:'=LOWER(G48 & "." & H48 & "@hlsr.com")'},
-  {id:'2067496',name:'Keenon Rayner',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1046',email:'=LOWER(G49 & "." & H49 & "@hlsr.com")'},
-  {id:'2074117',name:'Angel Rodriguez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1047',email:'=LOWER(G50 & "." & H50 & "@hlsr.com")'},
-  {id:'2074630',name:'Emmy Tornez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1048',email:'=LOWER(G51 & "." & H51 & "@hlsr.com")'},
-  {id:'2074241',name:'Adelie Yebra-Benavente',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1049',email:'=LOWER(G52 & "." & H52 & "@hlsr.com")'},
-  {id:'2074523',name:'Sophia Alaniz',title:'Junior Committeeman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1050',email:'=LOWER(G53 & "." & H53 & "@hlsr.com")'},
-  {id:'2073645',name:'Aldair Campos',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1051',email:'=LOWER(G54 & "." & H54 & "@hlsr.com")'},
-  {id:'2067398',name:'Marx Dominguez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1052',email:'=LOWER(G55 & "." & H55 & "@hlsr.com")'},
-  {id:'2073679',name:'Crystal Ledesma',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1053',email:'=LOWER(G56 & "." & H56 & "@hlsr.com")'},
-  {id:'2074991',name:'Maayan Milo',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1054',email:'=LOWER(G57 & "." & H57 & "@hlsr.com")'},
-  {id:'2075058',name:'Patrick Prudhomme',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1055',email:'=LOWER(G58 & "." & H58 & "@hlsr.com")'},
-  {id:'2073905',name:'Maddie Amos',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1056',email:'=LOWER(G59 & "." & H59 & "@hlsr.com")'},
-  {id:'1427746',name:'Seth Anderson',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1057',email:'=LOWER(G60 & "." & H60 & "@hlsr.com")'},
-  {id:'2071814',name:'Justin Denison',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1058',email:'=LOWER(G61 & "." & H61 & "@hlsr.com")'},
-  {id:'2075847',name:'Joseph Garza',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1059',email:'=LOWER(G62 & "." & H62 & "@hlsr.com")'},
-  {id:'2073558',name:'Kyle Ingersoll',title:'Junior Committeeman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1060',email:'=LOWER(G63 & "." & H63 & "@hlsr.com")'},
-  {id:'2073539',name:'Cash Mcdaniel',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1061',email:'=LOWER(G64 & "." & H64 & "@hlsr.com")'},
-  {id:'2073477',name:'Daniel Vasquez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1062',email:'=LOWER(G65 & "." & H65 & "@hlsr.com")'},
-  {id:'2026396',name:'Reyna Flores',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1063',email:'=LOWER(G66 & "." & H66 & "@hlsr.com")'},
-  {id:'2061392',name:'Lorelai Kagey',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1064',email:'=LOWER(G67 & "." & H67 & "@hlsr.com")'},
-  {id:'1249128',name:'Hailey Peters',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1065',email:'=LOWER(G68 & "." & H68 & "@hlsr.com")'},
-  {id:'2043871',name:'Sofia Alvarez-Gonzalez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1066',email:'=LOWER(G69 & "." & H69 & "@hlsr.com")'},
-  {id:'2043921',name:'Aliza Granados',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1067',email:'=LOWER(G70 & "." & H70 & "@hlsr.com")'},
-  {id:'2043749',name:'Valeria Lopez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1068',email:'=LOWER(G71 & "." & H71 & "@hlsr.com")'},
-  {id:'2044449',name:'Caitlyn Potts',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1069',email:'=LOWER(G72 & "." & H72 & "@hlsr.com")'},
-  {id:'2058864',name:'Aiden Twomey',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1070',email:'=LOWER(G73 & "." & H73 & "@hlsr.com")'},
-  {id:'2073329',name:'Katarina Carlson',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1071',email:'=LOWER(G74 & "." & H74 & "@hlsr.com")'},
-  {id:'1426846',name:'Morgan Clapp',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1072',email:'=LOWER(G75 & "." & H75 & "@hlsr.com")'},
-  {id:'2071788',name:'Megan Gulihur',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1073',email:'=LOWER(G76 & "." & H76 & "@hlsr.com")'},
-  {id:'2076862',name:'Audri Ivey',title:'Junior Committeeman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1074',email:'=LOWER(G77 & "." & H77 & "@hlsr.com")'},
-  {id:'2071504',name:'Arianna Roman',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1075',email:'=LOWER(G78 & "." & H78 & "@hlsr.com")'},
-  {id:'2074901',name:'Jordan Roush',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1076',email:'=LOWER(G79 & "." & H79 & "@hlsr.com")'},
-  {id:'2074193',name:'Elizabeth Ruffeno',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1077',email:'=LOWER(G80 & "." & H80 & "@hlsr.com")'},
-  {id:'2070929',name:'Harlem Stern',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1078',email:'=LOWER(G81 & "." & H81 & "@hlsr.com")'},
-  {id:'2044058',name:'Mikayla Anthony',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1079',email:'=LOWER(G82 & "." & H82 & "@hlsr.com")'},
-  {id:'1139472',name:'Meckenzie Clapp',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1080',email:'=LOWER(G83 & "." & H83 & "@hlsr.com")'},
-  {id:'2044213',name:'Maggie Garcia',title:'Junior Committeeman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1081',email:'=LOWER(G84 & "." & H84 & "@hlsr.com")'},
-  {id:'1321419',name:'Shelby Prazak',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1082',email:'=LOWER(G85 & "." & H85 & "@hlsr.com")'},
-  {id:'2027063',name:'Stephanie Vasquez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1083',email:'=LOWER(G86 & "." & H86 & "@hlsr.com")'},
-  {id:'2074348',name:'Chris Adams',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1084',email:'=LOWER(G87 & "." & H87 & "@hlsr.com")'},
-  {id:'2078121',name:'Miaangelina Castro',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1085',email:'=LOWER(G88 & "." & H88 & "@hlsr.com")'},
-  {id:'2072892',name:'Carly Cunningham',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1086',email:'=LOWER(G89 & "." & H89 & "@hlsr.com")'},
-  {id:'2077571',name:'Misa Garcia',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1087',email:'=LOWER(G90 & "." & H90 & "@hlsr.com")'},
-  {id:'2075435',name:'Morgan Gross',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1088',email:'=LOWER(G91 & "." & H91 & "@hlsr.com")'},
-  {id:'2071150',name:'London Herrera',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1089',email:'=LOWER(G92 & "." & H92 & "@hlsr.com")'},
-  {id:'2073692',name:'Samantha Martinez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1090',email:'=LOWER(G93 & "." & H93 & "@hlsr.com")'},
-  {id:'2048689',name:'Skylier Tipton',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1091',email:'=LOWER(G94 & "." & H94 & "@hlsr.com")'},
-  {id:'2060583',name:'John Cruz',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1092',email:'=LOWER(G95 & "." & H95 & "@hlsr.com")'},
-  {id:'2057253',name:'Isabella Martinez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1093',email:'=LOWER(G96 & "." & H96 & "@hlsr.com")'},
-  {id:'2016332',name:'Keira Quinteros',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1094',email:'=LOWER(G97 & "." & H97 & "@hlsr.com")'},
-  {id:'2060515',name:'Carlton Walton',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1095',email:'=LOWER(G98 & "." & H98 & "@hlsr.com")'},
-  {id:'2063444',name:'Luke Davis',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1096',email:'=LOWER(G99 & "." & H99 & "@hlsr.com")'},
-  {id:'2060346',name:'Connor Matthheessen',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1097',email:'=LOWER(G100 & "." & H100 & "@hlsr.com")'},
-  {id:'2059986',name:'Nicolas Requenes',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1098',email:'=LOWER(G101 & "." & H101 & "@hlsr.com")'},
-  {id:'2044136',name:'Jackson Wetzel',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1099',email:'=LOWER(G102 & "." & H102 & "@hlsr.com")'},
-  {id:'2072132',name:'Katelyn Araguz',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1100',email:'=LOWER(G103 & "." & H103 & "@hlsr.com")'},
-  {id:'2073970',name:'Ronnie Baird',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1101',email:'=LOWER(G104 & "." & H104 & "@hlsr.com")'},
-  {id:'2073686',name:'Kaylie Diaz',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1102',email:'=LOWER(G105 & "." & H105 & "@hlsr.com")'},
-  {id:'2078457',name:'Tristan Hadley',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1103',email:'=LOWER(G106 & "." & H106 & "@hlsr.com")'},
-  {id:'2073886',name:'Maren Jackson',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1104',email:'=LOWER(G107 & "." & H107 & "@hlsr.com")'},
-  {id:'2071656',name:'Maddie Melendy',title:'Junior Committeeman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1105',email:'=LOWER(G108 & "." & H108 & "@hlsr.com")'},
-  {id:'2074373',name:'Lizzie Vandegrift',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1106',email:'=LOWER(G109 & "." & H109 & "@hlsr.com")'},
-  {id:'2073769',name:'Pablo Vasquez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1107',email:'=LOWER(G110 & "." & H110 & "@hlsr.com")'},
-  {id:'2072104',name:'Philip Alvarez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1108',email:'=LOWER(G111 & "." & H111 & "@hlsr.com")'},
-  {id:'2073835',name:'Katelyn Amos',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1109',email:'=LOWER(G112 & "." & H112 & "@hlsr.com")'},
-  {id:'2072878',name:'Bella Delgardo',title:'Junior Committeeman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1110',email:'=LOWER(G113 & "." & H113 & "@hlsr.com")'},
-  {id:'2077060',name:'Abie Duran',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1111',email:'=LOWER(G114 & "." & H114 & "@hlsr.com")'},
-  {id:'2071677',name:'Melanie Huezo',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1112',email:'=LOWER(G115 & "." & H115 & "@hlsr.com")'},
-  {id:'2034055',name:'Jaxtin McCollum',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1113',email:'=LOWER(G116 & "." & H116 & "@hlsr.com")'},
-  {id:'2053772',name:'Preston Tucker',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1114',email:'=LOWER(G117 & "." & H117 & "@hlsr.com")'},
-  {id:'2042377',name:'Matthew Berman',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1115',email:'=LOWER(G118 & "." & H118 & "@hlsr.com")'},
-  {id:'2061198',name:'Savannah Dobbins',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1116',email:'=LOWER(G119 & "." & H119 & "@hlsr.com")'},
-  {id:'2060406',name:'Dylan Metcalfe',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1117',email:'=LOWER(G120 & "." & H120 & "@hlsr.com")'},
-  {id:'2023230',name:'Vivian Ruiz',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1118',email:'=LOWER(G121 & "." & H121 & "@hlsr.com")'},
-  {id:'1426270',name:'Ava Baughman',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1119',email:'=LOWER(G122 & "." & H122 & "@hlsr.com")'},
-  {id:'2018803',name:'Faith McDuffie',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1120',email:'=LOWER(G123 & "." & H123 & "@hlsr.com")'},
-  {id:'2057657',name:'Elsie Wire',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1121',email:'=LOWER(G124 & "." & H124 & "@hlsr.com")'},
-  {id:'2044102',name:'Emma Alexander',title:'Junior Committeeman',last:'None',history:[],ageout:true,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1122',email:'=LOWER(G125 & "." & H125 & "@hlsr.com")'},
-  {id:'2058914',name:'Liam Alonzo',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1123',email:'=LOWER(G126 & "." & H126 & "@hlsr.com")'},
-  {id:'2052561',name:'Abby Gonzalez',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1124',email:'=LOWER(G127 & "." & H127 & "@hlsr.com")'},
-  {id:'2055239',name:'Claire Plante',title:'Junior Committeeman',last:'None',history:[],ageout:false,checkedIn:false,assignment:null,prevLast:null,order:0,phone:'(713) 555-1125',email:'=LOWER(G128 & "." & H128 & "@hlsr.com")'}
-];
+var juniors = []; // loaded from Neon on login
+var adults  = []; // loaded from Neon on login
 
-var adults = [
-  {id:'1111111',name:'David Smith',title:'Vice President',email:'david.smith@hlsr.com'},
-  {id:'1134145',name:'David Wick',title:'Chairman',phone:'(713) 555-1000',email:'david.wick@hlsr.com'},
-  {id:'918672',name:'David Brooks',title:'Vice Chairman',phone:'(713) 555-1001',email:'david.brooks@hlsr.com'},
-  {id:'1127631',name:'Lacey Maxwell',title:'Vice Chairman',phone:'(713) 555-1002',email:'lacey.maxwell@hlsr.com'},
-  {id:'1048734',name:'Kevin Norton',title:'Vice Chairman',phone:'(713) 555-1003',email:'kevin.norton@hlsr.com'},
-  {id:'1116506',name:'Chadisty Pauly',title:'Vice Chairman',phone:'(713) 555-1004',email:'chadisty.pauly@hlsr.com'},
-  {id:'1091507',name:'Garry Pigg',title:'Vice Chairman',phone:'(713) 555-1005',email:'garry.pigg@hlsr.com'},
-  {id:'1285240',name:'Regan Ray',title:'Vice Chairman',phone:'(713) 555-1006',email:'regan.ray@hlsr.com'},
-  {id:'1222730',name:'Alycia Stewart',title:'Vice Chairman',phone:'(713) 555-1007',email:'alycia.stewart@hlsr.com'},
-  {id:'1177047',name:'Christian Slaton',title:'Captain',phone:'(713) 555-1008',email:'christian.slaton@hlsr.com'}
-];
+
 
 // COMMITTEE LIBRARY — all 43 real committees from 2025-2026 request forms
 // Each shift entry: {shift, cap}
@@ -2356,8 +2228,9 @@ function renderRoster(){
     return;
   }
 
-  var list = juniors.slice();
+  var list = juniors.filter(function(j){ return !j.inactive; });
   if(f === 'ageout') list = list.filter(function(j){ return j.ageout; });
+  if(f === 'inactive') list = juniors.filter(function(j){ return j.inactive; });
   if(q) list = list.filter(function(j){ return j.name.toLowerCase().includes(q) || j.id.includes(q) || (j.phone && j.phone.includes(q)) || (j.email && j.email.toLowerCase().includes(q)); });
 
   document.getElementById('r-count').textContent = list.length + ' junior' + (list.length !== 1 ? 's' : '') + (f === 'ageout' ? ' (age-outs)' : '') + ' &bull; ' + aoCount + ' age-outs total';
@@ -3703,6 +3576,7 @@ function _doSave(){
       simTimeOffset: simTimeOffset,
     },
     juniors: juniors,
+    adults: adults,
     activeSlots: activeSlots,
     committeeRequests: committeeRequests,
   };
@@ -3752,10 +3626,24 @@ function _applyState(data){
   if(!data) return;
   var state = data.state || data;
   var jRows = data.juniors;
-  if(jRows && Array.isArray(jRows)){
+  if(jRows && Array.isArray(jRows) && jRows.length > 0){
+    // Rebuild juniors array from Neon — Neon is the authoritative source
+    var existingById = {};
+    juniors.forEach(function(j){ existingById[j.id] = j; });
+
     jRows.forEach(function(row){
-      var jr = juniors.find(function(j){ return j.id === row.id; });
-      if(!jr) return;
+      var jr = existingById[row.id];
+      if(!jr){
+        // New junior from Neon not yet in memory — add them
+        jr = { id: row.id, name: row.name || '', title: row.title || 'Committeeman',
+               ageout: false, hasHat: false, notes: '', phone: '', email: '',
+               checkedIn: false, assignment: null, last: 'None', order: 0,
+               checkInShift: '', shiftAssignments: {}, plannedShifts: [],
+               shiftLog: [], history: [], inactive: false };
+        juniors.push(jr);
+        existingById[jr.id] = jr;
+      }
+      // Update all fields from Neon
       jr.ageout           = row.ageout           !== undefined ? row.ageout           : jr.ageout;
       jr.hasHat           = row.has_hat           !== undefined ? row.has_hat          : (row.hasHat !== undefined ? row.hasHat : jr.hasHat);
       jr.notes            = row.notes             !== undefined ? row.notes            : (jr.notes||'');
@@ -3770,6 +3658,7 @@ function _applyState(data){
       jr.shiftAssignments = row.shift_assignments || row.shiftAssignments || {};
       jr.plannedShifts    = row.planned_shifts    || row.plannedShifts    || [];
       jr.history          = row.history           || [];
+      jr.inactive         = row.inactive          || false;
     });
   } else if(state.juniorOverrides){
     juniors.forEach(function(j){
@@ -3783,6 +3672,13 @@ function _applyState(data){
       j.plannedShifts=o.plannedShifts||[]; j.history=o.history||[];
     });
   }
+  // Restore adults from Neon
+  if(data.adults && data.adults.length > 0){
+    adults = data.adults.map(function(a){
+      return {id:a.id, name:a.name, title:a.title||'', phone:a.phone||'', email:a.email||'', inactive:a.inactive||false};
+    });
+  }
+
   if(data.activeSlots && data.activeSlots.length){
     activeSlots = data.activeSlots.map(function(s){
       return {
@@ -4089,48 +3985,67 @@ function handleRosterUpload(event){
 
 function applyRosterImport(){
   if(!pendingRosterImport) return;
-  var added = 0, updated = 0;
+  var added = 0, updated = 0, deactivated = 0, reactivated = 0;
 
+  // Build lookup of IDs in this import
+  var importedIds = {};
+  pendingRosterImport.forEach(function(m){ importedIds[m.id] = true; });
+
+  // Process each member in the import
   pendingRosterImport.forEach(function(m){
     if(m.isAdult){
-      // Update or add to adults array
       var existing = adults.find(function(a){ return a.id === m.id; });
       if(existing){
-        existing.name = m.name; existing.phone = m.phone; existing.email = m.email; existing.title = m.title;
+        existing.name = m.name; existing.phone = m.phone;
+        existing.email = m.email; existing.title = m.title;
+        existing.inactive = false;
       } else {
-        adults.push({id:m.id, name:m.name, title:m.title, phone:m.phone, email:m.email});
+        adults.push({id:m.id, name:m.name, title:m.title, phone:m.phone, email:m.email, inactive:false});
       }
       return;
     }
 
     var existing = juniors.find(function(j){ return j.id === m.id; });
     if(existing){
-      // Update — preserve shift log, checkedIn, assignments
-      existing.name    = m.name;
-      existing.phone   = m.phone;
-      existing.email   = m.email;
-      existing.title   = m.title;
-      existing.ageout  = m.ageout;
-      updated++;
+      // Update contact info and title — preserve ALL history
+      existing.name   = m.name;
+      existing.phone  = m.phone;
+      existing.email  = m.email;
+      existing.title  = m.title;
+      existing.ageout = m.ageout;
+      if(existing.inactive){ existing.inactive = false; reactivated++; }
+      else updated++;
     } else {
-      // New member
+      // Brand new member
       juniors.push({
         id: m.id, name: m.name, title: m.title,
         phone: m.phone, email: m.email,
         ageout: m.ageout, hasHat: false, notes: '',
         checkedIn: false, assignment: null, last: 'None',
         order: 0, checkInShift: '',
-        shiftAssignments: {}, plannedShifts: [], shiftLog: [], history: []
+        shiftAssignments: {}, plannedShifts: [], shiftLog: [], history: [],
+        inactive: false
       });
       added++;
+    }
+  });
+
+  // Mark anyone NOT in this import as inactive (keeps history, hides from normal views)
+  juniors.forEach(function(j){
+    if(!importedIds[j.id] && !j.inactive){
+      j.inactive = true;
+      deactivated++;
     }
   });
 
   saveStateNow();
   renderRoster();
   cancelRosterImport();
-  document.getElementById('roster-upload-status').textContent =
-    '&#10003; Import complete: ' + added + ' added, ' + updated + ' updated.';
+  var msg = '&#10003; Import complete: ' + added + ' new';
+  if(updated) msg += ', ' + updated + ' updated';
+  if(reactivated) msg += ', ' + reactivated + ' reactivated';
+  if(deactivated) msg += ', ' + deactivated + ' marked inactive (history preserved)';
+  document.getElementById('roster-upload-status').innerHTML = msg;
   document.getElementById('roster-file-input').value = '';
 }
 
