@@ -1570,7 +1570,7 @@ function unassignJr(jr, sl){
 
 
 function printDropOffReport(slotId){
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!sl) return;
   buildReports([sl]);
 }
@@ -2133,7 +2133,7 @@ function closePick(){ activePick = null; activePickShift = null; renderOfficer()
 function pickSlot(jid, slotId){
   var realJid = jid.split('_')[0]; // strip shift suffix if present
   var jr = juniors.find(function(j){ return j.id === realJid; });
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!jr || !sl || sl.assigned.length >= sl.capacity) return;
   if(jr.ageout){
     if(!jr.shiftAssignments) jr.shiftAssignments = {};
@@ -3467,7 +3467,7 @@ function toggleLock(jid){
 var boardTimer = null;
 
 function markSent(slotId){
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!sl) return;
   onShiftSlots.add(String(slotId));
   var date = (document.getElementById('setup-date') ? document.getElementById('setup-date').value : '') || currentDate;
@@ -3489,7 +3489,7 @@ function markSent(slotId){
 }
 
 function undoSent(slotId){
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!sl) return;
   if(!confirm('Undo "Out on Shift" for ' + sl.name + '? Juniors will return to Assigned status.')) return;
   onShiftSlots.delete(String(slotId));
