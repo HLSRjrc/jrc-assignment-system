@@ -3836,15 +3836,24 @@ function stopPolling(){
 
 function pollForUpdates(){
   if(!DB_AVAILABLE) return;
-  if(isSaving) return; // don't poll while saving
-  if(Date.now() - lastSaveTime < 3000) return; // wait 3s after a save before polling
-  fetch('/.netlify/functions/state?since=' + lastSyncTime)
+  if(isSaving) return;
+  // Don't poll if we saved very recently — our local state is newer than Neon
+  if(Date.now() - lastSaveTime < 10000) return; // 10s grace after any save
+  fetch('/.netlify/functions/state')
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(!data || data.error) return;
-      lastSyncTime = Date.now();
+      // Preserve local sim time — don't let poll overwrite it
+      var localSimEnabled = simTimeEnabled;
+      var localSimOffset  = simTimeOffset;
       _applyState(data);
-      // Re-render current tab quietly
+      // Restore sim time if it was active locally
+      if(localSimEnabled){
+        simTimeEnabled = localSimEnabled;
+        simTimeOffset  = localSimOffset;
+      }
+      lastSyncTime = Date.now();
+      // Re-render current tab
       var activePanel = document.querySelector('.panel[style*="display: block"], .panel[style*="display:block"]');
       if(activePanel){
         var id = activePanel.id;
@@ -3855,7 +3864,7 @@ function pollForUpdates(){
       }
       updateHeaderDate();
     })
-    .catch(function(){ /* silent fail — don't spam console */ });
+    .catch(function(){});
 }
 
 // ============================================================
