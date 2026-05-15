@@ -679,6 +679,7 @@ position:relative;z-index:1}
   </div>
   <div class="action-row">
     <button class="btn btn-orange" onclick="autoAssign()">&#9654; Auto-Assign Regular Juniors</button>
+    <button class="btn" onclick="placeStragglers()" title="Place remaining juniors even if alone — use when no one else is coming">&#128101; Place Straggler</button>
     <button class="btn" onclick="clearAssignments()">Clear Assignments</button>
   </div>
   <div id="off-alert" style="display:none;margin-bottom:12px"></div>
@@ -1715,7 +1716,7 @@ function renderNotesQueue(){
     var isDismissed = state === 'dismissed';
 
     html += '<div class="notes-item' + (isDismissed ? ' dismissed' : isAssigned && state === 'locked' ? ' locked' : '') + '">' +
-      '<div class="notes-item-name">' + (j.hasHat ? '🤠 ' : '') + j.name + +
+      '<div class="notes-item-name">' + (j.hasHat ? '🤠 ' : '') + j.name +
         (isAssigned && state === 'locked' ? ' <span class="locked-tag">&#128274; ' + j.assignment + '</span>' : '') +
         (isDismissed ? ' <span style="font-size:11px;color:#999;font-style:italic">&mdash; dismissed to regular pool</span>' : '') +
       '</div>' +
@@ -2154,6 +2155,28 @@ function doUnassign(jid, slotId){
 }
   saveState();
 
+
+function placeStragglers(){
+  var ci = juniors.filter(function(j){ return j.checkedIn && !j.assignment && !j.ageout; });
+  if(ci.length === 0){ showAlert('No unassigned juniors to place.', 'info'); return; }
+  var open = activeSlots.filter(function(s){ return s.shift === currentShift && s.assigned.length < s.capacity; });
+  if(open.length === 0){ showAlert('No open slots in this shift.', 'warn'); return; }
+
+  var placed = 0;
+  ci.forEach(function(jr){
+    var eligible = jr.hasHat ? open : open.filter(function(s){ return !s.hat; });
+    if(!eligible.length) return;
+    // Prefer most-filled slots first (top up existing assignments)
+    eligible.sort(function(a,b){ return b.assigned.length - a.assigned.length; });
+    var pick = eligible[0];
+    assignJr(jr, pick.name);
+    pick.assigned.push(jr.id);
+    placed++;
+  });
+  showAlert(placed + ' straggler' + (placed !== 1 ? 's' : '') + ' placed.', placed > 0 ? 'success' : 'warn');
+  renderOfficer();
+  saveStateNow();
+}
 
 function autoAssign(){
   var ci = juniors.filter(function(j){ return j.checkedIn && !j.assignment; });
