@@ -3538,12 +3538,14 @@ function renderBoard(){
     if(isFutureShift){
       pendList = juniors.filter(function(j){
         if(!j.ageout) return false;
-        if(!j.plannedShifts) return false;
+        if(!j.plannedShifts || !j.plannedShifts.length) return false;
         if(j.plannedShifts.indexOf(sh) < 0) return false;
-        // Don't show if currently checked in for this shift (means they're already physically here)
-        var jShift = j.checkInShift || '';
-        if(j.checkedIn && jShift === sh) return false;
-        // Don't show if already on-shift / done with this shift
+        // Must have checked in at least once today (checkInShift set) to show as pending
+        // This prevents stale plannedShifts from old sessions from appearing
+        if(!j.checkInShift) return false;
+        // Don't show if currently checked in for this shift
+        if(j.checkedIn && j.checkInShift === sh) return false;
+        // Don't show if already in checkedInForShift list
         if(checkedInForShift.indexOf(j) >= 0) return false;
         return true;
       });
