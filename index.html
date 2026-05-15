@@ -3679,35 +3679,40 @@ function _applyState(data){
   if(!data) return;
   var state = data.state || data;
   var jRows = data.juniors;
-  if(jRows && Array.isArray(jRows)){
-    jRows.forEach(function(row){
-      var jr = juniors.find(function(j){ return j.id === row.id; });
-      if(!jr) return;
-      jr.ageout           = row.ageout           !== undefined ? row.ageout           : jr.ageout;
-      jr.hasHat           = row.has_hat           !== undefined ? row.has_hat          : (row.hasHat !== undefined ? row.hasHat : jr.hasHat);
-      jr.notes            = row.notes             !== undefined ? row.notes            : (jr.notes||'');
-      jr.phone            = row.phone             !== undefined ? row.phone            : (jr.phone||'');
-      jr.email            = row.email             !== undefined ? row.email            : (jr.email||'');
-      jr.shiftLog         = row.shift_log         || row.shiftLog         || [];
-      jr.checkedIn        = row.checked_in        !== undefined ? row.checked_in       : (row.checkedIn||false);
-      jr.assignment       = row.assignment        || null;
-      jr.last             = row.last_assignment   || row.last             || 'None';
-      jr.order            = row.check_in_order    || row.order            || 0;
-      jr.checkInShift     = row.check_in_shift    || row.checkInShift     || '';
-      jr.shiftAssignments = row.shift_assignments || row.shiftAssignments || {};
-      jr.plannedShifts    = row.planned_shifts    || row.plannedShifts    || [];
-      jr.history          = row.history           || [];
+
+  // Rebuild juniors array from Neon — Neon is the authoritative source
+  if(jRows && Array.isArray(jRows) && jRows.length > 0){
+    juniors = jRows.map(function(row){
+      return {
+        id:              row.id,
+        name:            row.name            || '',
+        title:           row.title           || 'Committeeman',
+        ageout:          row.ageout          || false,
+        hasHat:          row.has_hat         || false,
+        notes:           row.notes           || '',
+        phone:           row.phone           || '',
+        email:           row.email           || '',
+        shiftLog:        row.shift_log       || [],
+        checkedIn:       row.checked_in      || false,
+        assignment:      row.assignment      || null,
+        last:            row.last_assignment || 'None',
+        order:           row.check_in_order  || 0,
+        checkInShift:    row.check_in_shift  || '',
+        shiftAssignments:row.shift_assignments || {},
+        plannedShifts:   row.planned_shifts  || [],
+        history:         row.history         || [],
+        inactive:        row.inactive        || false,
+      };
     });
-  } else if(state.juniorOverrides){
-    juniors.forEach(function(j){
-      var o = state.juniorOverrides[j.id]; if(!o) return;
-      j.ageout=o.ageout; j.hasHat=o.hasHat; j.notes=o.notes||'';
-      j.phone=o.phone||''; j.email=o.email||'';
-      j.shiftLog=o.shiftLog||[]; j.checkedIn=o.checkedIn||false;
-      j.assignment=o.assignment||null; j.last=o.last||'None';
-      j.order=o.order||0; j.checkInShift=o.checkInShift||'';
-      j.shiftAssignments=o.shiftAssignments||{};
-      j.plannedShifts=o.plannedShifts||[]; j.history=o.history||[];
+  }
+
+  // Rebuild adults array from Neon
+  if(data.adults && Array.isArray(data.adults) && data.adults.length > 0){
+    adults = data.adults.map(function(row){
+      return {
+        id: row.id, name: row.name||'', title: row.title||'',
+        phone: row.phone||'', email: row.email||'', inactive: row.inactive||false
+      };
     });
   }
   if(data.activeSlots && data.activeSlots.length){
