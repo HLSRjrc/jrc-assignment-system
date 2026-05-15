@@ -1394,19 +1394,8 @@ function kLookup(){
     pendingJr = jr;
     document.getElementById('kco-name').textContent = (jr.hasHat ? '🤠 ' : '') + jr.name;
     document.getElementById('kco-assignment').textContent = jr.assignment ? 'Currently assigned to: ' + jr.assignment : 'Not yet assigned to a committee';
-    // Show next pre-assigned shift ONLY for age-outs with pre-assignments
     var nextEl = document.getElementById('kco-next-shift');
-    if(nextEl){
-      nextEl.textContent = ''; // clear for non-age-outs
-      if(jr.ageout && jr.shiftAssignments){
-        var nextShifts = ['8am','12pm','4pm'].filter(function(sh){
-          return sh !== currentShift && jr.shiftAssignments[sh];
-        });
-        if(nextShifts.length > 0){
-          nextEl.textContent = 'ℹ You have pre-assignments for: ' + nextShifts.map(function(sh){ return SL[sh] + ' → ' + jr.shiftAssignments[sh]; }).join(', ') + '. Check back in when ready!';
-        }
-      }
-    }
+    if(nextEl) nextEl.textContent = '';
     document.getElementById('k-entry').style.display = 'none';
     document.getElementById('k-clockout').style.display = 'block';
     return;
@@ -1480,7 +1469,7 @@ function kConfirm(){
     var shifts = (pendingJr.plannedShifts && pendingJr.plannedShifts.length > 0)
       ? pendingJr.plannedShifts.map(function(s){ return SL[s]; }).join(', ')
       : SL[currentShift];
-    aoMsg = '<span class="badge b-ageout">Please see the shift officer to select your shifts</span>';
+    aoMsg = '';
   }
   document.getElementById('kd-ao').innerHTML = aoMsg;
   document.getElementById('k-confirm').style.display = 'none';
@@ -1972,7 +1961,11 @@ function renderOfficer(search){
         'draggable="true" data-jid="' + j.id + '" ' +
         'title="Last: ' + j.last + (j.notes ? ' | Note: ' + j.notes : '') + ' — drag to assign" ' +
         'ondragstart="onPoolChipDragStart(event)" ondragend="onPoolChipDragEnd(event)">' +
-        (j.hasHat ? '🤠 ' : '') + j.name + '</span>'; }).join('');
+        (j.hasHat ? '🤠 ' : '') + j.name +
+        ' <button onclick="event.stopPropagation();manualClockOut(\'' + j.id + '\')" ' +
+        'style="background:none;border:none;cursor:pointer;color:#999;font-size:11px;padding:0 2px;line-height:1;margin-left:2px" ' +
+        'title="Clock out">&#x23F9;</button>' +
+        '</span>'; }).join('');
 
   // Slots
   var shiftSlots = activeSlots.filter(function(s){ return s.shift === currentShift; });
@@ -2209,28 +2202,26 @@ function autoAssign(){
       pool = eligible;
     }
 
-    // No-solo rule: NEVER leave a slot with exactly 1 — always bring to 2 first
-    // Then fill all slots to 2 before any slot gets a 3rd, etc.
-    var atOne = pool.filter(function(s){ return s.assigned.length === 1; });
-    if(atOne.length) {
-      // Priority: fill slots that have exactly 1 person to avoid singles
-      var roundCandidates = atOne;
-      roundCandidates.sort(function(a,b){ return (visited[a.name]||0) - (visited[b.name]||0); });
-      var minV = visited[roundCandidates[0].name] || 0;
-      var freshest = roundCandidates.filter(function(s){ return (visited[s.name]||0) === minV; });
-      return freshest[0];
-    }
-    // No slots at 1 — fill at current minimum (all slots progress evenly)
-    var minFill = pool.reduce(function(m,s){ return Math.min(m, s.assigned.length); }, Infinity);
-    var roundCandidates = pool.filter(function(s){ return s.assigned.length === minFill; });
-
-    // Prefer variety — sort by least visited across full shift history
+    // Build visited map first (used below for variety sorting)
     var visited = {};
     if(jr.shiftLog) jr.shiftLog.forEach(function(e){ visited[e.committee] = (visited[e.committee]||0)+1; });
     if(jr.last) visited[jr.last] = (visited[jr.last]||0) + 1;
-    roundCandidates.sort(function(a,b){ return (visited[a.name]||0) - (visited[b.name]||0); });
-    var minV2 = visited[roundCandidates[0] ? roundCandidates[0].name : ''] || 0;
-    var freshest = roundCandidates.filter(function(s){ return (visited[s.name]||0) === minV2; });
+
+    // No-solo rule: NEVER leave a slot with exactly 1 — fill to 2 first
+    var atOne = pool.filter(function(s){ return s.assigned.length === 1; });
+    var candidates;
+    if(atOne.length){
+      candidates = atOne;
+    } else {
+      // Fill all slots evenly — round-robin at current minimum
+      var minFill = pool.reduce(function(m,s){ return Math.min(m, s.assigned.length); }, Infinity);
+      candidates = pool.filter(function(s){ return s.assigned.length === minFill; });
+    }
+
+    // Among candidates, prefer least-visited committees for variety
+    candidates.sort(function(a,b){ return (visited[a.name]||0) - (visited[b.name]||0); });
+    var minV = visited[candidates[0] ? candidates[0].name : ''] || 0;
+    var freshest = candidates.filter(function(s){ return (visited[s.name]||0) === minV; });
     return freshest[0];
   }
 
@@ -3449,6 +3440,28 @@ function toggleLock(jid){
 // ============================================================
 var boardTimer = null;
 
+function manualClockOut(jid){
+  var jr = juniors.find(function(j){ return j.id === jid; });
+  if(!jr) return;
+  if(!confirm('Clock out ' + jr.name + ' from the officer dashboard?')) return;
+  // Remove from slot if assigned
+  if(jr.assignment){
+    var sl = activeSlots.find(function(s){
+      return String(s.id) === String(jid) || (s.name === jr.assignment && s.shift === currentShift);
+    });
+    // find by assignment name
+    sl = activeSlots.find(function(s){ return s.name === jr.assignment && s.shift === currentShift; });
+    if(sl) sl.assigned = sl.assigned.filter(function(id){ return String(id) !== String(jid); });
+  }
+  onShiftJuniors.delete(jid);
+  onShiftJuniors.delete(String(jid));
+  jr.checkedIn = false;
+  clockedOut[jid] = true;
+  renderOfficer();
+  renderBoard();
+  saveStateNow();
+}
+
 function markSent(slotId){
   var sl = activeSlots.find(function(s){ return s.id === slotId; });
   if(!sl) return;
@@ -3472,25 +3485,30 @@ function markSent(slotId){
 }
 
 function undoSent(slotId){
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
-  if(!sl) return;
-  if(!confirm('Undo "Out on Shift" for ' + sl.name + '? Juniors will return to Assigned status.')) return;
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
+  if(!sl){ alert('Slot not found — try refreshing.'); return; }
+  if(!confirm('Undo "Out on Shift" for ' + sl.name + '?')) return;
+  // Remove slot from sent set
   onShiftSlots.delete(String(slotId));
   onShiftSlots.delete(slotId);
+  // Remove all assigned juniors from onShiftJuniors
   var date = (document.getElementById('setup-date') ? document.getElementById('setup-date').value : '') || currentDate;
   sl.assigned.forEach(function(jid){
-    onShiftJuniors.delete(String(jid));
     onShiftJuniors.delete(jid);
-    var jr = juniors.find(function(j){ return j.id === jid; });
-    if(jr && jr.shiftLog){
-      jr.shiftLog = jr.shiftLog.filter(function(e){
-        return !(e.date===date && e.shift===sl.shift && e.committee===sl.name);
-      });
+    onShiftJuniors.delete(String(jid));
+    var jr = juniors.find(function(j){ return j.id === jid || String(j.id) === String(jid); });
+    if(jr){
+      // Remove shift log entry for this send
+      if(jr.shiftLog){
+        jr.shiftLog = jr.shiftLog.filter(function(e){
+          return !(e.date===date && e.shift===sl.shift && e.committee===sl.name);
+        });
+      }
     }
   });
   renderOfficer();
   renderBoard();
-  saveState();
+  saveStateNow();
 }
 
 
@@ -3527,7 +3545,7 @@ function renderBoard(){
     '<div class="board-header">' +
       '<div>' +
         '<div class="board-title">JRC Live Status Board</div>' +
-        '<div class="board-clock" id="board-date-lbl">' + fmtDateLong(date) + ' &bull; ' + SL[currentShift] + ' Active</div>' +
+        '<div class="board-clock" id="board-date-lbl">' + fmtDateLong(date) + '</div>' +
       '</div>' +
       '<div id="board-clock" style="font-size:22px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums"></div>' +
     '</div>' +
