@@ -825,12 +825,30 @@ position:relative;z-index:1}
   <div class="card">
     <div class="section-lbl" style="margin-bottom:8px">Data management</div>
     <div style="font-size:13px;color:#667788;margin-bottom:12px;line-height:1.6">
-      Reset options for testing or end-of-season cleanup. History is always preserved unless you do a full reset.
+      Use these with caution. All destructive actions require confirmation.
     </div>
-    <div class="action-row">
-      <button class="btn" onclick="clearAll()">Clear today&apos;s check-ins &amp; assignments</button>
-      <button class="btn btn-danger" onclick="if(confirm('This will clear ALL history for ALL juniors. Are you sure?'))resetAllHistory()">Clear all assignment history</button>
-      <button class="btn btn-danger" onclick="if(confirm('Clear all saved browser data? This cannot be undone.')){clearSavedState();location.reload();}">&#128465; Clear saved browser data</button>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#F8F9FA;border-radius:8px;border:1px solid #E0E0E0">
+        <div>
+          <div style="font-weight:600;font-size:13px">Clear today's check-ins &amp; assignments</div>
+          <div style="font-size:11px;color:#667788">Resets who is checked in and assigned for this shift. Roster and history untouched.</div>
+        </div>
+        <button class="btn" onclick="confirmClearShift()">Clear Shift</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FFF8F0;border-radius:8px;border:1px solid #F0C080">
+        <div>
+          <div style="font-weight:600;font-size:13px;color:#8B4000">Clear all assignment history</div>
+          <div style="font-size:11px;color:#667788">Wipes every junior's committee history and last-assignment tracking. Cannot be undone.</div>
+        </div>
+        <button class="btn btn-danger" onclick="confirmClearHistory()">Clear History</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FFF0F0;border-radius:8px;border:1px solid #F0A0A0">
+        <div>
+          <div style="font-weight:600;font-size:13px;color:#CC0000">&#9888; Full Database Reset</div>
+          <div style="font-size:11px;color:#667788">Wipes ALL data from Neon — roster, history, check-ins, everything. Use to start completely fresh.</div>
+        </div>
+        <button class="btn btn-danger" onclick="confirmFullReset()">Full Reset</button>
+      </div>
     </div>
   </div>
 </div>
@@ -989,6 +1007,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var clockedOut = {}; // jid -> true when clocked out after a shift
+var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
 var simTimeEnabled = false;
 var simDateSet = false;   // true once user has explicitly set date/time
@@ -1376,6 +1395,7 @@ function kConfirm(){
   document.getElementById('kd-ao').innerHTML = aoMsg;
   document.getElementById('k-confirm').style.display = 'none';
   document.getElementById('k-done').style.display = 'block';
+  if(pendingJr) dirtyJuniors.add(pendingJr.id);
   pendingJr = null;
   saveStateNow();
 }
@@ -1389,6 +1409,7 @@ function kClockOut(){
   pendingJr.checkedIn = false;
   // Keep pendingJr.assignment so they stay in the slot card
   clockedOut[pendingJr.id] = true;
+  dirtyJuniors.add(pendingJr.id);
   saveStateNow();
   document.getElementById('kdo-name').textContent = (pendingJr.hasHat ? '🤠 ' : '') + pendingJr.name;
   document.getElementById('k-clockout').style.display = 'none';
@@ -2204,6 +2225,13 @@ function clearAssignments(){
   activePick = null;
   document.getElementById('off-alert').style.display = 'none';
   renderOfficer();
+  renderBoard();
+  // Reset Neon session state — DELETE clears app_state + active_slots + resets checked_in
+  fetch('/.netlify/functions/state', {method:'DELETE'})
+    .then(function(){ console.log('Session cleared in Neon'); })
+    .catch(function(e){ console.warn('Neon session clear failed:', e.message); });
+  // Also save all juniors with checkedIn=false to Neon so no ghost check-ins remain
+  saveRosterToNeon(null);
 }
 
 function resetShift(){
@@ -3629,6 +3657,17 @@ var isSaving = false;
 function _doSave(){
   isSaving = true;
   lastSaveTime = Date.now();
+
+  // Send juniors with any non-default data OR recently touched ones
+  var activeJuniors = juniors.filter(function(j){
+    return j.checkedIn || j.assignment || j.order > 0 ||
+           (j.shiftLog && j.shiftLog.length > 0) ||
+           (j.history && j.history.length > 0) ||
+           j.last !== 'None' || j.hasHat || j.notes || j.ageout ||
+           dirtyJuniors.has(j.id);
+  });
+  dirtyJuniors.clear();
+
   var payload = {
     state: {
       clockedOut: clockedOut,
@@ -3641,14 +3680,12 @@ function _doSave(){
       simTimeEnabled: simTimeEnabled,
       simTimeOffset: simTimeOffset,
       simDateSet: simDateSet,
-      currentDate: currentDate,
-      currentShift: currentShift,
     },
-    juniors: juniors,
+    juniors: activeJuniors,
     activeSlots: activeSlots,
     committeeRequests: committeeRequests,
   };
-  try { localStorage.setItem(LS_KEY, JSON.stringify(payload)); } catch(e){}
+  try { localStorage.setItem(LS_KEY, JSON.stringify({state: payload.state, juniors: juniors, activeSlots: activeSlots})); } catch(e){}
   if(!DB_AVAILABLE) return;
   fetch('/.netlify/functions/state', {
     method: 'POST',
@@ -3666,8 +3703,24 @@ function _doSave(){
     isSaving = false;
   }).catch(function(e){
     console.error('Neon save network error:', e.message);
-    // Don't set DB_AVAILABLE=false — retry on next action
     isSaving = false;
+  });
+}
+
+// Roster save — sends ALL juniors to Neon (used only on import)
+function saveRosterToNeon(callback){
+  console.log('Saving full roster to Neon (' + juniors.length + ' juniors)...');
+  fetch('/.netlify/functions/state', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ juniors: juniors, adults: adults })
+  }).then(function(r){
+    if(!r.ok) return r.text().then(function(b){ throw new Error(r.status + ': ' + b); });
+    console.log('Roster saved to Neon');
+    if(callback) callback(null);
+  }).catch(function(e){
+    console.error('Roster save failed:', e.message);
+    if(callback) callback(e);
   });
 }
 
@@ -3764,7 +3817,49 @@ function _applyState(data){
 
 function clearSavedState(){
   localStorage.removeItem(LS_KEY);
+  try { localStorage.removeItem('jrc_simstate'); } catch(e){}
   console.log('Saved state cleared');
+}
+
+function confirmClearShift(){
+  if(!confirm('Clear all check-ins and assignments for this shift?\n\nRoster data and shift history will NOT be affected.')) return;
+  resetShift();
+}
+
+function confirmClearHistory(){
+  var first = confirm('WARNING: This will permanently erase ALL committee assignment history for every junior.\n\nThis cannot be undone. Continue?');
+  if(!first) return;
+  var second = confirm('Are you absolutely sure? All "last assignment" and history data will be lost.');
+  if(!second) return;
+  resetAllHistory();
+  saveRosterToNeon(null);
+  showAlert('All assignment history cleared.', 'info');
+}
+
+function confirmFullReset(){
+  var first = confirm('FULL DATABASE RESET\n\nThis will permanently delete:\n• All juniors and adults\n• All shift history and hours\n• All check-ins and assignments\n• All committee slots\n\nThis CANNOT be undone. Continue?');
+  if(!first) return;
+  var second = confirm('Last chance — type OK to confirm you want to wipe the entire database.');
+  if(!second) return;
+  // Clear everything in memory
+  juniors = []; adults = []; activeSlots = []; committeeRequests = [];
+  clockedOut = {}; onShiftJuniors = new Set(); onShiftSlots = new Set();
+  checkInOrder = 0; lockedJuniors = new Set(); notesState = {};
+  clearSimTime();
+  localStorage.removeItem(LS_KEY);
+  try { localStorage.removeItem('jrc_simstate'); } catch(e){}
+  // Wipe Neon via the reset endpoint
+  fetch('/.netlify/functions/reset', {method:'POST'})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d.success){
+        alert('Database wiped. You can now upload a fresh roster.');
+        renderOfficer(); renderRoster(); renderBoard();
+      } else {
+        alert('Reset failed: ' + (d.error || 'unknown error'));
+      }
+    })
+    .catch(function(e){ alert('Reset failed: ' + e.message); });
 }
 
 // ── Real-time sync polling ────────────────────────────────────────────────────
@@ -4126,17 +4221,27 @@ function applyRosterImport(){
     if(!importIds[j.id] && !j.inactive){ j.inactive=true; deactivated++; }
   });
 
-  // Save everything to Neon immediately
-  saveStateNow();
+  // Save full roster to Neon (separate call — too large for regular save)
   renderRoster();
   cancelRosterImport();
+  var statusEl2 = document.getElementById('roster-upload-status');
+  statusEl2.textContent = 'Saving to database…';
 
-  var msg = '&#10003; Import complete: ' + added + ' new';
-  if(updated)     msg += ', ' + updated + ' updated';
-  if(reactivated) msg += ', ' + reactivated + ' reactivated';
-  if(adultCount)  msg += ', ' + adultCount + ' adults';
-  if(deactivated) msg += ', ' + deactivated + ' marked inactive (history preserved)';
-  statusEl.innerHTML = msg;
+  saveRosterToNeon(function(err){
+    if(err){
+      document.getElementById('roster-upload-status').innerHTML = '&#9888; Import applied locally but database save failed. Try again.';
+      return;
+    }
+    // Also save session state so check-ins/assignments sync to other devices
+    _doSave();
+    var msg = '&#10003; Import complete: ' + added + ' new';
+    if(updated)     msg += ', ' + updated + ' updated';
+    if(reactivated) msg += ', ' + reactivated + ' reactivated';
+    if(adultCount)  msg += ', ' + adultCount + ' adults';
+    if(deactivated) msg += ', ' + deactivated + ' marked inactive';
+    document.getElementById('roster-upload-status').innerHTML = msg;
+  });
+
   document.getElementById('roster-file-input').value = '';
 }
 
