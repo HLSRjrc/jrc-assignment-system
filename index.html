@@ -989,11 +989,17 @@ function setSimTime(h, m){
   simTimeOffset = target - now;
   simTimeEnabled = true;
   simDateSet = true;
+  // Persist sim settings to localStorage immediately — independent of Neon
+  try { localStorage.setItem('jrc_simstate', JSON.stringify({
+    simTimeEnabled: true, simTimeOffset: simTimeOffset,
+    simDateSet: true, currentDate: currentDate, currentShift: currentShift
+  })); } catch(e){}
 }
 function clearSimTime(){
   simTimeOffset = 0;
   simTimeEnabled = false;
   simDateSet = false;
+  try { localStorage.removeItem('jrc_simstate'); } catch(e){}
 }
 var pendingJr = null;
 
@@ -3886,12 +3892,22 @@ function pollForUpdates(){
         }
       });
       _applyState(data);
-      // Restore sim time and date if user set them
-      if(localSimDateSet || localSimEnabled){
-        simTimeEnabled = localSimEnabled;
-        simTimeOffset  = localSimOffset;
-        simDateSet     = localSimDateSet;
-      }
+      // Restore sim time and date — localStorage is authoritative for this
+      try {
+        var simRaw = localStorage.getItem('jrc_simstate');
+        if(simRaw){
+          var sim = JSON.parse(simRaw);
+          simTimeEnabled = sim.simTimeEnabled || false;
+          simTimeOffset  = sim.simTimeOffset  || 0;
+          simDateSet     = sim.simDateSet     || false;
+          if(sim.currentDate)  currentDate  = sim.currentDate;
+          if(sim.currentShift) currentShift = sim.currentShift;
+        } else if(localSimDateSet || localSimEnabled){
+          simTimeEnabled = localSimEnabled;
+          simTimeOffset  = localSimOffset;
+          simDateSet     = localSimDateSet;
+        }
+      } catch(e){}
       // Always restore date/shift if user explicitly set them
       if(simDateSet){ currentDate = localCurrentDate; currentShift = localCurrentShift; }
       // Restore junior active state — local state wins for checked-in juniors
@@ -4044,6 +4060,18 @@ function exportHoursCSV(){
 // INIT — runs after login, not on page load
 // ============================================================
 function initApp(){
+  // Restore sim state from localStorage first — this always wins over Neon
+  try {
+    var simRaw = localStorage.getItem('jrc_simstate');
+    if(simRaw){
+      var sim = JSON.parse(simRaw);
+      simTimeEnabled = sim.simTimeEnabled || false;
+      simTimeOffset  = sim.simTimeOffset  || 0;
+      simDateSet     = sim.simDateSet     || false;
+      if(sim.currentDate)  currentDate  = sim.currentDate;
+      if(sim.currentShift) currentShift = sim.currentShift;
+    }
+  } catch(e){}
   loadState();
   startPolling();
   updateHeaderDate();
