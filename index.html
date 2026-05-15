@@ -3734,12 +3734,18 @@ function _doSave(){
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload)
   }).then(function(r){
-    if(!r.ok) throw new Error('Save failed: ' + r.status);
+    if(!r.ok){
+      return r.text().then(function(body){
+        console.error('Neon save HTTP error:', r.status, body);
+        isSaving = false;
+      });
+    }
+    console.log('State saved to Neon');
     lastSyncTime = Date.now();
     isSaving = false;
   }).catch(function(e){
-    console.warn('Neon save failed, localStorage only:', e.message);
-    DB_AVAILABLE = false;
+    console.error('Neon save network error:', e.message);
+    // Don't set DB_AVAILABLE=false — retry on next action
     isSaving = false;
   });
 }
