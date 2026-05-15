@@ -1536,7 +1536,7 @@ function unassignJr(jr, sl){
 
 
 function printDropOffReport(slotId){
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!sl) return;
   buildReports([sl]);
 }
@@ -1785,7 +1785,7 @@ function renderNotePick(){
 
 function pickNoteSlot(jid, slotId){
   var jr = juniors.find(function(j){ return j.id === jid; });
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!jr || !sl || sl.assigned.length >= sl.capacity) return;
   // Remove from current slot if already assigned
   if(jr.assignment){
@@ -1799,6 +1799,7 @@ function pickNoteSlot(jid, slotId){
   renderNotesQueue();
   renderNotePick();
   renderOfficer();
+  saveStateNow();
   // Highlight and scroll to the slot
   setTimeout(function(){
     var cards = document.querySelectorAll('.slot-card');
@@ -2101,7 +2102,7 @@ function closePick(){ activePick = null; activePickShift = null; renderOfficer()
 function pickSlot(jid, slotId){
   var realJid = jid.split('_')[0]; // strip shift suffix if present
   var jr = juniors.find(function(j){ return j.id === realJid; });
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!jr || !sl || sl.assigned.length >= sl.capacity) return;
   if(jr.ageout){
     if(!jr.shiftAssignments) jr.shiftAssignments = {};
@@ -2125,7 +2126,7 @@ function pickSlot(jid, slotId){
 function doManualAssign(jid, slotId, sel){
   if(!jid) return;
   var jr = juniors.find(function(j){ return j.id === jid; });
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!jr || !sl || jr.assignment || sl.assigned.length >= sl.capacity) return;
   assignJr(jr, sl.name);
   sl.assigned.push(jr.id);
@@ -2137,7 +2138,7 @@ function doManualAssign(jid, slotId, sel){
 
 function doUnassign(jid, slotId){
   var jr = juniors.find(function(j){ return j.id === jid; });
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!jr || !sl) return;
   unassignJr(jr, sl);
   renderOfficer();
@@ -3399,7 +3400,7 @@ function initDragListeners(){
     var toSlotId = parseInt(card.getAttribute('data-slotid'));
     if(!toSlotId) return;
     var jr = juniors.find(function(j){ return j.id === dragJid; });
-    var toSl = activeSlots.find(function(s){ return s.id === toSlotId; });
+    var toSl = activeSlots.find(function(s){ return String(s.id) === String(toSlotId); });
     if(!jr || !toSl) return;
     if(jr.assignment){
       showAlert(jr.name + ' is already assigned to ' + jr.assignment + '. Remove them first with the X.', 'warn');
@@ -3463,7 +3464,7 @@ function manualClockOut(jid){
 }
 
 function markSent(slotId){
-  var sl = activeSlots.find(function(s){ return s.id === slotId; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!sl) return;
   onShiftSlots.add(String(slotId));
   var date = (document.getElementById('setup-date') ? document.getElementById('setup-date').value : '') || currentDate;
