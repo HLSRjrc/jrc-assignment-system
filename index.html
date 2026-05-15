@@ -3685,7 +3685,7 @@ function _doSave(){
     activeSlots: activeSlots,
     committeeRequests: committeeRequests,
   };
-  try { localStorage.setItem(LS_KEY, JSON.stringify({state: payload.state, juniors: juniors, activeSlots: activeSlots})); } catch(e){}
+  try { localStorage.setItem(LS_KEY, JSON.stringify({state: payload.state, juniors: juniors, activeSlots: activeSlots, adults: adults})); } catch(e){}
   if(!DB_AVAILABLE) return;
   fetch('/.netlify/functions/state', {
     method: 'POST',
@@ -3730,6 +3730,8 @@ function loadState(){
     .then(function(r){ return r.json(); })
     .then(function(data){
       _applyState(data);
+      // Re-apply sim state from localStorage — always wins over Neon
+      _restoreSimFromLocalStorage();
       console.log('State loaded from Neon');
       renderOfficer(); renderRoster(); renderSetup(); updateHeaderDate();
     })
@@ -3738,6 +3740,19 @@ function loadState(){
       DB_AVAILABLE = false;
       _loadFromLocalStorage();
     });
+}
+
+function _restoreSimFromLocalStorage(){
+  try {
+    var simRaw = localStorage.getItem('jrc_simstate');
+    if(!simRaw) return;
+    var sim = JSON.parse(simRaw);
+    simTimeEnabled = sim.simTimeEnabled || false;
+    simTimeOffset  = sim.simTimeOffset  || 0;
+    simDateSet     = sim.simDateSet     || false;
+    if(sim.currentDate)  currentDate  = sim.currentDate;
+    if(sim.currentShift) currentShift = sim.currentShift;
+  } catch(e){}
 }
 
 function _loadFromLocalStorage(){
@@ -3799,6 +3814,18 @@ function _applyState(data){
         notes: s.slot_notes||s.notes||'', custom: s.custom||false,
       };
     });
+  } else {
+    // Neon has no slots — try to recover from localStorage backup
+    try {
+      var lsRaw = localStorage.getItem(LS_KEY);
+      if(lsRaw){
+        var lsData = JSON.parse(lsRaw);
+        if(lsData.activeSlots && lsData.activeSlots.length){
+          activeSlots = lsData.activeSlots;
+          console.warn('Active slots recovered from localStorage backup');
+        }
+      }
+    } catch(e){}
   }
   if(data.committeeRequests && data.committeeRequests.length){
     committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
@@ -3907,22 +3934,15 @@ function pollForUpdates(){
         }
       });
       _applyState(data);
-      // Restore sim time and date — localStorage is authoritative for this
-      try {
-        var simRaw = localStorage.getItem('jrc_simstate');
-        if(simRaw){
-          var sim = JSON.parse(simRaw);
-          simTimeEnabled = sim.simTimeEnabled || false;
-          simTimeOffset  = sim.simTimeOffset  || 0;
-          simDateSet     = sim.simDateSet     || false;
-          if(sim.currentDate)  currentDate  = sim.currentDate;
-          if(sim.currentShift) currentShift = sim.currentShift;
-        } else if(localSimDateSet || localSimEnabled){
-          simTimeEnabled = localSimEnabled;
-          simTimeOffset  = localSimOffset;
-          simDateSet     = localSimDateSet;
-        }
-      } catch(e){}
+      // Restore sim time — localStorage always wins
+      _restoreSimFromLocalStorage();
+      if(!simDateSet && (localSimDateSet || localSimEnabled)){
+        simTimeEnabled = localSimEnabled;
+        simTimeOffset  = localSimOffset;
+        simDateSet     = localSimDateSet;
+        if(localCurrentDate)  currentDate  = localCurrentDate;
+        if(localCurrentShift) currentShift = localCurrentShift;
+      }
       // Always restore date/shift if user explicitly set them
       if(simDateSet){ currentDate = localCurrentDate; currentShift = localCurrentShift; }
       // Restore junior active state — local state wins for checked-in juniors
@@ -4256,19 +4276,7 @@ function cancelRosterImport(){
 // INIT — runs after login, not on page load
 // ============================================================
 function initApp(){
-  // Restore sim state from localStorage first — this always wins over Neon
-  try {
-    var simRaw = localStorage.getItem('jrc_simstate');
-    if(simRaw){
-      var sim = JSON.parse(simRaw);
-      simTimeEnabled = sim.simTimeEnabled || false;
-      simTimeOffset  = sim.simTimeOffset  || 0;
-      simDateSet     = sim.simDateSet     || false;
-      if(sim.currentDate)  currentDate  = sim.currentDate;
-      if(sim.currentShift) currentShift = sim.currentShift;
-    }
-  } catch(e){}
-  loadState();
+  loadState(); // _restoreSimFromLocalStorage is called inside after Neon loads
   startPolling();
   updateHeaderDate();
   if(document.getElementById('lib-count')) renderLibrary();
