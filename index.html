@@ -2194,11 +2194,23 @@ function autoAssign(){
 
     if(!eligible.length) return null;
 
-    // Hat-wearers: prefer hat-required slots; only spill to non-hat if no hat slots remain
+    // Hat rule: only send to hat-required slots if there are enough hat-wearers
+    // to avoid leaving non-hat juniors stranded with no eligible slots
     var pool;
     if(jr.hasHat){
       var hatSlots = eligible.filter(function(s){ return s.hat; });
-      pool = hatSlots.length ? hatSlots : eligible;
+      var nonHatUnassigned = reg.filter(function(j){ return !j.assignment && !j.hasHat; }).length;
+      var hatUnassigned = reg.filter(function(j){ return !j.assignment && j.hasHat; }).length;
+      // Only claim hat slots if non-hat juniors can still pair up without us
+      // or if hat slots have someone alone needing a partner
+      var hatSlotAtOne = hatSlots.filter(function(s){ return s.assigned.length === 1; });
+      if(hatSlotAtOne.length){
+        pool = hatSlots; // must fill solo in hat slot
+      } else if(hatSlots.length && (nonHatUnassigned === 0 || hatUnassigned >= 2)){
+        pool = hatSlots; // enough hat-wearers or no non-hat left
+      } else {
+        pool = eligible; // pair with non-hat junior instead
+      }
     } else {
       pool = eligible;
     }
@@ -3838,20 +3850,44 @@ function pollForUpdates(){
   if(!DB_AVAILABLE) return;
   if(isSaving) return;
   // Don't poll if we saved very recently — our local state is newer than Neon
-  if(Date.now() - lastSaveTime < 10000) return; // 10s grace after any save
+  if(Date.now() - lastSaveTime < 60000) return; // 60s grace after any save — prevents poll from overwriting recent changes
   fetch('/.netlify/functions/state')
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(!data || data.error) return;
-      // Preserve local sim time — don't let poll overwrite it
+      // Preserve critical local state before applying remote data
       var localSimEnabled = simTimeEnabled;
       var localSimOffset  = simTimeOffset;
+      var localCurrentDate = currentDate;
+      var localCurrentShift = currentShift;
+      // Snapshot local junior state (check-ins, assignments, plannedShifts)
+      var localJuniorState = {};
+      juniors.forEach(function(j){
+        if(j.checkedIn || j.assignment || (j.plannedShifts && j.plannedShifts.length)){
+          localJuniorState[j.id] = {
+            checkedIn: j.checkedIn, assignment: j.assignment,
+            plannedShifts: j.plannedShifts, shiftAssignments: j.shiftAssignments,
+            checkInShift: j.checkInShift, order: j.order
+          };
+        }
+      });
       _applyState(data);
-      // Restore sim time if it was active locally
-      if(localSimEnabled){
-        simTimeEnabled = localSimEnabled;
-        simTimeOffset  = localSimOffset;
-      }
+      // Restore sim time
+      if(localSimEnabled){ simTimeEnabled = localSimEnabled; simTimeOffset = localSimOffset; }
+      // Restore date/shift if they were set locally
+      if(localCurrentDate !== '2027-03-02') currentDate = localCurrentDate;
+      if(localCurrentShift !== '8am') currentShift = localCurrentShift;
+      // Restore junior active state — local state wins for checked-in juniors
+      juniors.forEach(function(j){
+        var local = localJuniorState[j.id];
+        if(!local) return;
+        if(local.checkedIn) j.checkedIn = local.checkedIn;
+        if(local.assignment) j.assignment = local.assignment;
+        if(local.plannedShifts && local.plannedShifts.length) j.plannedShifts = local.plannedShifts;
+        if(local.shiftAssignments && Object.keys(local.shiftAssignments).length) j.shiftAssignments = local.shiftAssignments;
+        if(local.checkInShift) j.checkInShift = local.checkInShift;
+        if(local.order) j.order = local.order;
+      });
       lastSyncTime = Date.now();
       // Re-render current tab
       var activePanel = document.querySelector('.panel[style*="display: block"], .panel[style*="display:block"]');
