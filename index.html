@@ -969,6 +969,7 @@ var checkInOrder = 0;
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var simTimeOffset = 0;    // ms offset from real time
 var simTimeEnabled = false;
+var simDateSet = false;   // true once user has explicitly set date/time
 function getSimTime(){
   if(!simTimeEnabled) return new Date();
   return new Date(Date.now() + simTimeOffset);
@@ -987,10 +988,12 @@ function setSimTime(h, m){
   target.setHours(h, m, 0, 0);
   simTimeOffset = target - now;
   simTimeEnabled = true;
+  simDateSet = true;
 }
 function clearSimTime(){
   simTimeOffset = 0;
   simTimeEnabled = false;
+  simDateSet = false;
 }
 var pendingJr = null;
 
@@ -3716,6 +3719,9 @@ function _doSave(){
       lockedJuniors: Array.from(lockedJuniors),
       simTimeEnabled: simTimeEnabled,
       simTimeOffset: simTimeOffset,
+      simDateSet: simDateSet,
+      currentDate: currentDate,
+      currentShift: currentShift,
     },
     juniors: juniors,
     activeSlots: activeSlots,
@@ -3821,6 +3827,7 @@ function _applyState(data){
   if(state.lockedJuniors)  lockedJuniors  = new Set(state.lockedJuniors);
   if(state.simTimeEnabled !== undefined) simTimeEnabled = state.simTimeEnabled;
   if(state.simTimeOffset  !== undefined) simTimeOffset  = state.simTimeOffset;
+  if(state.simDateSet     !== undefined) simDateSet      = state.simDateSet;
 }
 
 function clearSavedState(){
@@ -3858,6 +3865,7 @@ function pollForUpdates(){
       // Preserve critical local state before applying remote data
       var localSimEnabled = simTimeEnabled;
       var localSimOffset  = simTimeOffset;
+      var localSimDateSet = simDateSet;
       var localCurrentDate = currentDate;
       var localCurrentShift = currentShift;
       // Snapshot local junior state (check-ins, assignments, plannedShifts)
@@ -3872,11 +3880,14 @@ function pollForUpdates(){
         }
       });
       _applyState(data);
-      // Restore sim time
-      if(localSimEnabled){ simTimeEnabled = localSimEnabled; simTimeOffset = localSimOffset; }
-      // Restore date/shift if they were set locally
-      if(localCurrentDate !== '2027-03-02') currentDate = localCurrentDate;
-      if(localCurrentShift !== '8am') currentShift = localCurrentShift;
+      // Restore sim time and date if user set them
+      if(localSimDateSet || localSimEnabled){
+        simTimeEnabled = localSimEnabled;
+        simTimeOffset  = localSimOffset;
+        simDateSet     = localSimDateSet;
+      }
+      // Always restore date/shift if user explicitly set them
+      if(simDateSet){ currentDate = localCurrentDate; currentShift = localCurrentShift; }
       // Restore junior active state — local state wins for checked-in juniors
       juniors.forEach(function(j){
         var local = localJuniorState[j.id];
