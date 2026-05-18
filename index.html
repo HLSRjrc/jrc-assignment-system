@@ -2562,17 +2562,23 @@ function fmtDateLong(dateStr){
   return days[d.getDay()] + ', ' + months[parseInt(parts[1])] + ' ' + parseInt(parts[2]) + ', ' + parts[0];
 }
 
-function setSlotCapacity(idx, val){
+function setSlotCapacity(idx, val){ return setSlotCapacityById(idx, val, null); } // legacy
+
+function setSlotCapacityById(slotId, val, inputEl){
   var n = parseInt(val);
   if(isNaN(n) || n <= 0){
     // Delete the slot
-    activeSlots.splice(idx, 1);
+    activeSlots = activeSlots.filter(function(s){ return String(s.id) !== String(slotId); });
     renderSetup();
     saveState();
     return 0;
   }
   if(n === 1) n = 2; // minimum 2
-  activeSlots[idx].capacity = n;
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
+  if(sl){
+    sl.capacity = n;
+    if(inputEl) inputEl.value = n; // update input to show corrected value
+  }
   saveState();
   return n;
 }
@@ -2795,12 +2801,12 @@ function renderSetup(){
     return '<div style="padding:10px 0;border-bottom:1px solid var(--gray-100)">' +
       '<div style="display:grid;grid-template-columns:2fr 70px 1fr 55px auto;gap:6px;align-items:center">' +
       '<input class="finput" id="cs-name-' + sid + '" style="font-size:12px;padding:5px 7px" value="' + s.name + '" onchange="activeSlots[' + i + '].name=this.value">' +
-      '<input class="finput" id="cs-cap-' + sid + '" type="number" min="1" max="40" style="font-size:12px;padding:5px 7px" value="' + s.capacity + '" onchange="activeSlots[' + i + '].capacity=setSlotCapacity(i,this.value)" title="Juniors needed (min 2)">' +
-      '<select class="finput" id="cs-shift-' + sid + '" style="font-size:12px;padding:5px 7px" onchange="activeSlots[' + i + '].shift=this.value">' +
+      '<input class="finput" id="cs-cap-' + sid + '" type="number" min="2" max="40" style="font-size:12px;padding:5px 7px" value="' + s.capacity + '" onchange="setSlotCapacityById(' + sid + ',this.value,this)" title="Juniors needed (min 2)">' +
+      '<select class="finput" id="cs-shift-' + sid + '" style="font-size:12px;padding:5px 7px" onchange="activeSlots.find(function(x){return String(x.id)===String(' + sid + ')}).shift=this.value">' +
         ['8am','12pm','4pm'].map(function(sh){ return '<option value="' + sh + '"' + (s.shift === sh ? ' selected' : '') + '>' + SL[sh] + '</option>'; }).join('') +
       '</select>' +
       '<label style="font-size:12px;display:flex;align-items:center;gap:4px;color:#667788;justify-content:center"><input type="checkbox" id="cs-hat-' + sid + '" ' + (s.hat ? 'checked' : '') + ' onchange="activeSlots[' + i + '].hat=this.checked"> Hat</label>' +
-      '<button class="btn btn-sm btn-danger" onclick="activeSlots.splice(' + i + ',1);renderSetup()">Remove</button>' +
+      '<button class="btn btn-sm btn-danger" onclick="activeSlots=activeSlots.filter(function(x){return String(x.id)!==String(' + sid + ')});renderSetup();saveState()">Remove</button>' +
       '</div>' + contactSection +
     '</div>';
   }).join('');
