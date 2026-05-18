@@ -12,3 +12,8 @@
   to = "/?partner=1"
   status = 302
 
+[[redirects]]
+  from = "https://jrcpartner.hlsr.app/*"
+  to = "https://jrc.hlsr.app/?partner=1"
+  status = 302
+  force = true
