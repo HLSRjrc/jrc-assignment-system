@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <title>JRC Assignment System</title>
+<script>
+// Run immediately before page renders to prevent flash
+if(window.location.search.indexOf('partner=1') >= 0){
+  document.documentElement.classList.add('partner-mode');
+}
+</script>
+<style>
+/* Hide login screen instantly when in partner mode — no flash */
+.partner-mode #login-screen { display: none !important; }
+.partner-mode #main-app { display: block !important; }
+</style>
 <style>
 @font-face {
   font-family: 'Soleil';
