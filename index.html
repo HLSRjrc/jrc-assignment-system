@@ -2268,7 +2268,11 @@ function resetShift(){
       if(j.history.length > 0 && j.history[j.history.length - 1] === j.assignment) j.history.pop();
       j.assignment = null; j.prevLast = null;
     }
-    j.checkedIn = false; j.order = 0;
+    j.checkedIn      = false;
+    j.order          = 0;
+    j.checkInShift   = '';
+    j.plannedShifts  = [];
+    j.shiftAssignments = {};
   });
   activeSlots.forEach(function(s){ s.assigned = []; });
   activePick = null;
