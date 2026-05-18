@@ -1256,6 +1256,25 @@ function applySimDate(){
   // h is already 24h value from select
   var tempDate = new Date(); tempDate.setHours(h, m, 0, 0);
   var s = getShiftFromTime(tempDate);
+  // If date changed, clear all day-specific session data
+  if(d !== currentDate){
+    juniors.forEach(function(j){
+      j.checkedIn       = false;
+      j.assignment      = null;
+      j.order           = 0;
+      j.checkInShift    = '';
+      j.shiftAssignments = {};
+      j.plannedShifts   = [];
+    });
+    clockedOut       = {};
+    onShiftJuniors   = new Set();
+    onShiftSlots     = new Set();
+    checkInOrder     = 0;
+    activeSlots.forEach(function(s){ s.assigned = []; });
+    activePick       = null;
+    activePickShift  = null;
+    notesState       = {};
+  }
   currentDate = d;
   currentShift = s;
   var sd = document.getElementById('setup-date');
@@ -2543,6 +2562,21 @@ function fmtDateLong(dateStr){
   return days[d.getDay()] + ', ' + months[parseInt(parts[1])] + ' ' + parseInt(parts[2]) + ', ' + parts[0];
 }
 
+function setSlotCapacity(idx, val){
+  var n = parseInt(val);
+  if(isNaN(n) || n <= 0){
+    // Delete the slot
+    activeSlots.splice(idx, 1);
+    renderSetup();
+    saveState();
+    return 0;
+  }
+  if(n === 1) n = 2; // minimum 2
+  activeSlots[idx].capacity = n;
+  saveState();
+  return n;
+}
+
 function onSetupDateChange(){
   var date = document.getElementById('setup-date').value;
   currentDate = date || currentDate;
@@ -2761,7 +2795,7 @@ function renderSetup(){
     return '<div style="padding:10px 0;border-bottom:1px solid var(--gray-100)">' +
       '<div style="display:grid;grid-template-columns:2fr 70px 1fr 55px auto;gap:6px;align-items:center">' +
       '<input class="finput" id="cs-name-' + sid + '" style="font-size:12px;padding:5px 7px" value="' + s.name + '" onchange="activeSlots[' + i + '].name=this.value">' +
-      '<input class="finput" id="cs-cap-' + sid + '" type="number" min="1" max="40" style="font-size:12px;padding:5px 7px" value="' + s.capacity + '" onchange="activeSlots[' + i + '].capacity=parseInt(this.value)||1" title="Juniors needed">' +
+      '<input class="finput" id="cs-cap-' + sid + '" type="number" min="1" max="40" style="font-size:12px;padding:5px 7px" value="' + s.capacity + '" onchange="activeSlots[' + i + '].capacity=setSlotCapacity(i,this.value)" title="Juniors needed (min 2)">' +
       '<select class="finput" id="cs-shift-' + sid + '" style="font-size:12px;padding:5px 7px" onchange="activeSlots[' + i + '].shift=this.value">' +
         ['8am','12pm','4pm'].map(function(sh){ return '<option value="' + sh + '"' + (s.shift === sh ? ' selected' : '') + '>' + SL[sh] + '</option>'; }).join('') +
       '</select>' +
