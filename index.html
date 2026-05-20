@@ -2063,7 +2063,7 @@ function renderOfficer(search){
              'style="' + (isOut ? 'opacity:.5;text-decoration:line-through;' : '') + '" ' +
              'title="' + (jr.notes ? 'Note: ' + jr.notes : '') + (isOut ? ' [Clocked out]' : '') + '">' +
              (jr.hasHat ? '🤠 ' : '') + jr.name +
-             (jr.ageout ? ' <span class="badge b-ageout" style="font-size:9px;padding:1px 5px">AO</span>' : '') +
+             (jr.ageout ? ' <span class="badge b-ageout" style="font-size:11px;padding:1px 4px;background:none;border:none;color:#F5A623">⭐</span>' : '') +
              (jr.notes ? ' <span style="font-size:11px;color:var(--orange);font-weight:700">&#9432;</span>' : '') +
              (isOut ? ' <span style="font-size:10px;color:#888">(out)</span>' : '') +
              ' <button class="pill-x" onclick="doUnassign(\'' + jid + '\',' + s.id + ')">&#x2715;</button>' +
@@ -4268,7 +4268,7 @@ function renderHours(){
       }).join('');
 
     return '<tr style="cursor:pointer" onclick="var s=this.nextElementSibling;s.style.display=s.style.display===\'none\'?\'\':\'none\'">' +
-      '<td style="font-weight:600;color:var(--navy)">' + j.name + (j.ageout ? ' <span class="badge b-ageout" style="font-size:9px">AO</span>' : '') + '</td>' +
+      '<td style="font-weight:600;color:var(--navy)">' + j.name + (j.ageout ? ' <span class="badge b-ageout" style="font-size:11px;padding:1px 4px;background:none;border:none;color:#F5A623">⭐</span>' : '') + '</td>' +
       '<td style="font-size:12px">' + j.title.replace('Junior ','') + '</td>' +
       '<td style="font-weight:700;color:' + (hrs >= 8 ? 'var(--green)' : hrs > 0 ? 'var(--navy)' : 'var(--gray-400)') + '">' + hrs + ' hrs</td>' +
       '<td style="font-size:12px">' + log.length + '</td>' +
@@ -4416,7 +4416,7 @@ function handleRosterUpload(event){
         members.slice(0, 60).map(function(m){
           var ex = !m.isAdult && juniors.find(function(j){ return j.id === m.id; });
           var tag = m.isAdult ? '<span style="background:#EEE;color:#555;font-size:10px;padding:1px 5px;border-radius:8px;margin-right:4px">Adult</span>' :
-                    m.ageout  ? '<span style="background:#FFF3CD;color:#7D4E00;font-size:10px;padding:1px 5px;border-radius:8px;margin-right:4px">AO</span>' : '';
+                    m.ageout  ? '<span style="font-size:11px;color:#F5A623;margin-right:2px">⭐</span>' : '';
           var action = m.isAdult ? '' : (ex ? '<span style="color:#2A7D2A;font-size:10px">update</span> ' : '<span style="color:#4A6CF7;font-size:10px">new</span> ');
           return '<div style="padding:2px 0;border-bottom:1px solid #F0F0F0">' + action + tag + '<strong>' + m.name + '</strong> &mdash; ' + m.id + (m.phone ? ' &bull; ' + m.phone : '') + '</div>';
         }).join('') + (members.length > 60 ? '<div style="color:#888;padding:4px 0">…and ' + (members.length-60) + ' more</div>' : '');
