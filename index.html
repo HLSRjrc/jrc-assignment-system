@@ -76,6 +76,7 @@ body{font-family:'Soleil','Source Sans 3',sans-serif;font-weight:400;background:
 .tab.active{color:var(--navy);border-bottom-color:var(--orange);font-weight:700}
 .panel{display:none}
 .panel.active{display:block}
+.app{padding-top:36px}
 
 /* STATS */
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
@@ -415,10 +416,10 @@ position:relative;z-index:1}
 .pin-input{width:100%;font-size:28px;text-align:center;padding:12px;border:2px solid var(--gray-200);border-radius:10px;letter-spacing:8px;font-weight:700;color:var(--navy);margin-bottom:12px;background:var(--white)}
 .pin-input:focus{outline:none;border-color:var(--orange)}
 .login-err{font-size:13px;color:var(--red);font-weight:600;min-height:20px;margin-bottom:10px}
-.logout-btn{position:fixed;top:12px;right:12px;z-index:999;font-size:11px;padding:5px 10px;opacity:.7}
+.logout-wrap{position:fixed;top:0;left:0;right:0;z-index:999;display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:rgba(10,31,68,0.92);backdrop-filter:blur(4px);}
+.logout-btn{font-size:11px;padding:5px 10px;opacity:.85;white-space:nowrap;flex-shrink:0;color:#fff;border-color:rgba(255,255,255,.4)}
 .logout-btn:hover{opacity:1}
-.user-badge{position:fixed;top:12px;right:90px;z-index:999;font-size:11px;padding:5px 10px;background:var(--navy);color:white;border-radius:6px;font-weight:600}
-
+.user-badge{font-size:11px;padding:4px 10px;background:rgba(255,255,255,.15);color:#fff;border-radius:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw}
 /* HAT HIGHLIGHTING */
 .chip.has-hat{background:#FFF8E1;border-color:#F9A825;color:#5D3B00;font-weight:700}
 .pill.has-hat{background:#FFF8E1;border-color:#F9A825;color:#5D3B00;font-weight:700}
@@ -666,8 +667,10 @@ position:relative;z-index:1}
 </div><!-- /main-header -->
 
 <!-- USER BADGE + LOGOUT (shown when logged in) -->
-<div id="user-badge" class="user-badge no-print" style="display:none"></div>
-<button id="logout-btn" class="btn logout-btn no-print" style="display:none" onclick="doLogout()">&#x2715; Sign Out</button>
+<div class="logout-wrap no-print" id="logout-wrap" style="display:none">
+  <div id="user-badge" class="user-badge"></div>
+  <button id="logout-btn" class="btn logout-btn" onclick="doLogout()">&#x2715; Sign Out</button>
+</div>
 
 <div class="app" id="main-app" style="display:none">
 
@@ -3080,8 +3083,8 @@ function enterPartnerMode(){
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
   document.getElementById('tab-bar').style.display = 'none';
-  document.getElementById('user-badge').style.display = 'none';
-  document.getElementById('logout-btn').style.display = 'none';
+  document.getElementById('logout-wrap').style.display = 'none';
+  // logout handled by wrapper
 
   // Show partner header
   document.getElementById('partner-header').style.display = 'block';
@@ -3148,8 +3151,8 @@ function loginAs(role){
 
   // Show user badge + logout
   document.getElementById('user-badge').textContent = ROLE_LABELS[role];
-  document.getElementById('user-badge').style.display = 'block';
-  document.getElementById('logout-btn').style.display = 'block';
+  document.getElementById('logout-wrap').style.display = 'flex';
+  // logout handled by wrapper
 
   // Init app panels now that the app is visible
   initApp();
@@ -3172,7 +3175,7 @@ function applyRoleTabs(role){
   });
   // Kiosk role: hide header controls too (logout stays)
   if(role === 'kiosk'){
-    document.getElementById('user-badge').style.display = 'none'; // cleaner for kiosk tablets
+    document.getElementById('logout-wrap').style.display = 'none'; // cleaner for kiosk tablets
   }
 }
 
@@ -3185,8 +3188,8 @@ function doLogout(){
   document.getElementById('role-select').style.display = 'block';
   document.getElementById('pin-input').value = '';
   document.getElementById('pin-err').textContent = '';
-  document.getElementById('user-badge').style.display = 'none';
-  document.getElementById('logout-btn').style.display = 'none';
+  document.getElementById('logout-wrap').style.display = 'none';
+  // logout handled by wrapper
   pendingRole = null;
 }
 
