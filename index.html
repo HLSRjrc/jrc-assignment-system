@@ -466,6 +466,102 @@ position:relative;z-index:1}
 .rpt-siglbl{font-size:10px;color:var(--gray-400);white-space:nowrap}
 .rpt-foot{font-size:10px;color:#667788;margin-top:10px;padding-top:8px;border-top:1px solid var(--gray-100);text-align:center}
 
+
+/* ============================================================
+   RESPONSIVE — Mobile first, tablet, desktop
+   ============================================================ */
+
+/* Base responsive meta adjustments */
+:root { --sidebar-w: 0px; }
+
+/* ── Tab bar ───────────────────────────────────────────────── */
+.tab-bar-wrap{
+  display:flex;flex-wrap:wrap;gap:0;border-bottom:2px solid var(--gray-100);
+  overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.tab-bar-wrap::-webkit-scrollbar{display:none}
+.tab{white-space:nowrap;flex-shrink:0}
+
+/* ── Cards & panels ─────────────────────────────────────────── */
+.card{padding:16px}
+.panel{padding:0 8px 80px}
+
+/* ── Stats grid — responsive ─────────────────────────────────── */
+.stats{grid-template-columns:repeat(2,1fr)!important}
+
+/* ── Slot cards — stack on mobile ────────────────────────────── */
+#slots-container{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:12px;
+}
+
+/* ── Roster table — horizontal scroll ───────────────────────── */
+.roster-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.roster-table{min-width:600px}
+
+/* ── Kiosk — full width on mobile ───────────────────────────── */
+.kiosk-wrap{padding:12px}
+.kiosk-inner{max-width:100%!important;padding:20px 16px!important}
+
+/* ── Login screen ────────────────────────────────────────────── */
+.login-card{padding:16px 12px}
+.role-btn{padding:12px 10px}
+
+/* ── Header ──────────────────────────────────────────────────── */
+.header{padding:10px 12px}
+.header-title{font-size:clamp(16px,3vw,24px)}
+
+/* ── Action rows ─────────────────────────────────────────────── */
+.action-row{flex-wrap:wrap;gap:6px}
+
+/* ── Status board — single column on mobile ─────────────────── */
+.board-body{flex-direction:column!important;gap:8px!important}
+.board{min-width:unset!important;flex:1 1 100%!important}
+
+/* ── Pool chips — wrap nicely ────────────────────────────────── */
+#off-pool{display:flex;flex-wrap:wrap;gap:6px}
+
+/* ── Age-out queue buttons ───────────────────────────────────── */
+.ao-card{padding:12px}
+.ao-btn{font-size:12px;padding:8px 10px}
+
+/* ── Tablet (768px+) ─────────────────────────────────────────── */
+@media(min-width:768px){
+  .panel{padding:0 16px 60px}
+  .card{padding:20px}
+  .stats{grid-template-columns:repeat(4,1fr)!important}
+  #slots-container{grid-template-columns:repeat(2,1fr)}
+  .board-body{flex-direction:row!important}
+  .board{flex:1 1 calc(33% - 8px)!important}
+  .kiosk-inner{max-width:480px!important;padding:32px!important}
+}
+
+/* ── Desktop (1100px+) ───────────────────────────────────────── */
+@media(min-width:1100px){
+  .panel{padding:0 24px 40px}
+  #slots-container{grid-template-columns:repeat(3,1fr)}
+}
+
+/* ── Large desktop (1440px+) ─────────────────────────────────── */
+@media(min-width:1440px){
+  #slots-container{grid-template-columns:repeat(4,1fr)}
+}
+
+/* ── Touch-friendly tap targets ─────────────────────────────── */
+@media(pointer:coarse){
+  .btn{min-height:44px;padding:10px 16px}
+  .tab{padding:12px 16px}
+  .pill-x{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center}
+  select.finput, input.finput{min-height:44px;font-size:16px!important} /* prevents iOS zoom */
+}
+
+/* ── Status board TV mode (landscape tablet/desktop) ─────────── */
+@media(min-width:900px) and (orientation:landscape){
+  .board-body{flex-direction:row!important;align-items:flex-start}
+  .board{flex:1!important}
+}
+
 </style>
 </head>
 <body>
@@ -718,7 +814,7 @@ position:relative;z-index:1}
     <div class="section-lbl" style="margin-bottom:0;flex:1">Committee slots &mdash; <span id="slot-shift-lbl" style="color:var(--orange)"></span></div>
     <input class="finput" style="max-width:200px" placeholder="Search slots..." oninput="renderOfficer(this.value)">
   </div>
-  <div id="off-slots"></div>
+  <div id="off-slots" style="display:grid;grid-template-columns:1fr;gap:12px"></div>
   <div id="print-area" style="display:none"></div>
 </div>
 
@@ -983,7 +1079,7 @@ position:relative;z-index:1}
       </div>
     </div>
     <div id="hours-summary" style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap"></div>
-    <table class="roster-table" style="width:100%">
+    <div class="roster-table-wrap"><table class="roster-table" style="width:100%">
       <thead><tr>
         <th>Name</th><th>Title</th><th>Total Hours</th><th>Shifts Worked</th><th>No-Shows</th><th>Early Departures</th>
       </tr></thead>
@@ -1946,6 +2042,9 @@ function renderOfficer(search){
     slotsEl.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:1.5rem 0;text-align:center">No committee slots for this shift.<br>Go to <strong>Shift Setup</strong> to add committees.</div>';
     return;
   }
+  // Responsive grid based on slot count
+  var colCount = shiftSlots.length <= 2 ? 1 : shiftSlots.length <= 4 ? 'repeat(auto-fill,minmax(320px,1fr))' : 'repeat(auto-fill,minmax(300px,1fr))';
+  slotsEl.style.gridTemplateColumns = typeof colCount === 'number' ? '1fr' : colCount;
   slotsEl.innerHTML = shiftSlots.map(function(s){
     var pct = s.capacity > 0 ? Math.round((s.assigned.length / s.capacity) * 100) : 0;
     var full = s.assigned.length >= s.capacity;
@@ -2014,6 +2113,9 @@ function renderOfficer(search){
 function renderTabs(activeTab){
   var bar = document.getElementById('tab-bar');
   if(!bar) return;
+  bar.style.display = 'flex';
+  bar.style.flexWrap = 'wrap';
+  bar.style.gap = '0';
 
   // Tab definitions per role — [id, label, row]
   var TAB_DEFS = {
