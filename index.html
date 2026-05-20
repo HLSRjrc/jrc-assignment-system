@@ -76,7 +76,7 @@ body{font-family:'Soleil','Source Sans 3',sans-serif;font-weight:400;background:
 .tab.active{color:var(--navy);border-bottom-color:var(--orange);font-weight:700}
 .panel{display:none}
 .panel.active{display:block}
-.app{padding-top:36px}
+.app{padding-top:0}
 
 /* STATS */
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:16px}
@@ -416,10 +416,10 @@ position:relative;z-index:1}
 .pin-input{width:100%;font-size:28px;text-align:center;padding:12px;border:2px solid var(--gray-200);border-radius:10px;letter-spacing:8px;font-weight:700;color:var(--navy);margin-bottom:12px;background:var(--white)}
 .pin-input:focus{outline:none;border-color:var(--orange)}
 .login-err{font-size:13px;color:var(--red);font-weight:600;min-height:20px;margin-bottom:10px}
-.logout-wrap{position:fixed;top:0;left:0;right:0;z-index:999;display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:rgba(10,31,68,0.92);backdrop-filter:blur(4px);}
-.logout-btn{font-size:11px;padding:5px 10px;opacity:.85;white-space:nowrap;flex-shrink:0;color:#fff;border-color:rgba(255,255,255,.4)}
-.logout-btn:hover{opacity:1}
-.user-badge{font-size:11px;padding:4px 10px;background:rgba(255,255,255,.15);color:#fff;border-radius:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60vw}
+.logout-wrap{position:fixed;top:18px;left:0;right:0;z-index:999;display:flex;align-items:center;justify-content:space-between;padding:0 20px;pointer-events:none}
+.logout-btn{font-size:11px;padding:4px 8px;white-space:nowrap;flex-shrink:0;color:rgba(255,255,255,.7);background:none;border:1px solid rgba(255,255,255,.3);border-radius:4px;cursor:pointer;pointer-events:auto}
+.logout-btn:hover{color:#fff;border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.1)}
+.user-badge{font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;letter-spacing:.03em;pointer-events:auto}
 /* HAT HIGHLIGHTING */
 .chip.has-hat{background:#FFF8E1;border-color:#F9A825;color:#5D3B00;font-weight:700}
 .pill.has-hat{background:#FFF8E1;border-color:#F9A825;color:#5D3B00;font-weight:700}
@@ -2123,14 +2123,15 @@ function renderTabs(activeTab){
   // Tab definitions per role — [id, label, row]
   var TAB_DEFS = {
     admin: [
-      ['kiosk',    'Kiosk',                    1],
-      ['officer',  'Shift Officer Dashboard',   1],
+      ['kiosk',    'Junior Login',              1],
+      ['officer',  'Officer Dashboard',         1],
       ['setup',    'Shift Setup',               1],
-      ['board',    '&#128250; Status Board',    1],
+      ['board',    'Status Board',              2],
       ['roster',   'Roster',                    2],
-      ['requests', '&#128203; Requests',        2],
-      ['reqform',  '&#43; Submit Request',      2],
-      ['simulate', '&#9881; Settings',          2],
+      ['requests', 'Requests',                  2],
+      ['reqform',  'Submit Request',            3],
+      ['simulate', 'Settings',                  3],
+      ['hours',    'Hours Report',              3],
     ],
     officer: [
       ['officer',  'Shift Officer Dashboard',   1],
@@ -2153,18 +2154,20 @@ function renderTabs(activeTab){
   var defs = TAB_DEFS[currentRole] || [];
   var row1 = defs.filter(function(d){ return d[2]===1; });
   var row2 = defs.filter(function(d){ return d[2]===2; });
+  var row3 = defs.filter(function(d){ return d[2]===3; });
 
   function makeBtn(d){
     var isActive = d[0] === (activeTab || currentTab);
-    return '<button class="tab' + (isActive ? ' active' : '') + '" onclick="switchTab(\'' + d[0] + '\',this)">' + d[1] + '</button>';
+    return '<button class="tab' + (isActive ? ' active' : '') + '" style="flex:1;min-width:80px;text-align:center" onclick="switchTab(\'' + d[0] + '\',this)">' + d[1] + '</button>';
   }
 
-  var html = '<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;width:100%">' +
-    row1.map(makeBtn).join('') + '</div>';
-  if(row2.length){
-    html += '<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:center;width:100%;margin-top:4px">' +
-      row2.map(makeBtn).join('') + '</div>';
+  function makeRow(tabs, extra){
+    return '<div style="display:flex;flex-wrap:nowrap;width:100%;' + (extra||'') + '">' + tabs.map(makeBtn).join('') + '</div>';
   }
+
+  var html = makeRow(row1);
+  if(row2.length) html += makeRow(row2, 'border-top:1px solid var(--gray-100)');
+  if(row3.length) html += makeRow(row3, 'border-top:1px solid var(--gray-100)');
   bar.innerHTML = html;
 }
 
