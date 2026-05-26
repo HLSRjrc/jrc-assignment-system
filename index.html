@@ -1994,8 +1994,10 @@ function renderOfficer(search){
           (j.hasHat ? '🤠 ' : '') + j.name +
           ' <span style="font-size:10px;opacity:.75">' + shiftLabel + '</span>' +
           (assigned ? ' &rarr; ' + assigned : '') +
-          (j.plannedShifts && j.plannedShifts.length > 1 ? '' : '') +
-        '</button>';
+        '</button>' +
+        '<button onclick="removeFromAoQueue(\'' + j.id + '\')" ' +
+        'style="background:none;border:none;cursor:pointer;color:#ccc;font-size:16px;padding:2px 4px;line-height:1;margin-left:-2px" ' +
+        'title="Remove from queue">&#x2715;</button>';
       }).join('') +
       '</div></div>';
   }
@@ -2194,6 +2196,28 @@ function renderTabs(activeTab){
 
 function setShift(s){ currentShift = s; activePick = null; renderOfficer(); }
 function openPick(jid){ activePick = jid; renderOfficer(); }
+function removeFromAoQueue(jid){
+  var jr = juniors.find(function(j){ return j.id === jid; });
+  if(!jr) return;
+  if(!confirm('Remove ' + jr.name.split(',')[0] + ' from the age-out queue? This will sign them out of the current shift.')) return;
+  // Clear all session state for this junior
+  if(jr.assignment){
+    var sl = activeSlots.find(function(s){ return s.name === jr.assignment && s.shift === currentShift; });
+    if(sl) sl.assigned = sl.assigned.filter(function(id){ return id !== jr.id; });
+  }
+  jr.checkedIn      = false;
+  jr.assignment     = null;
+  jr.order          = 0;
+  jr.checkInShift   = '';
+  jr.plannedShifts  = [];
+  jr.shiftAssignments = {};
+  clockedOut[jr.id] = false;
+  onShiftJuniors.delete(jr.id);
+  renderOfficer();
+  saveStateNow();
+  showAlert(jr.name.split(',')[0] + ' removed from queue.', 'info');
+}
+
 function openPickForShift(jid, shift){
   activePick = jid + '_' + shift;
   activePickShift = shift;
