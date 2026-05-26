@@ -468,7 +468,22 @@ position:relative;z-index:1}
 .rpt-foot{font-size:10px;color:#667788;margin-top:10px;padding-top:8px;border-top:1px solid var(--gray-100);text-align:center}
 
 
+/* ── Footer ──────────────────────────────────────────────────── */
+.app-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px;margin-top:24px;
+  border-top:1px solid var(--gray-100);
+  font-size:11px;color:#aab;
+  background:var(--white);
+}
+.app-footer .footer-copy{ opacity:.7; }
+.app-footer .footer-ver{ font-weight:600;color:var(--navy);opacity:.5; }
+
 /* ============================================================
+.app-footer{display:flex;align-items:center;justify-content:space-between;padding:12px 20px;margin-top:24px;border-top:1px solid var(--gray-100);font-size:11px;color:#aab;background:var(--white)}
+.footer-copy{opacity:.7}
+.footer-ver{font-weight:600;color:var(--navy);opacity:.5}
+
    RESPONSIVE — Mobile first, tablet, desktop
    ============================================================ */
 
@@ -2038,7 +2053,7 @@ function renderOfficer(search){
         (j.hasHat ? '🤠 ' : '') + j.name +
         ' <button onclick="event.stopPropagation();manualClockOut(\'' + j.id + '\')" ' +
         'style="background:none;border:none;cursor:pointer;color:#999;font-size:11px;padding:0 2px;line-height:1;margin-left:2px" ' +
-        'title="Clock out">&#x23F9;</button>' +
+        'title="Sign out" style="color:#CC6600">&#x23CF;</button>' +
         '</span>'; }).join('');
 
   // Slots
@@ -2070,7 +2085,8 @@ function renderOfficer(search){
              (jr.ageout ? ' <span class="badge b-ageout" style="font-size:11px;padding:1px 4px;background:none;border:none;color:#F5A623">⭐</span>' : '') +
              (jr.notes ? ' <span style="font-size:11px;color:var(--orange);font-weight:700">&#9432;</span>' : '') +
              (isOut ? ' <span style="font-size:10px;color:#888">(out)</span>' : '') +
-             ' <button class="pill-x" onclick="doUnassign(\'' + jid + '\',' + s.id + ')">&#x2715;</button>' +
+             ' <button class="pill-x" data-jid="' + jid + '" data-slotid="' + s.id + '" data-sent="' + isSent + '" data-jrid="' + jr.id + '" onclick="pillAction(this)">&#x2715;</button>' +
+
              '</span>';
     }).join('');
 
@@ -2237,6 +2253,61 @@ function doManualAssign(jid, slotId, sel){
   renderOfficer();
   saveStateNow();
   saveStateNow();
+}
+
+var _pillActionData = {};
+
+function pillAction(btn){
+  var jid    = btn.getAttribute('data-jid');
+  var slotId = btn.getAttribute('data-slotid');
+  var sent   = btn.getAttribute('data-sent') === 'true';
+  var jrid   = btn.getAttribute('data-jrid');
+  var jr  = juniors.find(function(j){ return j.id === jrid; });
+  var sl  = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
+  if(!jr || !sl) return;
+
+  _pillActionData = { jid: jid, jrid: jrid, slotId: slotId, sent: sent };
+
+  var modal = document.getElementById('pill-modal');
+  document.getElementById('pill-modal-name').textContent = jr.name;
+  document.getElementById('pill-modal-slot').textContent = 'Currently assigned to: ' + sl.name;
+  document.getElementById('pill-modal-confirm').style.display = 'none';
+
+  // If slot is sent, can't return to queue — only sign out
+  var qBtn = document.getElementById('pill-modal-queue');
+  if(sent){
+    qBtn.style.display = 'none';
+  } else {
+    qBtn.style.display = '';
+  }
+  modal.style.display = 'flex';
+}
+
+function pillModalClose(){
+  document.getElementById('pill-modal').style.display = 'none';
+  _pillActionData = {};
+}
+
+function pillModalQueue(){
+  var d = _pillActionData;
+  var jr = juniors.find(function(j){ return j.id === d.jrid; });
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(d.slotId); });
+  if(jr && sl){ unassignJr(jr, sl); renderOfficer(); saveStateNow(); }
+  pillModalClose();
+}
+
+function pillModalSignOut(){
+  var d = _pillActionData;
+  var jr = juniors.find(function(j){ return j.id === d.jrid; });
+  if(!jr) return;
+  document.getElementById('pill-modal-confirm-name').textContent = jr.name.split(',')[0];
+  document.getElementById('pill-modal-confirm').style.display = 'block';
+}
+
+function pillModalConfirmSignOut(){
+  var d = _pillActionData;
+  pillModalClose();
+  manualClockOut(d.jrid, true); // true = skip built-in confirm
 }
 
 function doUnassign(jid, slotId){
@@ -3114,6 +3185,7 @@ var pendingRole = null;
 
 function enterPartnerMode(){
   // Hide login, show app with only the request form visible
+  var ft = document.getElementById('app-footer'); if(ft) ft.style.display = 'none';
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
   document.getElementById('tab-bar').style.display = 'none';
@@ -3193,6 +3265,8 @@ function loginAs(role){
   document.getElementById('user-badge').textContent = ROLE_LABELS[role];
   document.getElementById('logout-wrap').style.display = 'flex';
   // logout handled by wrapper
+  var ft = document.getElementById('app-footer'); if(ft) ft.style.display = 'flex';
+  var fv = document.getElementById('footer-version'); if(fv) fv.textContent = 'v' + APP_VERSION;
 
   // Init app panels now that the app is visible
   initApp();
@@ -3221,6 +3295,7 @@ function applyRoleTabs(role){
 
 function doLogout(){
   currentRole = null;
+  var ft = document.getElementById('app-footer'); if(ft) ft.style.display = 'none';
   // Reset login UI
   document.getElementById('main-app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
@@ -3690,10 +3765,10 @@ function toggleLock(jid){
 // ============================================================
 var boardTimer = null;
 
-function manualClockOut(jid){
+function manualClockOut(jid, skipConfirm){
   var jr = juniors.find(function(j){ return j.id === jid; });
   if(!jr) return;
-  if(!confirm('Clock out ' + jr.name + ' from the officer dashboard?')) return;
+  if(!skipConfirm && !confirm('Sign out ' + jr.name + '?')) return;
   // Remove from slot if assigned
   if(jr.assignment){
     var sl = activeSlots.find(function(s){
@@ -4602,7 +4677,35 @@ function initApp(){
   if(el) el.textContent = 'Enter your 7-digit member ID';
 }
 </script>
-<div id="sync-error-banner" class="no-print" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#7B1F1F;color:#fff;padding:10px 16px;align-items:center;justify-content:space-between;gap:10px;font-size:13px">
+<!-- Pill action modal -->
+<div id="pill-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+  <div style="background:#fff;border-radius:14px;padding:24px 28px;max-width:340px;width:calc(100% - 32px);box-shadow:0 8px 40px rgba(0,0,0,.3)">
+    <div id="pill-modal-name" style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:6px"></div>
+    <div id="pill-modal-slot" style="font-size:13px;color:#667788;margin-bottom:20px"></div>
+    <div id="pill-modal-btns" style="display:flex;flex-direction:column;gap:10px">
+      <button class="btn btn-primary" id="pill-modal-queue" onclick="pillModalQueue()" style="width:100%;padding:11px">&#8617; Return to Queue</button>
+      <button class="btn" id="pill-modal-signout" onclick="pillModalSignOut()" style="width:100%;padding:11px;border-color:#CC0000;color:#CC0000">&#x23CF; Sign Out</button>
+      <button class="btn" onclick="pillModalClose()" style="width:100%;padding:9px;font-size:13px">Cancel</button>
+    </div>
+    <div id="pill-modal-confirm" style="display:none;margin-top:16px;padding:14px;background:#FFF5F5;border-radius:8px;border:1px solid #ffcccc">
+      <div style="font-size:13px;color:#7B1F1F;margin-bottom:12px">&#9888; Are you sure you want to sign out <strong id="pill-modal-confirm-name"></strong>? This will remove them from the shift entirely.</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="pillModalConfirmSignOut()" style="flex:1;background:#CC0000;color:#fff;border-color:#CC0000;padding:9px">Yes, Sign Out</button>
+        <button class="btn" onclick="document.getElementById('pill-modal-confirm').style.display='none'" style="flex:1;padding:9px">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="app-footer no-print"  id="app-footer" style="display:none">
+  <span class="footer-copy">&#169; 2026 Houston Livestock Show and Rodeo. All rights reserved.</span>
+  <span class="footer-ver" id="footer-version">v1</span>
+</footer>
+<footer class="app-footer no-print" id="app-footer" style="display:none">
+  <span class="footer-copy">&#169; 2026 Houston Livestock Show and Rodeo. All rights reserved.</span>
+  <span class="footer-ver" id="footer-version">v1</span>
+</footer>
+<div id="sync-error-banner"  class="no-print" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#7B1F1F;color:#fff;padding:10px 16px;align-items:center;justify-content:space-between;gap:10px;font-size:13px">
   <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">&#9888;</span><span class="sync-err-msg">Database offline — data is saved locally and will sync when restored.</span></div>
   <button onclick="hideSyncError()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px">Dismiss</button>
 </div>
