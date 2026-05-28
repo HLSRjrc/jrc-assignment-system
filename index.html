@@ -1283,7 +1283,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 17;  // Major version — milestone releases
-var APP_BUILD   = 3;   // Minor build — increments every small change
+var APP_BUILD   = 2;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3052,7 +3052,23 @@ function setSlotCapacityById(slotId, val, inputEl){
 
 function onSetupDateChange(){
   var date = document.getElementById('setup-date').value;
+  var prevDate = currentDate;
   currentDate = date || currentDate;
+
+  // Clear active slots when date changes
+  if(date && date !== prevDate && activeSlots.length > 0){
+    var hasAssigned = activeSlots.some(function(s){ return s.assigned.length > 0; });
+    if(hasAssigned){
+      if(!confirm('Changing the date will clear all current slots and assignments. Continue?')) {
+        document.getElementById('setup-date').value = prevDate;
+        currentDate = prevDate;
+        return;
+      }
+    }
+    activeSlots = [];
+    juniors.forEach(function(j){ j.assignment = null; });
+    document.getElementById('bulk-result').textContent = '';
+  }
   updateHeaderDate();
   var prev = document.getElementById('setup-date-slots-preview');
   if(!prev) return;
