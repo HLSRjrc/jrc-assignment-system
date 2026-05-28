@@ -2942,6 +2942,36 @@ function initSetupDatePicker(){
   });
   sel.appendChild(optgroup2026);
 
+  // ── Pre-Show / Other dates (between 2026 and 2027) ────────────────────
+  var preShowDates = {};
+  var show2026Keys = Object.keys(SCHEDULE_2026);
+  committeeRequests.filter(function(r){ return r.status==='approved'; }).forEach(function(r){
+    r.shifts.forEach(function(s){
+      if(!s.date) return;
+      var in2026Show = show2026Keys.indexOf(s.date) >= 0;
+      // Temporarily check against 2027 show — we'll build that below
+      var in2027Show = (function(){
+        var dt = new Date(s.date + 'T00:00:00');
+        return dt.getFullYear() === 2027 && dt.getMonth() === 2 && dt.getDate() >= 2 && dt.getDate() <= 20;
+      })();
+      if(!in2026Show && !in2027Show){
+        preShowDates[s.date] = true;
+      }
+    });
+  });
+  var psDates = Object.keys(preShowDates).sort();
+  if(psDates.length){
+    var optgroupPS = document.createElement('optgroup');
+    optgroupPS.label = 'Pre-Show / Other';
+    psDates.forEach(function(d){
+      var opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = fmtDateLong(d) + ' ✓';
+      optgroupPS.appendChild(opt);
+    });
+    sel.appendChild(optgroupPS);
+  }
+
   // ── 2027 show dates (March 2-20 always shown) ─────────────────────────
   var allDates2027 = {};
   for(var d = 0; d < 19; d++){
@@ -2971,32 +3001,6 @@ function initSetupDatePicker(){
   });
   sel.appendChild(optgroup2027);
 
-  // ── Pre-Show / Other dates from approved requests ──────────────────────
-  // Collect any approved request dates NOT in 2026 show OR 2027 show window
-  var preShowDates = {};
-  var show2026Keys = Object.keys(SCHEDULE_2026);
-  committeeRequests.filter(function(r){ return r.status==='approved'; }).forEach(function(r){
-    r.shifts.forEach(function(s){
-      if(!s.date) return;
-      var in2026Show = show2026Keys.indexOf(s.date) >= 0;
-      var in2027Show = !!allDates2027[s.date];
-      if(!in2026Show && !in2027Show){
-        preShowDates[s.date] = (r.name || 'Pre-Show');
-      }
-    });
-  });
-  var psDates = Object.keys(preShowDates).sort();
-  if(psDates.length){
-    var optgroupPS = document.createElement('optgroup');
-    optgroupPS.label = 'Pre-Show / Other';
-    psDates.forEach(function(d){
-      var opt = document.createElement('option');
-      opt.value = d;
-      opt.textContent = fmtDateLong(d) + ' ✓';
-      optgroupPS.appendChild(opt);
-    });
-    sel.appendChild(optgroupPS);
-  }
 }
 
 function isShow2026Date(d){ return !!SCHEDULE_2026[d]; }
