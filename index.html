@@ -1283,7 +1283,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 17;  // Major version — milestone releases
-var APP_BUILD   = 3;   // Minor build — increments every small change
+var APP_BUILD   = 2;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3389,14 +3389,32 @@ function activateShift(){
     if(el) el.innerHTML = '<div class="alert alert-danger" style="margin:0"><strong>Required fields missing on custom slots:</strong><br>' + missing.join('<br>') + '</div>';
     return;
   }
-  currentShift = document.getElementById('setup-shift').value;
+
   var dateEl = document.getElementById('setup-date');
   currentDate = (dateEl ? dateEl.value : '') || currentDate;
+
+  // Auto-detect shift: use the shift that has the most loaded slots,
+  // falling back to the dropdown selection, then real time
+  var shiftCounts = {'8am':0, '12pm':0, '4pm':0};
+  activeSlots.forEach(function(s){ if(shiftCounts[s.shift] !== undefined) shiftCounts[s.shift]++; });
+  var dominantShift = document.getElementById('setup-shift').value;
+  var maxCount = 0;
+  Object.keys(shiftCounts).forEach(function(sh){
+    if(shiftCounts[sh] > maxCount){ maxCount = shiftCounts[sh]; dominantShift = sh; }
+  });
+  currentShift = dominantShift;
+
+  // Also update the setup-shift dropdown to reflect what we picked
+  var ss = document.getElementById('setup-shift');
+  if(ss) ss.value = currentShift;
+
   updateHeaderDate();
+  saveStateNow();
   switchTab('officer', document.querySelector('.tab[onclick*="officer"]'));
   renderOfficer();
   window.scrollTo({top:0, behavior:'smooth'});
 }
+
 
 
 // ============================================================
