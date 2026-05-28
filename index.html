@@ -1094,8 +1094,8 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
   <div class="action-row">
     <div style="font-size:13px;color:#667788;flex:1">Review and approve committee shift requests. Approved requests appear in the officer&apos;s approved list for shift setup.</div>
     <select class="finput" style="max-width:160px" id="req-filter" onchange="renderRequests()">
-      <option value="all">All requests</option>
-      <option value="pending" selected>Pending only</option>
+      <option value="all" selected>All requests</option>
+      <option value="pending">Pending only</option>
       <option value="approved">Approved</option>
       <option value="rejected">Rejected</option>
     </select>
@@ -1283,7 +1283,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 17;  // Major version — milestone releases
-var APP_BUILD   = 3;   // Minor build — increments every small change
+var APP_BUILD   = 2;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
