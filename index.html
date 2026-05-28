@@ -1009,7 +1009,7 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
     <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:flex-end;margin-bottom:14px">
       <div>
         <div style="font-size:12px;color:#667788;margin-bottom:4px">Date</div>
-        <input class="finput" type="date" id="sim-date" value="2027-03-02">
+        <input class="finput" type="date" id="sim-date">
       </div>
       <div>
         <div style="font-size:12px;color:#667788;margin-bottom:4px">Time</div>
@@ -1034,7 +1034,7 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <button class="btn btn-primary" onclick="applySimDate()">&#9201; Apply</button>
-      <button class="btn" onclick="clearSimTime();currentDate=new Date().toISOString().slice(0,10);updateHeaderDate();document.getElementById('sim-status').textContent='Using real date &amp; time';">Use Real Time</button>
+      <button class="btn" onclick="clearSimTime();var el=document.getElementById('sim-status');if(el)el.innerHTML='<span style=&quot;color:var(--green);font-weight:600&quot;>&#10003; Using current real time</span>';">Use Real Time</button>
       <span id="sim-status" style="font-size:12px;color:#667788">Not set &mdash; using real time</span>
     </div>
   </div>
@@ -1136,8 +1136,23 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
       </div>
     </div>
 
+    <!-- Pre-show / Showtime Toggle -->
+    <div class="section-lbl" style="margin-bottom:10px">When is this?</div>
+    <div style="display:flex;gap:10px;margin-bottom:20px" id="rf-when-toggle">
+      <button type="button" id="rf-btn-showtime" onclick="setReqType('showtime')"
+        style="flex:1;padding:12px;border-radius:8px;border:2px solid var(--navy);background:var(--navy);color:#fff;font-size:13px;font-weight:700;cursor:pointer">
+        🎡 Showtime<br><span style="font-size:11px;font-weight:400;opacity:.8">March 2–20, 2027</span>
+      </button>
+      <button type="button" id="rf-btn-preshow" onclick="setReqType('preshow')"
+        style="flex:1;padding:12px;border-radius:8px;border:2px solid var(--gray-200);background:#fff;color:var(--navy);font-size:13px;font-weight:700;cursor:pointer">
+        📅 Pre-Show<br><span style="font-size:11px;font-weight:400;color:#667788">Any date &amp; time before the show</span>
+      </button>
+    </div>
+
+    <!-- SHOWTIME SECTION -->
+    <div id="rf-showtime-section">
     <div class="section-lbl" style="margin-bottom:10px">Shift Requests</div>
-    <div style="font-size:12px;color:#667788;margin-bottom:10px">Check all shifts you need juniors for and enter how many juniors per shift. You may request for all 20 show days or specific dates.</div>
+    <div style="font-size:12px;color:#667788;margin-bottom:10px">Check all shifts you need juniors for and enter how many juniors per shift. You may request for all 19 show days or specific dates.</div>
 
     <div style="margin-bottom:12px;padding:12px 14px;background:var(--navy-lt);border-radius:8px;border:1px solid #B8CCE0">
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer;color:var(--navy)">
@@ -1171,8 +1186,41 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
       <button class="btn" style="width:100%;margin-top:8px" onclick="addSpecificShift()">+ Add a shift date</button>
     </div>
 
+    </div><!-- /rf-showtime-section -->
+
+    <!-- PRE-SHOW SECTION -->
+    <div id="rf-preshow-section" style="display:none">
+      <div class="section-lbl" style="margin-bottom:10px">Pre-Show Details</div>
+      <div style="font-size:12px;color:#667788;margin-bottom:14px">Select any date and time for your pre-show request. Add additional dates if needed.</div>
+      <div id="rf-ps-rows">
+        <div class="rf-ps-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px" id="rf-ps-row-1">
+          <div><div class="form-lbl">Date *</div><input class="finput" type="date" id="rf-ps-date-1"></div>
+          <div><div class="form-lbl">Start Time *</div>
+            <select class="finput" id="rf-ps-start-1">
+              <option value="">-- Select --</option>
+              <option>6:00 AM</option><option>7:00 AM</option><option>8:00 AM</option><option>9:00 AM</option>
+              <option>10:00 AM</option><option>11:00 AM</option><option>12:00 PM</option><option>1:00 PM</option>
+              <option>2:00 PM</option><option>3:00 PM</option><option>4:00 PM</option><option>5:00 PM</option>
+              <option>6:00 PM</option><option>7:00 PM</option><option>8:00 PM</option>
+            </select>
+          </div>
+          <div><div class="form-lbl">End Time *</div>
+            <select class="finput" id="rf-ps-end-1">
+              <option value="">-- Select --</option>
+              <option>7:00 AM</option><option>8:00 AM</option><option>9:00 AM</option><option>10:00 AM</option>
+              <option>11:00 AM</option><option>12:00 PM</option><option>1:00 PM</option><option>2:00 PM</option>
+              <option>3:00 PM</option><option>4:00 PM</option><option>5:00 PM</option><option>6:00 PM</option>
+              <option>7:00 PM</option><option>8:00 PM</option><option>9:00 PM</option>
+            </select>
+          </div>
+          <div><div class="form-lbl">Juniors</div><input class="finput" type="number" id="rf-ps-cap-1" min="1" max="40" value="4" style="width:70px"></div>
+        </div>
+      </div>
+      <button type="button" class="btn" style="font-size:12px;margin-bottom:16px" onclick="addPsRow()">&#43; Add another date</button>
+    </div><!-- /rf-preshow-section -->
+
     <div id="rf-submit-msg" style="min-height:20px;margin-bottom:10px"></div>
-    <button class="btn btn-orange" style="width:100%;padding:12px;font-size:14px" onclick="submitRequest()">Submit Request</button>
+    <button class="btn btn-orange"  style="width:100%;padding:12px;font-size:14px" onclick="submitRequest()">Submit Request</button>
   </div>
 </div>
 
@@ -1237,7 +1285,7 @@ var SHOW_START = new Date('2027-03-02');
 var SHOW_END = new Date('2027-03-20');
 
 var currentShift = '8am';
-var currentDate = '2027-03-02';
+var currentDate = new Date().toISOString().slice(0,10); // always starts as today
 var activePick = null;
 var activePickShift = null;
 var lockedJuniors = new Set(); // jid strings
@@ -1279,7 +1327,11 @@ function clearSimTime(){
   simTimeOffset = 0;
   simTimeEnabled = false;
   simDateSet = false;
+  currentDate = new Date().toISOString().slice(0,10);
+  currentShift = getShiftFromTime(new Date());
+  try { localStorage.removeItem(('jrc_simstate_v' + APP_VERSION)); } catch(e){}
   try { localStorage.removeItem('jrc_simstate'); } catch(e){}
+  updateHeaderDate();
 }
 var pendingJr = null;
 
@@ -1461,7 +1513,7 @@ function updateHeaderDate(){
   document.getElementById('hdr-info').innerHTML =
     (ds ? '<strong style="color:#fff">' + ds + '</strong> &bull; ' : '') +
     (dow ? '<span style="color:#99BBDD">' + dow + '</span><br>' : '') +
-    fmtDate(d) + '<br><span id="hdr-clock"></span><span style="font-size:9px;opacity:.4;margin-left:6px">v' + APP_VERSION + '</span>';
+    fmtDate(d) + '<br><span id="hdr-clock"></span>';
   updateHeaderClock();
 }
 
@@ -3070,6 +3122,11 @@ function addSinglePreviewSlotEl(btn){
 
 
 function renderSetup(){
+  // Initialize sim-date picker to today if not already set
+  var sdEl = document.getElementById('sim-date');
+  if(sdEl && !sdEl.value){
+    sdEl.value = new Date().toISOString().slice(0,10);
+  }
   initSetupDatePicker();
   var sel = document.getElementById('add-sel');
   if(sel) sel.innerHTML = committeeLibrary.map(function(c){
@@ -3481,6 +3538,65 @@ function validatePhone(el){
   }
 }
 
+var currentReqType = 'showtime';
+var psRowCount = 1;
+
+function setReqType(type){
+  currentReqType = type;
+  var showEl = document.getElementById('rf-showtime-section');
+  var preEl  = document.getElementById('rf-preshow-section');
+  var btnShow = document.getElementById('rf-btn-showtime');
+  var btnPre  = document.getElementById('rf-btn-preshow');
+
+  if(type === 'showtime'){
+    showEl.style.display = 'block';
+    preEl.style.display  = 'none';
+    btnShow.style.background   = 'var(--navy)';
+    btnShow.style.color        = '#fff';
+    btnShow.style.borderColor  = 'var(--navy)';
+    btnPre.style.background    = '#fff';
+    btnPre.style.color         = 'var(--navy)';
+    btnPre.style.borderColor   = 'var(--gray-200)';
+  } else {
+    showEl.style.display = 'none';
+    preEl.style.display  = 'block';
+    btnPre.style.background    = 'var(--navy)';
+    btnPre.style.color         = '#fff';
+    btnPre.style.borderColor   = 'var(--navy)';
+    btnShow.style.background   = '#fff';
+    btnShow.style.color        = 'var(--navy)';
+    btnShow.style.borderColor  = 'var(--gray-200)';
+  }
+}
+
+function removePsRow(id){
+  var row = document.getElementById('rf-ps-row-' + id);
+  if(row) row.remove();
+}
+
+function addPsRow(){
+  psRowCount++;
+  var id = psRowCount;
+  var container = document.getElementById('rf-ps-rows');
+  var div = document.createElement('div');
+  div.className = 'rf-ps-row';
+  div.id = 'rf-ps-row-' + id;
+  div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px';
+  var timeOpts = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM',
+    '1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM','9:00 PM'];
+  var endOpts = timeOpts.slice(1);
+  div.innerHTML =
+    '<div><div class="form-lbl">Date</div><input class="finput" type="date" id="rf-ps-date-' + id + '"></div>' +
+    '<div><div class="form-lbl">Start Time</div><select class="finput" id="rf-ps-start-' + id + '"><option value="">-- Select --</option>' +
+      timeOpts.map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select></div>' +
+    '<div><div class="form-lbl">End Time</div><select class="finput" id="rf-ps-end-' + id + '"><option value="">-- Select --</option>' +
+      endOpts.map(function(t){ return '<option>' + t + '</option>'; }).join('') + '</select></div>' +
+    '<div style="display:flex;flex-direction:column"><div class="form-lbl">Juniors</div>' +
+      '<div style="display:flex;align-items:center;gap:6px"><input class="finput" type="number" id="rf-ps-cap-' + id + '" min="1" max="40" value="4" style="width:70px">' +
+      '<button class="btn" onclick="removePsRow(' + id + ')" style="padding:4px 8px;color:var(--red);border-color:var(--red)">&#x2715;</button></div></div>';
+  container.appendChild(div);
+}
+
 function toggleAll20(){
   var checked = document.getElementById('rf-all20').checked;
   document.getElementById('rf-all20-section').style.display = checked ? 'block' : 'none';
@@ -3564,6 +3680,19 @@ function renderReqForm(){
   document.getElementById('rf-specific-list').innerHTML = '';
   specificShiftCount = 0;
   var msg = document.getElementById('rf-submit-msg'); if(msg) msg.innerHTML = '';
+  // Reset type to showtime
+  currentReqType = 'showtime';
+  psRowCount = 1;
+  setReqType('showtime');
+  // Reset pre-show rows
+  var psRows = document.getElementById('rf-ps-rows');
+  if(psRows) psRows.innerHTML = '<div class="rf-ps-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px" id="rf-ps-row-1">' +
+    '<div><div class="form-lbl">Date *</div><input class="finput" type="date" id="rf-ps-date-1"></div>' +
+    '<div><div class="form-lbl">Start Time *</div><select class="finput" id="rf-ps-start-1"><option value="">-- Select --</option>' +
+    ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM'].map(function(t){ return '<option>'+t+'</option>';}).join('') +
+    '</select></div><div><div class="form-lbl">End Time *</div><select class="finput" id="rf-ps-end-1"><option value="">-- Select --</option>' +
+    ['7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM','9:00 PM'].map(function(t){ return '<option>'+t+'</option>';}).join('') +
+    '</select></div><div><div class="form-lbl">Juniors</div><input class="finput" type="number" id="rf-ps-cap-1" min="1" max="40" value="4" style="width:70px"></div></div>';
   // Add one blank shift row by default
   addSpecificShift();
 }
@@ -3620,8 +3749,28 @@ function submitRequest(){
     return;
   }
 
-  var all20 = document.getElementById('rf-all20').checked;
+  var all20 = currentReqType === 'showtime' ? document.getElementById('rf-all20').checked : false;
   var shifts = [];
+  var preshow = currentReqType === 'preshow';
+
+  if(preshow){
+    // Collect pre-show rows
+    var psRowEls = document.getElementById('rf-ps-rows').querySelectorAll('.rf-ps-row');
+    psRowEls.forEach(function(row){
+      var rid = row.id.replace('rf-ps-row-','');
+      var dt  = document.getElementById('rf-ps-date-'  + rid);
+      var st  = document.getElementById('rf-ps-start-' + rid);
+      var en  = document.getElementById('rf-ps-end-'   + rid);
+      var cp  = document.getElementById('rf-ps-cap-'   + rid);
+      if(dt && st && en && dt.value && st.value && en.value){
+        shifts.push({preshow:true, date:dt.value, startTime:st.value, endTime:en.value, cap:parseInt(cp&&cp.value)||4});
+      }
+    });
+    if(!shifts.length){
+      msg.innerHTML = '<div class="alert alert-danger">Please fill in at least one date and time for the pre-show request.</div>';
+      return;
+    }
+  } else {
 
   if(all20){
     var s1 = document.getElementById('rf-s1-check').checked;
@@ -3647,7 +3796,7 @@ function submitRequest(){
       msg.innerHTML = '<div class="alert alert-danger">Please add at least one shift.</div>';
       return;
     }
-  }
+  } } // end showtime; end preshow block
 
   var req = {
     id: requestIdCounter++,
@@ -3656,7 +3805,7 @@ function submitRequest(){
     name:name, chair:chair, chairPhone:chairPhone, chairEmail:chairEmail,
     liaison:liaison, liaisonPhone:liaisonPhone, liaisonEmail:liaisonEmail,
     location:location, duties:duties, notes:notes, hat:hat,
-    all20:all20, shifts:shifts,
+    all20:all20, preshow:preshow, shifts:shifts,
     schedulingNotes: ''
   };
   committeeRequests.unshift(req);
