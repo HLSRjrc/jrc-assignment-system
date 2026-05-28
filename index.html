@@ -3888,6 +3888,7 @@ function renderRequests(){
           '<button class="btn" style="font-size:12px;padding:5px 12px" onclick="editRequest(' + r.id + ')">&#9998; Edit</button>' +
           '<button class="btn btn-danger" style="font-size:12px;padding:5px 12px" onclick="revokeRequest(' + r.id + ')">&#x21A9; Revoke Approval</button>' +
           '<button class="btn" style="font-size:12px;padding:5px 12px;border-color:#CC0000;color:#CC0000" onclick="rejectRequest(' + r.id + ')">&#x2715; Deny &amp; Archive</button>' +
+          '<button class="btn" style="font-size:12px;padding:5px 10px;border-color:#CC0000;color:#CC0000" onclick="deleteRequest(' + r.id + ')" title="Delete">&#x1F5D1;</button>' +
         '</div>';
     }
 
@@ -3911,6 +3912,7 @@ function renderRequests(){
           '<div style="display:flex;gap:8px">' +
             '<button class="btn btn-primary" style="flex:1" onclick="approveRequest(' + r.id + ')">&#10003; Approve</button>' +
             '<button class="btn btn-danger" style="flex:1" onclick="rejectRequest(' + r.id + ')">&#x2715; Reject</button>' +
+            '<button class="btn" style="padding:5px 10px;border-color:#CC0000;color:#CC0000" onclick="deleteRequest(' + r.id + ')" title="Delete">&#x1F5D1;</button>' +
           '</div>' +
         '</div>'
       : r.status === 'rejected' ?
