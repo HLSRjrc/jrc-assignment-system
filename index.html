@@ -1283,7 +1283,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 17;  // Major version — milestone releases
-var APP_BUILD   = 2;   // Minor build — increments every small change
+var APP_BUILD   = 1;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3913,9 +3913,36 @@ function renderRequests(){
             '<button class="btn btn-danger" style="flex:1" onclick="rejectRequest(' + r.id + ')">&#x2715; Reject</button>' +
           '</div>' +
         '</div>'
+      : r.status === 'rejected' ?
+        '<div style="margin-top:8px">' +
+          '<div style="font-size:11px;color:#721c24;margin-bottom:8px">&#x2715; Denied / Archived</div>' +
+          '<div style="display:flex;gap:8px">' +
+            '<button class="btn" style="font-size:12px;padding:5px 12px" onclick="restoreRequest(' + r.id + ')">&#8617; Restore to Pending</button>' +
+            '<button class="btn" style="font-size:12px;padding:5px 12px;border-color:#CC0000;color:#CC0000" onclick="deleteRequest(' + r.id + ')">&#x1F5D1; Delete</button>' +
+          '</div>' +
+        '</div>'
       : approvedFrom) +
     '</div>';
   }).join('');
+}
+
+function deleteRequest(id){
+  var r = committeeRequests.find(function(x){ return x.id === id; });
+  if(!r) return;
+  if(!confirm('Permanently delete the request from "' + r.name + '"? This cannot be undone.')) return;
+  committeeRequests = committeeRequests.filter(function(x){ return x.id !== id; });
+  renderRequests();
+  saveStateNow();
+  showAlert('Request deleted.', 'info');
+}
+
+function restoreRequest(id){
+  var r = committeeRequests.find(function(x){ return x.id === id; });
+  if(!r) return;
+  r.status = 'pending';
+  renderRequests();
+  saveStateNow();
+  showAlert(r.name + ' restored to pending.', 'info');
 }
 
 function editRequest(id){
