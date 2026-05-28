@@ -761,7 +761,6 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
         </div>
       </button>
     </div>
-    <div style="text-align:center;font-size:10px;color:#aaa;margin-top:8px;letter-spacing:.05em" id="login-version">v1</div>
 
     <div id="pin-screen" class="pin-screen">
       <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px" id="pin-role-lbl"></div>
@@ -1191,26 +1190,18 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
     <!-- PRE-SHOW SECTION -->
     <div id="rf-preshow-section" style="display:none">
       <div class="section-lbl" style="margin-bottom:10px">Pre-Show Details</div>
-      <div style="font-size:12px;color:#667788;margin-bottom:14px">Select any date and time for your pre-show request. Add additional dates if needed.</div>
+      <div style="font-size:12px;color:#667788;margin-bottom:14px">Select any date and time for your pre-show request. Shifts are typically 4-hour increments (e.g. 8:00 AM – 12:00 PM). Start times up to 6:00 PM; end times up to 10:00 PM.</div>
       <div id="rf-ps-rows">
         <div class="rf-ps-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px" id="rf-ps-row-1">
           <div><div class="form-lbl">Date *</div><input class="finput" type="date" id="rf-ps-date-1"></div>
           <div><div class="form-lbl">Start Time *</div>
             <select class="finput" id="rf-ps-start-1">
-              <option value="">-- Select --</option>
-              <option>6:00 AM</option><option>7:00 AM</option><option>8:00 AM</option><option>9:00 AM</option>
-              <option>10:00 AM</option><option>11:00 AM</option><option>12:00 PM</option><option>1:00 PM</option>
-              <option>2:00 PM</option><option>3:00 PM</option><option>4:00 PM</option><option>5:00 PM</option>
-              <option>6:00 PM</option><option>7:00 PM</option><option>8:00 PM</option>
+              <option value="">-- Select --</option><option>6:00 AM</option><option>6:30 AM</option><option>7:00 AM</option><option>7:30 AM</option><option>8:00 AM</option><option>8:30 AM</option><option>9:00 AM</option><option>9:30 AM</option><option>10:00 AM</option><option>10:30 AM</option><option>11:00 AM</option><option>11:30 AM</option><option>12:00 PM</option><option>12:30 PM</option><option>1:00 PM</option><option>1:30 PM</option><option>2:00 PM</option><option>2:30 PM</option><option>3:00 PM</option><option>3:30 PM</option><option>4:00 PM</option><option>4:30 PM</option><option>5:00 PM</option><option>5:30 PM</option><option>6:00 PM</option>
             </select>
           </div>
           <div><div class="form-lbl">End Time *</div>
             <select class="finput" id="rf-ps-end-1">
-              <option value="">-- Select --</option>
-              <option>7:00 AM</option><option>8:00 AM</option><option>9:00 AM</option><option>10:00 AM</option>
-              <option>11:00 AM</option><option>12:00 PM</option><option>1:00 PM</option><option>2:00 PM</option>
-              <option>3:00 PM</option><option>4:00 PM</option><option>5:00 PM</option><option>6:00 PM</option>
-              <option>7:00 PM</option><option>8:00 PM</option><option>9:00 PM</option>
+              <option value="">-- Select --</option><option>6:30 AM</option><option>7:00 AM</option><option>7:30 AM</option><option>8:00 AM</option><option>8:30 AM</option><option>9:00 AM</option><option>9:30 AM</option><option>10:00 AM</option><option>10:30 AM</option><option>11:00 AM</option><option>11:30 AM</option><option>12:00 PM</option><option>12:30 PM</option><option>1:00 PM</option><option>1:30 PM</option><option>2:00 PM</option><option>2:30 PM</option><option>3:00 PM</option><option>3:30 PM</option><option>4:00 PM</option><option>4:30 PM</option><option>5:00 PM</option><option>5:30 PM</option><option>6:00 PM</option><option>6:30 PM</option><option>7:00 PM</option><option>7:30 PM</option><option>8:00 PM</option><option>8:30 PM</option><option>9:00 PM</option><option>9:30 PM</option><option>10:00 PM</option>
             </select>
           </div>
           <div><div class="form-lbl">Juniors</div><input class="finput" type="number" id="rf-ps-cap-1" min="1" max="40" value="4" style="width:70px"></div>
@@ -1471,6 +1462,11 @@ var CD = {
 // LOGO — embed real JRC logo
 // ============================================================
 document.addEventListener('DOMContentLoaded', function(){
+  if(window.location.search.indexOf('partner=1') < 0 && _restoreLogin()) return;
+  // Restore saved login session on refresh
+  if(window.location.search.indexOf('partner=1') < 0){
+    if(_restoreLogin()) return;
+  }
   // Auto-enter partner mode if accessed via /partners redirect
   if(window.location.search.indexOf('partner=1') >= 0){
     setTimeout(function(){ enterPartnerMode(); }, 100);
@@ -2935,7 +2931,7 @@ function initSetupDatePicker(){
   if(!sel) return;
   sel.innerHTML = '<option value="">-- Select a date --</option>';
 
-  // ── 2026 show dates (from spreadsheet data) ───────────────────────────────
+  // ── 2026 show dates ───────────────────────────────────────────────────
   var optgroup2026 = document.createElement('optgroup');
   optgroup2026.label = '2026 Show — March 2–21';
   Object.keys(SCHEDULE_2026).sort().forEach(function(d){
@@ -2946,42 +2942,65 @@ function initSetupDatePicker(){
   });
   sel.appendChild(optgroup2026);
 
-  // ── 2027 show dates ────────────────────────────────────────────────────────
-  // Always show the full 19-day 2027 show as a group, even if no requests yet
-  var optgroup2027 = document.createElement('optgroup');
-  optgroup2027.label = '2027 Show — March 2–20';
-
-  // Build the full 2027 date list (March 2–20)
+  // ── 2027 show dates (March 2-20 always shown) ─────────────────────────
   var allDates2027 = {};
   for(var d = 0; d < 19; d++){
     var dt = new Date(Date.UTC(2027, 2, 2 + d));
-    var m = dt.getUTCMonth() + 1;
-    var day = dt.getUTCDate();
-    var key = '2027-' + String(m).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    var key = '2027-' + String(dt.getUTCMonth()+1).padStart(2,'0') + '-' + String(dt.getUTCDate()).padStart(2,'0');
     allDates2027[key] = true;
   }
-
-  // Also add any extra dates from approved requests (e.g. pre-show)
+  // Approved 2027 requests outside March 2-20 still go here
   committeeRequests.filter(function(r){ return r.status==='approved'; }).forEach(function(r){
-    r.shifts.forEach(function(s){ if(s.date && s.date.startsWith('2027')) allDates2027[s.date] = true; });
+    r.shifts.forEach(function(s){
+      if(s.date && s.date.startsWith('2027') && !isShow2026Date(s.date)) allDates2027[s.date] = true;
+    });
   });
-
-  // Count how many dates have actual approved requests
   var requestedDates2027 = {};
   committeeRequests.filter(function(r){ return r.status==='approved'; }).forEach(function(r){
-    r.shifts.forEach(function(s){ if(s.date) requestedDates2027[s.date] = true; });
+    r.shifts.forEach(function(s){ if(s.date && s.date.startsWith('2027')) requestedDates2027[s.date] = true; });
   });
-
+  var optgroup2027 = document.createElement('optgroup');
+  optgroup2027.label = '2027 Show — March 2–20';
   Object.keys(allDates2027).sort().forEach(function(d){
     var opt = document.createElement('option');
     opt.value = d;
-    var hasRequests = !!requestedDates2027[d];
-    opt.textContent = fmtDateLong(d) + (hasRequests ? ' ✓' : '');
-    if(!hasRequests) opt.style.color = '#AAAAAA'; // greyed out — no requests yet
+    var hasReq = !!requestedDates2027[d];
+    opt.textContent = fmtDateLong(d) + (hasReq ? ' ✓' : '');
+    if(!hasReq) opt.style.color = '#AAAAAA';
     optgroup2027.appendChild(opt);
   });
   sel.appendChild(optgroup2027);
+
+  // ── Pre-Show / Other dates from approved requests ──────────────────────
+  // Collect any approved request dates NOT in 2026 show OR 2027 show window
+  var preShowDates = {};
+  var show2026Keys = Object.keys(SCHEDULE_2026);
+  committeeRequests.filter(function(r){ return r.status==='approved'; }).forEach(function(r){
+    r.shifts.forEach(function(s){
+      if(!s.date) return;
+      var in2026Show = show2026Keys.indexOf(s.date) >= 0;
+      var in2027Show = !!allDates2027[s.date];
+      if(!in2026Show && !in2027Show){
+        preShowDates[s.date] = (r.name || 'Pre-Show');
+      }
+    });
+  });
+  var psDates = Object.keys(preShowDates).sort();
+  if(psDates.length){
+    var optgroupPS = document.createElement('optgroup');
+    optgroupPS.label = 'Pre-Show / Other';
+    psDates.forEach(function(d){
+      var opt = document.createElement('option');
+      opt.value = d;
+      opt.textContent = fmtDateLong(d) + ' ✓';
+      optgroupPS.appendChild(opt);
+    });
+    sel.appendChild(optgroupPS);
+  }
 }
+
+function isShow2026Date(d){ return !!SCHEDULE_2026[d]; }
+
 
 function fmtDateLong(dateStr){
   if(!dateStr) return '';
@@ -3451,6 +3470,9 @@ function loginAs(role){
   currentRole = role;
   pendingRole = null;
 
+  // Persist login so refresh doesn't log out
+  try { localStorage.setItem('jrc_saved_role', role); } catch(e){}
+
   // Hide login, show app
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
@@ -3493,6 +3515,7 @@ function applyRoleTabs(role){
 
 function doLogout(){
   currentRole = null;
+  try { localStorage.removeItem('jrc_saved_role'); } catch(e){}
   var ft = document.getElementById('app-footer'); if(ft) ft.style.display = 'none';
   // Reset login UI
   document.getElementById('main-app').style.display = 'none';
@@ -3582,9 +3605,8 @@ function addPsRow(){
   div.className = 'rf-ps-row';
   div.id = 'rf-ps-row-' + id;
   div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px';
-  var timeOpts = ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM',
-    '1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM','9:00 PM'];
-  var endOpts = timeOpts.slice(1);
+  var timeOpts = ['6:00 AM','6:30 AM','7:00 AM','7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','12:30 PM','1:00 PM','1:30 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM','5:30 PM','6:00 PM'];
+  var endOpts = ['6:30 AM','7:00 AM','7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','12:30 PM','1:00 PM','1:30 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM','5:30 PM','6:00 PM','6:30 PM','7:00 PM','7:30 PM','8:00 PM','8:30 PM','9:00 PM','9:30 PM','10:00 PM'];
   div.innerHTML =
     '<div><div class="form-lbl">Date</div><input class="finput" type="date" id="rf-ps-date-' + id + '"></div>' +
     '<div><div class="form-lbl">Start Time</div><select class="finput" id="rf-ps-start-' + id + '"><option value="">-- Select --</option>' +
@@ -3689,9 +3711,9 @@ function renderReqForm(){
   if(psRows) psRows.innerHTML = '<div class="rf-ps-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px" id="rf-ps-row-1">' +
     '<div><div class="form-lbl">Date *</div><input class="finput" type="date" id="rf-ps-date-1"></div>' +
     '<div><div class="form-lbl">Start Time *</div><select class="finput" id="rf-ps-start-1"><option value="">-- Select --</option>' +
-    ['6:00 AM','7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM'].map(function(t){ return '<option>'+t+'</option>';}).join('') +
+    ['6:00 AM','6:30 AM','7:00 AM','7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','12:30 PM','1:00 PM','1:30 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM','5:30 PM','6:00 PM'].map(function(t){ return '<option>'+t+'</option>';}).join('') +
     '</select></div><div><div class="form-lbl">End Time *</div><select class="finput" id="rf-ps-end-1"><option value="">-- Select --</option>' +
-    ['7:00 AM','8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM','6:00 PM','7:00 PM','8:00 PM','9:00 PM'].map(function(t){ return '<option>'+t+'</option>';}).join('') +
+    ['6:30 AM','7:00 AM','7:30 AM','8:00 AM','8:30 AM','9:00 AM','9:30 AM','10:00 AM','10:30 AM','11:00 AM','11:30 AM','12:00 PM','12:30 PM','1:00 PM','1:30 PM','2:00 PM','2:30 PM','3:00 PM','3:30 PM','4:00 PM','4:30 PM','5:00 PM','5:30 PM','6:00 PM','6:30 PM','7:00 PM','7:30 PM','8:00 PM','8:30 PM','9:00 PM','9:30 PM','10:00 PM'].map(function(t){ return '<option>'+t+'</option>';}).join('') +
     '</select></div><div><div class="form-lbl">Juniors</div><input class="finput" type="number" id="rf-ps-cap-1" min="1" max="40" value="4" style="width:70px"></div></div>';
   // Add one blank shift row by default
   addSpecificShift();
@@ -4953,10 +4975,20 @@ function cancelRosterImport(){
 // ============================================================
 // INIT — runs after login, not on page load
 // ============================================================
+function _restoreLogin(){
+  // If a role was saved, skip the login screen and go straight in
+  try {
+    var saved = localStorage.getItem('jrc_saved_role');
+    if(saved && ROLE_TABS[saved]){
+      loginAs(saved);
+      return true;
+    }
+  } catch(e){}
+  return false;
+}
+
 function initApp(){
   // Set version display
-  var vEl = document.getElementById('login-version');
-  if(vEl) vEl.textContent = 'v' + APP_VERSION + '.' + APP_BUILD;
   loadState(); // _restoreSimFromLocalStorage is called inside after Neon loads
   startPolling();
   updateHeaderDate();
