@@ -1283,7 +1283,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 17;  // Major version — milestone releases
-var APP_BUILD   = 3;   // Minor build — increments every small change
+var APP_BUILD   = 2;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3180,14 +3180,24 @@ function renderSetup(){
         '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#155724;margin-bottom:8px">Approved committee requests (' + approved.length + ')</div>' +
         '<div style="display:flex;flex-wrap:wrap;gap:6px">';
       approved.forEach(function(r){
-        r.shifts.forEach(function(s){
-          // For all20 requests, show for any date. For specific, only show if date matches
+        r.shifts.forEach(function(s, si){
           var date = document.getElementById('setup-date') ? document.getElementById('setup-date').value : '';
           if(!s.all20 && s.date !== date) return;
-          var alreadyAdded = activeSlots.some(function(sl){ return sl.name === r.name && sl.shift === s.shift; });
-          apHtml += '<button class="btn btn-sm' + (alreadyAdded ? '' : '') + '" style="font-size:11px;' + (alreadyAdded ? 'opacity:.5;cursor:default' : 'border-color:#27AE60;color:#155724') + '" ' +
-            (alreadyAdded ? 'disabled' : 'onclick="addApprovedSlot(' + r.id + ',\'' + s.shift + '\')"') + '>' +
-            (alreadyAdded ? '&#10003; ' : '+ ') + r.name + ' &mdash; ' + SL[s.shift] + ' (' + s.cap + ')' +
+
+          // Determine the effective shift key and display label
+          var effShift = s.shift;
+          var effLabel = SL[s.shift] || '';
+          if(s.preshow){
+            effShift = psTimeToShift(s.startTime);
+            effLabel = (s.startTime || '') + (s.endTime ? '–' + s.endTime : '');
+          }
+
+          var slotName = s.preshow ? (r.name + ' (' + effLabel + ')') : r.name;
+          var alreadyAdded = activeSlots.some(function(sl){ return sl.name === slotName && sl.shift === effShift; });
+          apHtml += '<button class="btn btn-sm" style="font-size:11px;' + (alreadyAdded ? 'opacity:.5;cursor:default' : 'border-color:#27AE60;color:#155724') + '" ' +
+            (alreadyAdded ? 'disabled' : 'onclick="addApprovedSlotByIdx(' + r.id + ',' + si + ')"') + '>' +
+            (alreadyAdded ? '&#10003; ' : '+ ') + r.name +
+            (effLabel ? ' &mdash; ' + effLabel : '') + ' (' + s.cap + ')' +
             (s.all20 ? ' <span style="font-size:9px;opacity:.7">(all days)</span>' : '') +
           '</button>';
         });
@@ -3927,7 +3937,8 @@ function renderRequests(){
         '<div style="margin-top:10px">' +
           '<div style="font-size:12px;color:#667788;margin-bottom:4px">Scheduling notes (optional — visible to officers)</div>' +
           '<input class="finput" id="req-note-' + r.id + '" style="font-size:12px;margin-bottom:8px" placeholder="e.g. Approved with reduced capacity, check location" value="' + (r.schedulingNotes||'') + '">' +
-          '<div style="display:flex;gap:8px">' +
+          '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+            '<button class="btn" style="font-size:12px;padding:5px 12px" onclick="editRequest(' + r.id + ')">&#9998; Edit</button>' +
             '<button class="btn btn-primary" style="flex:1" onclick="approveRequest(' + r.id + ')">&#10003; Approve</button>' +
             '<button class="btn btn-danger" style="flex:1" onclick="rejectRequest(' + r.id + ')">&#x2715; Reject</button>' +
             '<button class="btn" style="padding:5px 10px;border-color:#CC0000;color:#CC0000" onclick="deleteRequest(' + r.id + ')" title="Delete">&#x1F5D1;</button>' +
@@ -4172,10 +4183,45 @@ function rejectRequest(id){
   renderRequests();
 }
 
+function psTimeToShift(startTime){
+  if(!startTime) return '8am';
+  var hr = parseInt(startTime);
+  var isPM = startTime.indexOf('PM') >= 0 && hr !== 12;
+  if(isPM) hr += 12;
+  if(hr >= 16) return '4pm';
+  if(hr >= 12) return '12pm';
+  return '8am';
+}
+
+function addApprovedSlotByIdx(reqId, shiftIdx){
+  var r = committeeRequests.find(function(x){ return x.id === reqId; });
+  if(!r || !r.shifts[shiftIdx]) return;
+  var s = r.shifts[shiftIdx];
+  var effShift = s.shift || psTimeToShift(s.startTime);
+  var slotName = s.preshow ? (r.name + ' (' + (s.startTime||'') + (s.endTime ? '–'+s.endTime : '') + ')') : r.name;
+  var alreadyAdded = activeSlots.some(function(sl){ return sl.name === slotName && sl.shift === effShift; });
+  if(alreadyAdded){ renderSetup(); return; }
+  activeSlots.push({
+    id: Date.now() + Math.random(),
+    name: slotName,
+    capacity: s.cap || 4,
+    shift: effShift,
+    hat: r.hat,
+    assigned: []
+  });
+  CD[slotName] = {
+    chair: r.chair, cp: r.chairPhone,
+    liaison: r.liaison, lp: r.liaisonPhone, le: r.liaisonEmail,
+    loc: r.location, duties: r.duties, notes: r.notes
+  };
+  renderSetup();
+  saveState();
+}
+
 function addApprovedSlot(reqId, shift){
+  // Legacy: find by shift key (showtime requests)
   var r = committeeRequests.find(function(x){ return x.id === reqId; });
   if(!r) return;
-  // Match by shift — works for both specific-date and all20 requests
   var shiftData = r.shifts.find(function(s){ return s.shift === shift; });
   if(!shiftData) return;
   var alreadyAdded = activeSlots.some(function(s){ return s.name === r.name && s.shift === shift; });
@@ -4188,13 +4234,13 @@ function addApprovedSlot(reqId, shift){
     hat: r.hat,
     assigned: []
   });
-  // Also update the CD details object so drop-off reports have the right info
   CD[r.name] = {
     chair: r.chair, cp: r.chairPhone,
     liaison: r.liaison, lp: r.liaisonPhone, le: r.liaisonEmail,
     loc: r.location, duties: r.duties, notes: r.notes
   };
   renderSetup();
+  saveState();
 }
 
 
