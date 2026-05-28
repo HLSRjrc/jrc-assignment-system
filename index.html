@@ -1283,7 +1283,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 17;  // Major version — milestone releases
-var APP_BUILD   = 3;   // Minor build — increments every small change
+var APP_BUILD   = 2;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1469,6 +1469,7 @@ document.addEventListener('DOMContentLoaded', function(){
   var ll = document.getElementById('login-logo');
   if(ll) ll.src = 'data:image/png;base64,' + loginHlsrB64;
   if(window.location.search.indexOf('partner=1') < 0 && _restoreLogin()) return;
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeReqEdit(); });
   // Auto-enter partner mode if accessed via /partners redirect
   if(window.location.search.indexOf('partner=1') >= 0){
     setTimeout(function(){ enterPartnerMode(); }, 100);
@@ -3947,14 +3948,164 @@ function restoreRequest(id){
   showAlert(r.name + ' restored to pending.', 'info');
 }
 
+var _editingReqId = null;
+var _editShiftCount = 0;
+
 function editRequest(id){
   var r = committeeRequests.find(function(x){ return x.id === id; });
   if(!r) return;
-  // Revert to pending so the form can be re-submitted
-  r.status = 'pending';
+  _editingReqId = id;
+  _editShiftCount = 0;
+
+  // Build shift rows HTML
+  var shiftRowsHtml = '';
+  var shifts = r.shifts || [];
+  shifts.forEach(function(s, idx){
+    _editShiftCount++;
+    var rowId = _editShiftCount;
+    if(s.preshow){
+      shiftRowsHtml += '<div class="rf-ps-row" id="edit-shift-row-'+rowId+'" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:flex-end;margin-bottom:8px">' +
+        '<div><div class="form-lbl">Date</div><input class="finput" type="date" id="edit-ps-date-'+rowId+'" value="'+(s.date||'')+'"></div>' +
+        '<div><div class="form-lbl">Start</div><select class="finput" id="edit-ps-start-'+rowId+'">'+buildTimeOpts(s.startTime)+'</select></div>' +
+        '<div><div class="form-lbl">End</div><select class="finput" id="edit-ps-end-'+rowId+'">'+buildTimeOpts(s.endTime, true)+'</select></div>' +
+        '<div><div class="form-lbl">Juniors</div><input class="finput" type="number" id="edit-ps-cap-'+rowId+'" value="'+(s.cap||4)+'" min="1" max="40" style="width:70px"></div>' +
+        '</div>';
+    } else {
+      var showDateOpts = buildShowDateOpts(s.date);
+      shiftRowsHtml += '<div id="edit-shift-row-'+rowId+'" style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:flex-end;margin-bottom:8px">' +
+        '<div><div class="form-lbl">Date</div><select class="finput" id="edit-date-'+rowId+'">'+showDateOpts+'</select></div>' +
+        '<div><div class="form-lbl">Shift</div><select class="finput" id="edit-shift-'+rowId+'">' +
+          '<option value="8am"'+(s.shift==='8am'?' selected':'')+'>8am – 12pm</option>' +
+          '<option value="12pm"'+(s.shift==='12pm'?' selected':'')+'>12pm – 4pm</option>' +
+          '<option value="4pm"'+(s.shift==='4pm'?' selected':'')+'>4pm – 8pm</option>' +
+        '</select></div>' +
+        '<div><div class="form-lbl">Juniors</div><input class="finput" type="number" id="edit-cap-'+rowId+'" value="'+(s.cap||4)+'" min="1" max="40" style="width:70px"></div>' +
+        '</div>';
+    }
+  });
+
+  var isPreshow = r.preshow || (shifts.length && shifts[0].preshow);
+  var body =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
+      '<div style="grid-column:1/-1"><div class="form-lbl">Committee Name *</div><input class="finput" id="edit-name" value="'+escHtml(r.name||'')+'"></div>' +
+      '<div><div class="form-lbl">Chairman Name</div><input class="finput" id="edit-chair" value="'+escHtml(r.chair||'')+'"></div>' +
+      '<div><div class="form-lbl">Chairman Phone</div><input class="finput" id="edit-chair-phone" value="'+escHtml(r.chairPhone||'')+'"></div>' +
+      '<div style="grid-column:1/-1"><div class="form-lbl">Chairman Email</div><input class="finput" id="edit-chair-email" value="'+escHtml(r.chairEmail||'')+'"></div>' +
+      '<div><div class="form-lbl">Liaison Name</div><input class="finput" id="edit-liaison" value="'+escHtml(r.liaison||'')+'"></div>' +
+      '<div><div class="form-lbl">Liaison Phone</div><input class="finput" id="edit-liaison-phone" value="'+escHtml(r.liaisonPhone||'')+'"></div>' +
+      '<div style="grid-column:1/-1"><div class="form-lbl">Liaison Email</div><input class="finput" id="edit-liaison-email" value="'+escHtml(r.liaisonEmail||'')+'"></div>' +
+      '<div style="grid-column:1/-1"><div class="form-lbl">Location</div><input class="finput" id="edit-location" value="'+escHtml(r.location||'')+'"></div>' +
+      '<div style="grid-column:1/-1"><div class="form-lbl">Duties</div><textarea class="finput" id="edit-duties" rows="2" style="resize:none">'+escHtml(r.duties||'')+'</textarea></div>' +
+      '<div style="grid-column:1/-1"><div class="form-lbl">Notes</div><textarea class="finput" id="edit-notes" rows="2" style="resize:none">'+escHtml(r.notes||'')+'</textarea></div>' +
+      '<div style="grid-column:1/-1"><label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">' +
+        '<input type="checkbox" id="edit-hat"'+(r.hat?' checked':'')+' style="width:18px;height:18px;accent-color:var(--navy)"> Hats required</label></div>' +
+    '</div>' +
+    '<div class="section-lbl" style="margin-bottom:8px">'+(isPreshow ? 'Pre-Show ' : '')+'Shifts</div>' +
+    '<div id="edit-shift-rows">'+shiftRowsHtml+'</div>' +
+    '<button type="button" class="btn" style="font-size:12px;margin-top:4px" onclick="addEditShiftRow('+!!isPreshow+')">&#43; Add shift</button>';
+
+  document.getElementById('req-edit-body').innerHTML = body;
+  document.getElementById('req-edit-modal').style.display = 'flex';
+}
+
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function buildShowDateOpts(selected){
+  var opts = '';
+  for(var d = 0; d < 19; d++){
+    var dt = new Date(Date.UTC(2027, 2, 2 + d));
+    var m = dt.getUTCMonth()+1;
+    var day = dt.getUTCDate();
+    var val = '2027-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+    var lbl = 'Mar '+day;
+    opts += '<option value="'+val+'"'+(val===selected?' selected':'')+'>'+lbl+'</option>';
+  }
+  return opts;
+}
+
+function buildTimeOpts(selected, isEnd){
+  var startH = 6, startM = 0, endH = isEnd ? 22 : 18, endM = 0;
+  if(isEnd){ startH = 6; startM = 30; }
+  var opts = '<option value="">-- Select --</option>';
+  var h = startH, m = startM;
+  while((h < endH)||(h===endH&&m<=endM)){
+    var ampm = h<12?'AM':'PM';
+    var h12 = h%12||12;
+    var label = h12+':'+String(m).padStart(2,'0')+' '+ampm;
+    opts += '<option value="'+label+'"'+(label===selected?' selected':'')+'>'+label+'</option>';
+    m += 30; if(m>=60){ m-=60; h++; }
+  }
+  return opts;
+}
+
+function addEditShiftRow(isPreshow){
+  _editShiftCount++;
+  var id = _editShiftCount;
+  var container = document.getElementById('edit-shift-rows');
+  var div = document.createElement('div');
+  div.id = 'edit-shift-row-'+id;
+  if(isPreshow){
+    div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:flex-end;margin-bottom:8px';
+    div.innerHTML =
+      '<div><div class="form-lbl">Date</div><input class="finput" type="date" id="edit-ps-date-'+id+'"></div>' +
+      '<div><div class="form-lbl">Start</div><select class="finput" id="edit-ps-start-'+id+'">'+buildTimeOpts('',false)+'</select></div>' +
+      '<div><div class="form-lbl">End</div><select class="finput" id="edit-ps-end-'+id+'">'+buildTimeOpts('',true)+'</select></div>' +
+      '<div><div class="form-lbl">Juniors</div><div style="display:flex;gap:4px"><input class="finput" type="number" id="edit-ps-cap-'+id+'" value="4" min="1" max="40" style="width:70px"><button class="btn" onclick="this.parentNode.parentNode.remove()" style="padding:4px 8px;color:var(--red);border-color:var(--red)">&#x2715;</button></div></div>';
+  } else {
+    div.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:flex-end;margin-bottom:8px';
+    div.innerHTML =
+      '<div><div class="form-lbl">Date</div><select class="finput" id="edit-date-'+id+'">'+buildShowDateOpts('')+'</select></div>' +
+      '<div><div class="form-lbl">Shift</div><select class="finput" id="edit-shift-'+id+'"><option value="8am">8am – 12pm</option><option value="12pm" selected>12pm – 4pm</option><option value="4pm">4pm – 8pm</option></select></div>' +
+      '<div><div class="form-lbl">Juniors</div><div style="display:flex;gap:4px"><input class="finput" type="number" id="edit-cap-'+id+'" value="4" min="1" max="40" style="width:70px"><button class="btn" onclick="this.parentNode.parentNode.remove()" style="padding:4px 8px;color:var(--red);border-color:var(--red)">&#x2715;</button></div></div>';
+  }
+  container.appendChild(div);
+}
+
+function saveReqEdit(){
+  var r = committeeRequests.find(function(x){ return x.id === _editingReqId; });
+  if(!r) return;
+
+  r.name        = document.getElementById('edit-name').value.trim();
+  r.chair       = document.getElementById('edit-chair').value.trim();
+  r.chairPhone  = document.getElementById('edit-chair-phone').value.trim();
+  r.chairEmail  = document.getElementById('edit-chair-email').value.trim();
+  r.liaison     = document.getElementById('edit-liaison').value.trim();
+  r.liaisonPhone= document.getElementById('edit-liaison-phone').value.trim();
+  r.liaisonEmail= document.getElementById('edit-liaison-email').value.trim();
+  r.location    = document.getElementById('edit-location').value.trim();
+  r.duties      = document.getElementById('edit-duties').value.trim();
+  r.notes       = document.getElementById('edit-notes').value.trim();
+  r.hat         = document.getElementById('edit-hat').checked;
+
+  var isPreshow = r.preshow || (r.shifts && r.shifts.length && r.shifts[0].preshow);
+  var newShifts = [];
+  var rows = document.getElementById('edit-shift-rows').querySelectorAll('[id^="edit-shift-row-"]');
+  rows.forEach(function(row){
+    var rid = row.id.replace('edit-shift-row-','');
+    if(isPreshow){
+      var dt  = document.getElementById('edit-ps-date-'+rid);
+      var st  = document.getElementById('edit-ps-start-'+rid);
+      var en  = document.getElementById('edit-ps-end-'+rid);
+      var cp  = document.getElementById('edit-ps-cap-'+rid);
+      if(dt && dt.value) newShifts.push({preshow:true, date:dt.value, startTime:st?st.value:'', endTime:en?en.value:'', cap:parseInt(cp&&cp.value)||4});
+    } else {
+      var dateEl  = document.getElementById('edit-date-'+rid);
+      var shiftEl = document.getElementById('edit-shift-'+rid);
+      var capEl   = document.getElementById('edit-cap-'+rid);
+      if(dateEl && dateEl.value) newShifts.push({all20:false, date:dateEl.value, shift:shiftEl?shiftEl.value:'8am', cap:parseInt(capEl&&capEl.value)||4});
+    }
+  });
+  if(newShifts.length) r.shifts = newShifts;
+
+  closeReqEdit();
   renderRequests();
-  saveState();
-  showAlert(r.name + ' reverted to pending for editing.', 'info');
+  saveStateNow();
+  showAlert(r.name + ' updated.', 'success');
+}
+
+function closeReqEdit(){
+  document.getElementById('req-edit-modal').style.display = 'none';
+  _editingReqId = null;
 }
 
 function revokeRequest(id){
@@ -5083,7 +5234,36 @@ function initApp(){
   <span class="footer-copy">&#169; 2026 Houston Livestock Show and Rodeo. All rights reserved.</span>
   <span class="footer-ver" id="footer-version">v1</span>
 </footer>
-<div id="sync-error-banner"  class="no-print" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#7B1F1F;color:#fff;padding:10px 16px;align-items:center;justify-content:space-between;gap:10px;font-size:13px">
+<!-- Request Edit Modal -->
+<div id="req-edit-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,16,40,.6);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0">
+  <div style="background:var(--surface);border-radius:var(--r-xl);padding:24px 28px;max-width:640px;width:calc(100% - 32px);margin:auto;box-shadow:var(--sh-5);animation:modalScale var(--dur-base) var(--ease-spring)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700;color:var(--navy)">Edit Request</div>
+      <button onclick="closeReqEdit()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;line-height:1">&#x2715;</button>
+    </div>
+    <div id="req-edit-body"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-primary" style="flex:1" onclick="saveReqEdit()">&#10003; Save Changes</button>
+      <button class="btn" style="flex:1" onclick="closeReqEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Request Edit Modal -->
+<div id="req-edit-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,16,40,.6);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0">
+  <div style="background:#fff;border-radius:16px;padding:24px 28px;max-width:640px;width:calc(100% - 32px);margin:auto;box-shadow:0 20px 60px rgba(0,0,0,.18)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div style="font-size:16px;font-weight:700;color:var(--navy)">Edit Request</div>
+      <button onclick="closeReqEdit()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;line-height:1">&#x2715;</button>
+    </div>
+    <div id="req-edit-body"></div>
+    <div style="display:flex;gap:10px;margin-top:20px">
+      <button class="btn btn-primary" style="flex:1;padding:11px" onclick="saveReqEdit()">&#10003; Save Changes</button>
+      <button class="btn" style="flex:1;padding:11px" onclick="closeReqEdit()">Cancel</button>
+    </div>
+  </div>
+</div>
+<div id="sync-error-banner"   class="no-print" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#7B1F1F;color:#fff;padding:10px 16px;align-items:center;justify-content:space-between;gap:10px;font-size:13px">
   <div style="display:flex;align-items:center;gap:8px"><span style="font-size:18px">&#9888;</span><span class="sync-err-msg">Database offline — data is saved locally and will sync when restored.</span></div>
   <button onclick="hideSyncError()" style="background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:4px;padding:3px 10px;cursor:pointer;font-size:12px">Dismiss</button>
 </div>
