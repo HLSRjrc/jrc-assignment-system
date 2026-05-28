@@ -1283,7 +1283,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 17;  // Major version — milestone releases
-var APP_BUILD   = 3;   // Minor build — increments every small change
+var APP_BUILD   = 2;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4622,7 +4622,7 @@ var saveTimer = null;
 
 function saveState(){
   if(saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(function(){ _doSave(); }, 1500);
+  saveTimer = setTimeout(function(){ _doSave(); }, 8000);
 }
 
 function saveStateNow(){
@@ -4895,9 +4895,9 @@ var headerClockTimer = null;
 
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(function(){ pollForUpdates(); }, 30000);
+  pollTimer = setInterval(function(){ pollForUpdates(); }, 180000);
   if(headerClockTimer) clearInterval(headerClockTimer);
-  headerClockTimer = setInterval(function(){ updateHeaderClock(); updateBoardClock(); }, 10000);
+  headerClockTimer = setInterval(function(){ updateHeaderClock(); updateBoardClock(); }, 30000);
 }
 
 function stopPolling(){
