@@ -1283,7 +1283,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 17;  // Major version — milestone releases
-var APP_BUILD   = 3;   // Minor build — increments every small change
+var APP_BUILD   = 2;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2874,10 +2874,27 @@ function bulkAddShift(shift, silent){
   }
   committeeRequests.filter(function(r){ return r.status==='approved'; }).forEach(function(r){
     r.shifts.forEach(function(s){
-      if(s.shift !== shift) return;
-      // Match specific-date requests OR all-show requests (all20:true)
-      if(s.date === date || s.all20){
-        toAdd.push({name:r.name, shift:shift, cap:s.cap, hat:r.hat});
+      if(s.preshow){
+        // Pre-show: map startTime to nearest standard shift slot
+        if(s.date !== date) return;
+        var psShift = '8am';
+        if(s.startTime){
+          var hr = parseInt(s.startTime);
+          var isPM = s.startTime.indexOf('PM') >= 0;
+          if(isPM && hr !== 12) hr += 12;
+          if(hr >= 16) psShift = '4pm';
+          else if(hr >= 12) psShift = '12pm';
+          else psShift = '8am';
+        }
+        if(psShift !== shift) return;
+        var slotName = r.name + (s.startTime ? ' (' + s.startTime + '–' + s.endTime + ')' : '');
+        toAdd.push({name:slotName, shift:shift, cap:s.cap, hat:r.hat});
+      } else {
+        if(s.shift !== shift) return;
+        // Match specific-date requests OR all-show requests (all20:true)
+        if(s.date === date || s.all20){
+          toAdd.push({name:r.name, shift:shift, cap:s.cap, hat:r.hat});
+        }
       }
     });
   });
