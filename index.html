@@ -125,7 +125,7 @@ body{font-family:var(--font);font-weight:400;color:var(--ink);min-height:100vh;
 .tab{padding:7px 14px;font-size:11px;font-weight:700;cursor:pointer;border:none;background:none;color:var(--ink-subtle);border-bottom:2px solid transparent;margin-bottom:-2px;border-radius:var(--r-sm) var(--r-sm) 0 0;white-space:nowrap;transition:color var(--dur-base) var(--ease-out),background var(--dur-base) var(--ease-out);letter-spacing:var(--tracking-wide);text-transform:uppercase;text-transform:uppercase;letter-spacing:.07em;transition:color .15s;font-family:'Soleil',sans-serif;font-weight:700}
 .tab:hover{color:var(--navy);background:var(--navy-lt)}
 .tab.active{color:var(--navy);border-bottom-color:var(--orange);background:rgba(255,255,255,.7);font-weight:700}
-.panel{display:none;opacity:0}
+.panel{display:none}
 .panel.active{display:block;animation:panelFade .15s ease forwards}
 @keyframes panelFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
 .app{padding-top:0}
@@ -1397,7 +1397,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 11;  // Minor build — increments every small change
+var APP_BUILD   = 10;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3620,7 +3620,7 @@ function enterPartnerMode(){
   // Hide all panels then show only reqform
   document.querySelectorAll('.panel').forEach(function(p){ p.style.display='none'; });
   var pf = document.getElementById('panel-reqform');
-  if(pf){ pf.style.display='block'; }
+  if(pf){ pf.style.display='block'; pf.style.opacity='1'; }
 
   // Render the form
   try { renderReqForm(); } catch(e){ console.warn('renderReqForm error:', e); }
@@ -3629,7 +3629,7 @@ function enterPartnerMode(){
   setTimeout(function(){
     document.querySelectorAll('.panel').forEach(function(p){ p.style.display='none'; });
     var pf2 = document.getElementById('panel-reqform');
-    if(pf2) pf2.style.display='block';
+    if(pf2){ pf2.style.display='block'; pf2.style.opacity='1'; }
   }, 500);
 
   // Load state for show dates (no render side-effects)
