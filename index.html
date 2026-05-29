@@ -1362,7 +1362,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 2;   // Minor build — increments every small change
+var APP_BUILD   = 1;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1670,7 +1670,24 @@ function applySimDate(){
 // ============================================================
 // TABS
 // ============================================================
+var _boardUnlocked = false;
+
+function promptBoardPin(){
+  var pin = prompt('Enter Status Board PIN:');
+  if(pin === '2222'){
+    _boardUnlocked = true;
+    switchTab('board', null);
+  } else if(pin !== null){
+    alert('Incorrect PIN.');
+  }
+}
+
 function switchTab(t, el){
+  // Status board requires PIN 2222 unless already unlocked this session
+  if(t === 'board' && !_boardUnlocked){
+    promptBoardPin();
+    return;
+  }
   currentTab = t;
   // Re-render tabs to update active state
   renderTabs(t);
@@ -3628,9 +3645,8 @@ function doPersonalLogin(){
       document.getElementById('role-select').style.display = 'block';
       return;
     }
-    errEl.style.color = '#CC0000';
-    errEl.textContent = 'Your account has not been assigned a role yet. Please contact an administrator.';
-    return;
+    // Default: give basic access (kiosk + status board)
+    role = 'mentor';
   }
 
   // Success — store who logged in
@@ -3740,6 +3756,7 @@ function applyRoleTabs(role){
 
 function doLogout(){
   _clearInactivityTimer();
+  _boardUnlocked = false;
   currentRole = null;
   loggedInAdult = null;
   try { localStorage.removeItem('jrc_saved_role'); } catch(e){}
