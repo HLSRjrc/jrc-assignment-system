@@ -1154,6 +1154,16 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
     <button class="btn btn-primary" style="margin-top:14px" onclick="saveUserRoles()">&#10003; Save Role Assignments</button>
     <div id="user-mgmt-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
   </div>
+
+  <!-- LOGIN HISTORY -->
+  <div class="card" id="login-history-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="section-lbl">Login History</div>
+      <button class="btn" style="font-size:11px;padding:3px 10px" onclick="renderLoginHistory()">&#8635; Refresh</button>
+    </div>
+    <div style="font-size:12px;color:#667788;margin-bottom:12px">Last 500 logins, newest first.</div>
+    <div id="login-history-list"><div style="color:#999;font-size:13px">Loading...</div></div>
+  </div>
 </div>
 
 <!-- REQUESTS APPROVAL PANEL -->
@@ -1350,7 +1360,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 2;   // Minor build — increments every small change
+var APP_BUILD   = 1;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1397,6 +1407,7 @@ var pendingJr = null;
 var juniors = []; // loaded from Neon on login
 var adults  = []; // loaded from Neon on login
 var userRoles = {}; // {adult_id: 'admin'|'officer'|'scheduling'} — set by admin
+var loginLog  = []; // [{ts, name, role, device}] — last 500 entries
 var loggedInAdult = null; // the currently authenticated adult
 
 
@@ -1672,7 +1683,7 @@ function switchTab(t, el){
   if(t === 'reqform') renderReqForm();
   if(t === 'board') renderBoard();
   if(t === 'hours') renderHours();
-  if(t === 'simulate') renderUserMgmt();
+  if(t === 'simulate'){ renderUserMgmt(); renderLoginHistory(); }
 }
 
 // ============================================================
@@ -3684,22 +3695,23 @@ function loginAs(role){
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
 
-  // Show user badge + logout
+  // Show user badge + logout button
   var badgeName = loggedInAdult ? loggedInAdult.name.split(',')[0].trim() + ' (' + ROLE_LABELS[role] + ')' : ROLE_LABELS[role];
   document.getElementById('user-badge').textContent = badgeName;
-  document.getElementById('logout-wrap').style.display = 'none';
-  var lwi = document.getElementById('logout-wrap-inner'); if(lwi) lwi.style.display = 'none'; // moved inside header
-  var lwi = document.getElementById('logout-wrap-inner'); if(lwi) lwi.style.display = 'flex';
-  var badgeName = loggedInAdult ? loggedInAdult.name.split(',')[0].trim() + ' (' + ROLE_LABELS[role] + ')' : ROLE_LABELS[role];
-  document.getElementById('user-badge').textContent = badgeName;
-  // logout handled by wrapper
+  var lwi = document.getElementById('logout-wrap-inner'); if(lwi){ lwi.style.display = 'flex'; }
   var ft = document.getElementById('app-footer'); if(ft) ft.style.display = 'flex';
   var fv = document.getElementById('footer-version'); if(fv) fv.textContent = 'v' + APP_VERSION + '.' + APP_BUILD;
 
-  // Init app panels now that the app is visible
+  // Record login (skip on session restore to avoid duplicate log entries)
+  if(!window._restoringSession) _recordLogin(role);
+
+  // Start inactivity timer
+  _resetInactivityTimer();
+
+  // Init app panels
   initApp();
 
-  // Render tabs for this role then land on the first one
+  // Render tabs and land on first one
   var firstTab = ROLE_TABS[role][0];
   currentTab = firstTab;
   renderTabs(firstTab);
@@ -3723,29 +3735,28 @@ function applyRoleTabs(role){
 }
 
 function doLogout(){
+  _clearInactivityTimer();
   currentRole = null;
+  loggedInAdult = null;
   try { localStorage.removeItem('jrc_saved_role'); } catch(e){}
   try { localStorage.removeItem('jrc_logged_adult'); } catch(e){}
-  loggedInAdult = null;
-  // Return to personal login form
-  document.getElementById('personal-login').style.display = 'block';
-  document.getElementById('role-select').style.display = 'none';
-  document.getElementById('device-mode-select').style.display = 'none';
-  document.getElementById('pl-email').value = '';
-  document.getElementById('pl-password').value = '';
-  document.getElementById('pl-err').textContent = '';
-  var ft = document.getElementById('app-footer'); if(ft) ft.style.display = 'none';
-  // Reset login UI
+  pendingRole = null;
+
+  // Hide app, show login
   document.getElementById('main-app').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('pin-screen').style.display = 'none';
-  document.getElementById('role-select').style.display = 'block';
-  document.getElementById('pin-input').value = '';
-  document.getElementById('pin-err').textContent = '';
-  document.getElementById('logout-wrap').style.display = 'none';
+  var ft = document.getElementById('app-footer'); if(ft) ft.style.display = 'none';
   var lwi = document.getElementById('logout-wrap-inner'); if(lwi) lwi.style.display = 'none';
-  // logout handled by wrapper
-  pendingRole = null;
+
+  // Reset login form to personal login
+  document.getElementById('personal-login').style.display = 'block';
+  document.getElementById('role-select').style.display = 'none';
+  document.getElementById('pin-screen').style.display = 'none';
+  var e = document.getElementById('pl-email'); if(e) e.value = '';
+  var p = document.getElementById('pl-password'); if(p) p.value = '';
+  var err = document.getElementById('pl-err'); if(err) err.textContent = '';
+  var pin = document.getElementById('pin-input'); if(pin) pin.value = '';
+  var perr = document.getElementById('pin-err'); if(perr) perr.textContent = '';
 }
 
 // Logo set by hlsrB64 block above
@@ -4839,6 +4850,7 @@ function _doSave(){
       simTimeOffset: simTimeOffset,
       simDateSet: simDateSet,
     userRoles: userRoles,
+    loginLog: loginLog,
     },
     juniors: activeJuniors,
     activeSlots: activeSlots,
@@ -5007,6 +5019,7 @@ function _applyState(data){
     } catch(e){}
   }
   if(state.userRoles) userRoles = state.userRoles;
+  if(state.loginLog)  loginLog  = state.loginLog;
   if(data.committeeRequests && data.committeeRequests.length){
     committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
   }
@@ -5169,6 +5182,40 @@ function pollForUpdates(){
 function getTotalHours(jr){
   if(!jr.shiftLog || !jr.shiftLog.length) return 0;
   return jr.shiftLog.reduce(function(sum, e){ return sum + (e.hours !== undefined ? e.hours : 4); }, 0);
+}
+
+function renderLoginHistory(){
+  var el = document.getElementById('login-history-list');
+  if(!el) return;
+  if(!loginLog.length){
+    el.innerHTML = '<div style="color:#999;font-size:13px">No logins recorded yet.</div>';
+    return;
+  }
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+    '<thead><tr>' +
+    '<th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--gray-150);color:var(--navy);white-space:nowrap">Date &amp; Time</th>' +
+    '<th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--gray-150);color:var(--navy)">Name</th>' +
+    '<th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--gray-150);color:var(--navy)">Role</th>' +
+    '<th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--gray-150);color:var(--navy)">Device</th>' +
+    '</tr></thead><tbody>';
+
+  loginLog.forEach(function(e, i){
+    var d = new Date(e.ts);
+    var dateStr = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2,'0');
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    var timeStr = h + ':' + m + ' ' + ampm;
+    var rowBg = i % 2 === 0 ? '' : 'background:var(--gray-50)';
+    html += '<tr style="' + rowBg + '">' +
+      '<td style="padding:5px 8px;white-space:nowrap;color:#667788">' + dateStr + ' ' + timeStr + '</td>' +
+      '<td style="padding:5px 8px;font-weight:600;color:var(--navy)">' + (e.name || '—') + '</td>' +
+      '<td style="padding:5px 8px">' + (e.role || '—') + '</td>' +
+      '<td style="padding:5px 8px;color:#667788">' + (e.device || '—') + '</td>' +
+      '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
 }
 
 function renderUserMgmt(){
@@ -5520,6 +5567,57 @@ function cancelRosterImport(){
 // ============================================================
 // INIT — runs after login, not on page load
 // ============================================================
+function _getDeviceInfo(){
+  var ua = navigator.userAgent;
+  var browser = 'Unknown';
+  var os = 'Unknown';
+  if(ua.indexOf('Chrome') > -1 && ua.indexOf('Edg') < 0) browser = 'Chrome';
+  else if(ua.indexOf('Safari') > -1 && ua.indexOf('Chrome') < 0) browser = 'Safari';
+  else if(ua.indexOf('Firefox') > -1) browser = 'Firefox';
+  else if(ua.indexOf('Edg') > -1) browser = 'Edge';
+  if(ua.indexOf('iPhone') > -1) os = 'iPhone';
+  else if(ua.indexOf('iPad') > -1) os = 'iPad';
+  else if(ua.indexOf('Android') > -1) os = 'Android';
+  else if(ua.indexOf('Mac') > -1) os = 'Mac';
+  else if(ua.indexOf('Windows') > -1) os = 'Windows';
+  return browser + ' / ' + os;
+}
+
+function _recordLogin(role){
+  var entry = {
+    ts:     new Date().toISOString(),
+    name:   loggedInAdult ? loggedInAdult.name : '(Device: ' + ROLE_LABELS[role] + ')',
+    id:     loggedInAdult ? loggedInAdult.id : '',
+    role:   ROLE_LABELS[role] || role,
+    device: _getDeviceInfo()
+  };
+  loginLog.unshift(entry); // newest first
+  if(loginLog.length > 500) loginLog = loginLog.slice(0, 500); // cap at 500
+  saveStateNow();
+}
+
+// ── Inactivity auto-logout (5 minutes) ─────────────────────────────────
+var _inactivityTimer = null;
+var INACTIVITY_MS = 5 * 60 * 1000; // 5 minutes
+
+function _resetInactivityTimer(){
+  if(_inactivityTimer) clearTimeout(_inactivityTimer);
+  _inactivityTimer = setTimeout(function(){
+    if(currentRole) doLogout();
+  }, INACTIVITY_MS);
+}
+
+function _clearInactivityTimer(){
+  if(_inactivityTimer){ clearTimeout(_inactivityTimer); _inactivityTimer = null; }
+}
+
+// Reset timer on any user interaction
+['click','keydown','touchstart','scroll','mousemove'].forEach(function(evt){
+  document.addEventListener(evt, function(){
+    if(currentRole) _resetInactivityTimer();
+  }, {passive:true});
+});
+
 function _preloadAdults(){
   // Show loading state on login form
   var btn = document.querySelector('#personal-login .btn-primary');
@@ -5553,7 +5651,9 @@ function _restoreLogin(){
   try {
     var saved = localStorage.getItem('jrc_saved_role');
     if(saved && ROLE_TABS[saved]){
+      window._restoringSession = true;
       loginAs(saved);
+      window._restoringSession = false;
       return true;
     }
   } catch(e){}
