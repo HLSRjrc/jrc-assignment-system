@@ -1200,15 +1200,7 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
     <div id="user-mgmt-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
   </div>
 
-  <!-- LOGIN HISTORY -->
-  <div class="card" id="login-history-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
-      <div class="section-lbl">Login History</div>
-      <button class="btn" style="font-size:11px;padding:3px 10px" onclick="renderLoginHistory()">&#8635; Refresh</button>
-    </div>
-    <div style="font-size:12px;color:#667788;margin-bottom:12px">Last 500 logins, newest first.</div>
-    <div id="login-history-list"><div style="color:#999;font-size:13px">Loading...</div></div>
-  </div>
+
 </div>
 
 <!-- REQUESTS APPROVAL PANEL -->
@@ -1405,7 +1397,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 11;  // Minor build — increments every small change
+var APP_BUILD   = 10;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1747,7 +1739,7 @@ function switchTab(t, el){
   if(t === 'reqform') renderReqForm();
   if(t === 'board') renderBoard();
   if(t === 'hours') renderHours();
-  if(t === 'simulate'){ renderUserMgmt(); renderLoginHistory(); }
+  if(t === 'simulate') renderUserMgmt();
 }
 
 // ============================================================
