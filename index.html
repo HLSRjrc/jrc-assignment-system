@@ -1355,7 +1355,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 2;   // Minor build — increments every small change
+var APP_BUILD   = 1;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1544,6 +1544,9 @@ document.addEventListener('DOMContentLoaded', function(){
   if(ll) ll.src = 'data:image/png;base64,' + loginHlsrB64;
   if(window.location.search.indexOf('partner=1') < 0 && _restoreLogin()) return;
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeReqEdit(); });
+
+  // Pre-load adults from Neon so login form works immediately
+  _preloadAdults();
   // Auto-enter partner mode if accessed via /partners redirect
   if(window.location.search.indexOf('partner=1') >= 0){
     setTimeout(function(){ enterPartnerMode(); }, 100);
@@ -3590,8 +3593,9 @@ function doPersonalLogin(){
 
   // Adults must be loaded — if not, fetch first
   if(!adults.length){
-    errEl.textContent = 'Loading... please wait a moment and try again.';
-    loadState(); // triggers Neon fetch
+    errEl.style.color = '#667788';
+    errEl.textContent = 'Still connecting... please wait a moment and try again.';
+    _preloadAdults();
     return;
   }
 
@@ -5506,6 +5510,29 @@ function cancelRosterImport(){
 // ============================================================
 // INIT — runs after login, not on page load
 // ============================================================
+function _preloadAdults(){
+  // Show loading state on login form
+  var btn = document.querySelector('#personal-login .btn-primary');
+  var errEl = document.getElementById('pl-err');
+  if(btn) btn.disabled = true;
+  if(errEl){ errEl.style.color = '#667788'; errEl.textContent = 'Connecting...'; }
+
+  fetch('/.netlify/functions/state')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data && !data.error){
+        _applyState(data);
+      }
+    })
+    .catch(function(){
+      if(errEl){ errEl.style.color = '#CC0000'; errEl.textContent = 'Could not connect to server. Check your connection.'; }
+    })
+    .finally(function(){
+      if(btn) btn.disabled = false;
+      if(errEl && errEl.textContent === 'Connecting...') errEl.textContent = '';
+    });
+}
+
 function _restoreLogin(){
   // Restore personal adult identity first
   try {
