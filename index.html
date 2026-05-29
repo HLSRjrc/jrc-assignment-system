@@ -1,5 +1,3 @@
-// Auto-assign roles from title if not manually set
-  setTimeout(_autoAssignRolesFromRoster, 100);
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1362,7 +1360,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 2;   // Minor build — increments every small change
+var APP_BUILD   = 1;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1684,10 +1682,12 @@ function promptBoardPin(){
 
 function switchTab(t, el){
   // Status board requires PIN 2222 unless already unlocked this session
-  if(t === 'board' && !_boardUnlocked){
+  // Skip PIN check if this is an auto/initial tab switch (el === null means programmatic)
+  if(t === 'board' && !_boardUnlocked && el !== null){
     promptBoardPin();
     return;
   }
+  if(t === 'board' && el !== null) _boardUnlocked = true;
   currentTab = t;
   // Re-render tabs to update active state
   renderTabs(t);
@@ -3553,7 +3553,7 @@ var ROLE_TABS = {
   admin:       ['officer','kiosk','roster','setup','requests','reqform','simulate','board','hours'],
   officer:     ['officer','setup','kiosk'],
   scheduling:  ['reqform','requests','setup'],
-  mentor:      ['board','kiosk'],
+  mentor:      ['kiosk','board'],
   kiosk:       ['kiosk'],
   board:       ['board']
 };
