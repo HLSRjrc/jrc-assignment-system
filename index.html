@@ -730,15 +730,10 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
       </div>
       <div id="pl-err" style="color:#CC0000;font-size:12px;min-height:18px;margin-bottom:8px;text-align:center"></div>
       <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;margin-bottom:14px" onclick="doPersonalLogin()">Sign In &rarr;</button>
-      <div style="text-align:center;border-top:1px solid var(--gray-100);padding-top:12px;margin-top:4px">
-        <button class="btn" style="font-size:11px;color:#999;border:none;background:none;cursor:pointer" onclick="showDeviceMode()">&#128241; Device Mode (Kiosk / Status Board)</button>
-      </div>
+
     </div>
 
-    <!-- Device Mode (Kiosk / Status Board quick access) -->
-    <div id="device-mode-select" style="display:none">
-      <div style="font-size:12px;color:#667788;margin-bottom:12px;text-align:center">&#8592; <a href="#" onclick="hideDeviceMode();return false" style="color:var(--navy)">Back to Sign In</a></div>
-    </div><!-- /device-mode-select -->
+
 
     <div id="role-select" style="display:none">
       <button class="role-btn" onclick="selectRole('admin')">
@@ -1355,7 +1350,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 2;   // Minor build — increments every small change
+var APP_BUILD   = 1;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
