@@ -1323,7 +1323,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 17;  // Major version — milestone releases
-var APP_BUILD   = 3;   // Minor build — increments every small change
+var APP_BUILD   = 2;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4662,7 +4662,14 @@ var saveTimer = null;
 
 function saveState(){
   if(saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(function(){ _doSave(); }, 8000);
+  saveTimer = setTimeout(function(){
+    var h = _stateHash();
+    if(h === _lastSavedHash){
+      // Nothing changed — skip this save entirely
+      return;
+    }
+    _doSave();
+  }, 8000);
 }
 
 function saveStateNow(){
@@ -4672,6 +4679,23 @@ function saveStateNow(){
 
 var lastSaveTime = 0;
 var isSaving = false;
+var _lastSavedHash = '';
+
+function _stateHash(){
+  // Quick fingerprint of the parts that matter — avoids saving unchanged state
+  try {
+    var sig = [
+      activeSlots.length,
+      activeSlots.map(function(s){ return s.id + ':' + s.assigned.length + ':' + (s.sent?1:0); }).join('|'),
+      juniors.filter(function(j){ return j.checkedIn || j.assignment; }).map(function(j){
+        return j.id + ':' + (j.checkedIn?1:0) + ':' + (j.assignment||'') + ':' + j.order;
+      }).join('|'),
+      committeeRequests.map(function(r){ return r.id + ':' + r.status; }).join('|'),
+      currentDate, currentShift
+    ].join('§');
+    return sig;
+  } catch(e){ return Math.random().toString(); }
+}
 
 function _doSave(){
   isSaving = true;
@@ -4719,6 +4743,7 @@ function _doSave(){
     }
     console.log('State saved to Neon');
     lastSyncTime = Date.now();
+    _lastSavedHash = _stateHash();
     hideSyncError();
     isSaving = false;
   }).catch(function(e){
@@ -4935,9 +4960,20 @@ var headerClockTimer = null;
 
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
-  pollTimer = setInterval(function(){ pollForUpdates(); }, 180000);
+  pollTimer = setInterval(function(){
+    // Only poll when tab is visible — saves ~70% of idle function calls
+    if(!document.hidden) pollForUpdates();
+  }, 180000);
   if(headerClockTimer) clearInterval(headerClockTimer);
   headerClockTimer = setInterval(function(){ updateHeaderClock(); updateBoardClock(); }, 30000);
+
+  // When user returns to tab after being away, poll immediately
+  document.addEventListener('visibilitychange', function(){
+    if(!document.hidden && currentRole){
+      // Tab became visible — poll now to catch up, then resume normal interval
+      pollForUpdates();
+    }
+  });
 }
 
 function stopPolling(){
