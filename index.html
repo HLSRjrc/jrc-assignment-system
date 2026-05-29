@@ -1355,7 +1355,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 2;   // Minor build — increments every small change
+var APP_BUILD   = 1;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3645,11 +3645,12 @@ function showDeviceModePins(){
 
 function selectRole(role){
   pendingRole = role;
-  if(role === 'kiosk'){
-    // Kiosk has no PIN — log in directly
+  // If user already authenticated via personal login, skip PIN entirely
+  if(loggedInAdult || role === 'kiosk'){
     loginAs(role);
     return;
   }
+  // Device Mode (no personal login) — still requires PIN
   document.getElementById('role-select').style.display = 'none';
   document.getElementById('pin-screen').style.display = 'block';
   document.getElementById('pin-role-lbl').textContent = ROLE_LABELS[role];
