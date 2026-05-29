@@ -1355,7 +1355,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 2;   // Minor build — increments every small change
+var APP_BUILD   = 1;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3607,7 +3607,21 @@ function doPersonalLogin(){
   if(!adult){ errEl.textContent = 'Email or member number not found. Please try again.'; return; }
 
   var role = userRoles[adult.id];
-  if(!role){ errEl.textContent = 'Your account has not been assigned a role yet. Please contact an administrator.'; return; }
+  if(!role){
+    // If NO roles have been configured at all, allow any authenticated adult
+    // to access the admin role picker so someone can bootstrap the system
+    var anyRolesConfigured = Object.keys(userRoles).length > 0;
+    if(!anyRolesConfigured){
+      loggedInAdult = adult;
+      try { localStorage.setItem('jrc_logged_adult', JSON.stringify({id:adult.id, name:adult.name, role:'admin'})); } catch(e){}
+      document.getElementById('personal-login').style.display = 'none';
+      document.getElementById('role-select').style.display = 'block';
+      return;
+    }
+    errEl.style.color = '#CC0000';
+    errEl.textContent = 'Your account has not been assigned a role yet. Please contact an administrator.';
+    return;
+  }
 
   // Success — store who logged in
   loggedInAdult = adult;
