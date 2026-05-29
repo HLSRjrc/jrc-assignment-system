@@ -15,6 +15,22 @@ if(window.location.search.indexOf('partner=1') >= 0){
 /* Hide login screen instantly when in partner mode — no flash */
 .partner-mode #login-screen { display: none !important; }
 .partner-mode #main-app { display: block !important; }
+.partner-mode #partner-header { display: none !important; }
+.partner-mode #main-header { display: none !important; }
+.partner-mode .app { background: transparent !important; padding: 0 !important; max-width: 100% !important; }
+.partner-mode body { background: #001F40 !important; }
+.partner-mode #panel-reqform { 
+  min-height: 100vh;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 1;
+}
+.partner-mode #panel-reqform .card {
+  max-width: 720px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 2;
+}
 </style>
 <style>
 @font-face {
@@ -1218,6 +1234,26 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
 
 <!-- COMMITTEE REQUEST FORM PANEL -->
 <div id="panel-reqform" class="panel">
+  <div class="orb" style="width:5px;height:14px;left:96%;bottom:-20px;animation-duration:13.0s;animation-delay:-1.0s;opacity:0.59"></div>
+  <div class="orb" style="width:4px;height:5px;left:29%;bottom:-20px;animation-duration:7.1s;animation-delay:-7.2s;opacity:0.65"></div>
+  <div class="orb" style="width:14px;height:12px;left:55%;bottom:-20px;animation-duration:7.0s;animation-delay:-7.1s;opacity:0.76"></div>
+  <div class="orb" style="width:4px;height:6px;left:91%;bottom:-20px;animation-duration:8.8s;animation-delay:-3.3s;opacity:0.5"></div>
+  <div class="orb" style="width:9px;height:5px;left:13%;bottom:-20px;animation-duration:8.4s;animation-delay:-4.3s;opacity:0.55"></div>
+  <div class="orb" style="width:8px;height:4px;left:95%;bottom:-20px;animation-duration:9.1s;animation-delay:-1.5s;opacity:0.82"></div>
+  <div class="orb" style="width:5px;height:12px;left:39%;bottom:-20px;animation-duration:12.5s;animation-delay:-7.4s;opacity:0.79"></div>
+  <div class="orb" style="width:13px;height:7px;left:92%;bottom:-20px;animation-duration:5.6s;animation-delay:-7.9s;opacity:0.75"></div>
+  <div class="orb" style="width:5px;height:7px;left:14%;bottom:-20px;animation-duration:8.4s;animation-delay:-5.4s;opacity:0.78"></div>
+  <div class="orb" style="width:6px;height:9px;left:47%;bottom:-20px;animation-duration:6.9s;animation-delay:-3.2s;opacity:0.82"></div>
+  <div class="orb" style="width:14px;height:5px;left:79%;bottom:-20px;animation-duration:10.7s;animation-delay:-6.4s;opacity:0.51"></div>
+  <div class="orb" style="width:11px;height:10px;left:36%;bottom:-20px;animation-duration:13.9s;animation-delay:-7.7s;opacity:0.65"></div>
+  <div class="orb" style="width:14px;height:9px;left:9%;bottom:-20px;animation-duration:7.1s;animation-delay:-0.4s;opacity:0.54"></div>
+  <div class="orb" style="width:8px;height:5px;left:29%;bottom:-20px;animation-duration:13.2s;animation-delay:-6.8s;opacity:0.72"></div>
+  <div class="orb" style="width:7px;height:14px;left:65%;bottom:-20px;animation-duration:8.6s;animation-delay:-11.0s;opacity:0.61"></div>
+  <div class="orb" style="width:8px;height:6px;left:33%;bottom:-20px;animation-duration:11.7s;animation-delay:-6.5s;opacity:0.74"></div>
+  <div class="orb" style="width:10px;height:13px;left:53%;bottom:-20px;animation-duration:8.3s;animation-delay:-12.0s;opacity:0.46"></div>
+  <div class="orb" style="width:14px;height:14px;left:16%;bottom:-20px;animation-duration:5.2s;animation-delay:-3.3s;opacity:0.5"></div>
+  <div class="orb" style="width:5px;height:5px;left:88%;bottom:-20px;animation-duration:11.7s;animation-delay:-6.5s;opacity:0.67"></div>
+  <div class="orb" style="width:4px;height:4px;left:5%;bottom:-20px;animation-duration:5.8s;animation-delay:-2.8s;opacity:0.67"></div>
   <div class="card" style="max-width:700px;margin:0 auto">
     <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:4px">Junior Rodeo Committee &mdash; Opportunity Request</div>
     <div style="font-size:13px;color:#667788;margin-bottom:20px">Houston Livestock Show and Rodeo&trade; 2027 &bull; Show dates: March 2&ndash;20</div>
@@ -3613,8 +3649,7 @@ function enterPartnerMode(){
   var appLayout = document.querySelector('.app-layout'); if(appLayout) appLayout.style.display='block';
   var appContent = document.querySelector('.app-content'); if(appContent) appContent.style.cssText='width:100%;display:block';
 
-  // Show partner header
-  document.getElementById('partner-header').style.display = 'block';
+  // Partner header is hidden — orb background handles the look
 
   // Hide all panels then show only reqform
   document.querySelectorAll('.panel').forEach(function(p){ p.style.display='none'; });
