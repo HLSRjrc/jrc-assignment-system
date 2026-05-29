@@ -1405,7 +1405,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 11;  // Minor build — increments every small change
+var APP_BUILD   = 10;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3624,10 +3624,24 @@ function enterPartnerMode(){
   // Show only the reqform panel
   document.querySelectorAll('.panel').forEach(function(p){ p.style.display = 'none'; });
   var pf = document.getElementById('panel-reqform');
-  if(pf){ pf.style.display = 'block'; renderReqForm(); }
+  if(pf){
+    pf.style.display = 'block';
+    renderReqForm();
+    // Ensure it stays visible even if anything resets panels
+    setTimeout(function(){
+      document.querySelectorAll('.panel').forEach(function(p){ p.style.display='none'; });
+      if(pf) pf.style.display = 'block';
+    }, 200);
+  }
 
-  // Load state so committee library and dates are available
-  loadState();
+  // Load just enough state for the form (show dates, committee library)
+  // Use lightweight fetch to avoid render side effects on the partner form
+  fetch('/.netlify/functions/state')
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data && !data.error) _applyState(data);
+    })
+    .catch(function(){});
 }
 
 function partnerSubmitAnother(){
@@ -4020,7 +4034,7 @@ function renderReqForm(){
   // Reset type to showtime
   currentReqType = 'showtime';
   psRowCount = 1;
-  setReqType('showtime');
+  try { setReqType('showtime'); } catch(e){}
   // Reset pre-show rows
   var psRows = document.getElementById('rf-ps-rows');
   if(psRows) psRows.innerHTML = '<div class="rf-ps-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px" id="rf-ps-row-1">' +
