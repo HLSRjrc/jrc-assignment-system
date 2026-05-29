@@ -1,3 +1,5 @@
+// Auto-assign roles from title if not manually set
+  setTimeout(_autoAssignRolesFromRoster, 100);
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1360,7 +1362,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 18;  // Major version — milestone releases
-var APP_BUILD   = 2;   // Minor build — increments every small change
+var APP_BUILD   = 1;   // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3527,13 +3529,14 @@ function activateShift(){
 //   kiosk:   0000  (no PIN needed — just tap Enter or the button)
 // ============================================================
 var PINS = { admin:'1234', officer:'5678', scheduling:'1111', kiosk:'0000', board:'2222' };
-var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'Scheduling', kiosk:'Kiosk Mode', board:'Status Board' };
+var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'Scheduling', mentor:'Mentor', kiosk:'Kiosk Mode', board:'Status Board' };
 
 // Tabs each role can see
 var ROLE_TABS = {
   admin:       ['officer','kiosk','roster','setup','requests','reqform','simulate','board','hours'],
   officer:     ['officer','setup','kiosk'],
   scheduling:  ['reqform','requests','setup'],
+  mentor:      ['board','kiosk'],
   kiosk:       ['kiosk'],
   board:       ['board']
 };
@@ -3612,7 +3615,8 @@ function doPersonalLogin(){
 
   if(!adult){ errEl.textContent = 'Email or member number not found. Please try again.'; return; }
 
-  var role = userRoles[adult.id];
+  // Check explicit role first, then fall back to title-based role
+  var role = userRoles[adult.id] || _titleToRole(adult.title);
   if(!role){
     // If NO roles have been configured at all, allow any authenticated adult
     // to access the admin role picker so someone can bootstrap the system
@@ -5224,7 +5228,7 @@ function renderUserMgmt(){
   if(!adults.length){ el.innerHTML = '<div style="color:#999;font-size:13px">No adults loaded yet. Import a roster first.</div>'; return; }
 
   var roleOpts = [
-    {val:'', lbl:'-- No Access --'},
+    {val:'', lbl:'-- No Access (uses title default if set) --'},
     {val:'admin', lbl:'Administrator (all tabs)'},
     {val:'officer', lbl:'Shift Officer'},
     {val:'scheduling', lbl:'Scheduler (requests + partner)'}
@@ -5617,6 +5621,28 @@ function _clearInactivityTimer(){
     if(currentRole) _resetInactivityTimer();
   }, {passive:true});
 });
+
+// ── Title → Role auto-mapping ────────────────────────────────────────────
+function _titleToRole(title){
+  if(!title) return null;
+  var t = title.toLowerCase().trim();
+  if(t.indexOf('admin') >= 0 || t.indexOf('president') >= 0 || t.indexOf('chairman') >= 0 || t.indexOf('chair') >= 0) return 'admin';
+  if(t.indexOf('shift officer') >= 0 || t.indexOf('shift ofcr') >= 0) return 'officer';
+  if(t.indexOf('schedul') >= 0) return 'scheduling';
+  if(t.indexOf('mentor') >= 0) return 'mentor';
+  return null;
+}
+
+function _autoAssignRolesFromRoster(){
+  // Only auto-assign if no explicit assignment exists for this adult
+  var changed = false;
+  adults.forEach(function(a){
+    if(userRoles[a.id]) return; // already has explicit role — don't override
+    var role = _titleToRole(a.title);
+    if(role){ userRoles[a.id] = role; changed = true; }
+  });
+  if(changed) saveState();
+}
 
 function _preloadAdults(){
   // Show loading state on login form
