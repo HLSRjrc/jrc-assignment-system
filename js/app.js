@@ -1722,31 +1722,44 @@ function initSetupDatePicker(){
   });
   sel.appendChild(optgroup2026);
 
-  // ── Pre-Show / Other dates (between 2026 and 2027) ────────────────────
+  // ── Pre-Show 2027 — any date after 2026 show and before 2027 show ─────
   var preShowDates = {};
+
+  // Include hardcoded SCHEDULE_2026 dates that are outside the 2026 show window
+  Object.keys(SCHEDULE_2026).forEach(function(d){
+    if(!isShow2026Date(d) || (function(){
+      var dt = new Date(d + 'T00:00:00');
+      // Outside 2026 show (March 2-21): after 2026-03-21 or before 2026-03-02
+      return dt > new Date('2026-03-21T23:59:59');
+    })()){
+      var dt = new Date(d + 'T00:00:00');
+      var in2027Show = dt.getFullYear() === 2027 && dt.getMonth() === 2 && dt.getDate() >= 2 && dt.getDate() <= 20;
+      if(!in2027Show) preShowDates[d] = true;
+    }
+  });
+
+  // Also include approved requests not in 2026 show or 2027 show
   var show2026Keys = Object.keys(SCHEDULE_2026);
   committeeRequests.filter(function(r){ return r.status==='approved'; }).forEach(function(r){
     r.shifts.forEach(function(s){
       if(!s.date) return;
       var in2026Show = show2026Keys.indexOf(s.date) >= 0;
-      // Temporarily check against 2027 show — we'll build that below
       var in2027Show = (function(){
         var dt = new Date(s.date + 'T00:00:00');
         return dt.getFullYear() === 2027 && dt.getMonth() === 2 && dt.getDate() >= 2 && dt.getDate() <= 20;
       })();
-      if(!in2026Show && !in2027Show){
-        preShowDates[s.date] = true;
-      }
+      if(!in2026Show && !in2027Show) preShowDates[s.date] = true;
     });
   });
+
   var psDates = Object.keys(preShowDates).sort();
   if(psDates.length){
     var optgroupPS = document.createElement('optgroup');
-    optgroupPS.label = 'Pre-Show / Other';
+    optgroupPS.label = 'Pre-Show 2027';
     psDates.forEach(function(d){
       var opt = document.createElement('option');
       opt.value = d;
-      opt.textContent = fmtDateLong(d) + ' ✓';
+      opt.textContent = fmtDateLong(d) + (SCHEDULE_2026[d] ? '' : ' ✓');
       optgroupPS.appendChild(opt);
     });
     sel.appendChild(optgroupPS);
