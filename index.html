@@ -12,6 +12,13 @@ if(window.location.search.indexOf('partner=1') >= 0){
 }
 </script>
 <link rel="stylesheet" href="/css/app.css">
+<style>
+  .partner-mode body,
+  .partner-mode html {
+    overflow-y: auto !important;
+    height: auto !important;
+  }
+</style>
 
 </head>
 <body>
@@ -182,14 +189,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
           <div class="role-desc">Request Juniors to work with your committee</div>
         </div>
       </button>
-    </div>
-      <div style="font-size:13px;color:#667788;margin-bottom:14px">Enter your 4-digit PIN</div>
-      <input class="pin-input" id="pin-input" type="password" maxlength="4" inputmode="numeric" placeholder="&bull;&bull;&bull;&bull;" onkeydown="if(event.key==='Enter')submitPin()">
-      <div class="login-err" id="pin-err"></div>
-      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="submitPin()">Enter</button>
-      <button class="btn" style="width:100%;padding:10px;font-size:13px;margin-top:8px" onclick="backToRoles()">&#8592; Back</button>
-    </div>
-  </div>
+    </div></div>
   </div>
 </div>
 </div><!-- /main-header -->
