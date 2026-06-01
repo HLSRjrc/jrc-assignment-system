@@ -17,3 +17,10 @@
   to = "https://jrc.hlsr.app/?partner=1"
   status = 302
   force = true
+
+[build.processing]
+  skip_processing = false
+
+[secrets_scanning]
+  omit_paths = ["node_modules"]
+  omit_keys = ["BOARD_ACCESS_CODE"]

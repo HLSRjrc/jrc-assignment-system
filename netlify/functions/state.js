@@ -152,7 +152,16 @@ exports.handler = async (event) => {
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({ state, juniors: juniorRows, adults: adultRows, activeSlots: slotRows, committeeRequests: reqRows })
+        body: JSON.stringify({
+          state,
+          juniors: juniorRows,
+          adults: adultRows,
+          activeSlots: slotRows,
+          committeeRequests: reqRows,
+          config: {
+            boardPin: process.env.BOARD_ACCESS_CODE || ''
+          }
+        })
       };
     }
 
