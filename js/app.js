@@ -4251,7 +4251,7 @@ function applyRosterImport(){
         id:m.id, name:m.name, title:m.title, phone:m.phone, email:m.email,
         ageout:m.ageout, hasHat:false, notes:'', checkedIn:false, assignment:null,
         last:'None', order:0, checkInShift:'', shiftAssignments:{},
-        plannedShifts:[], shiftLog:[], history:[], inactive:false
+        plannedShifts:[], shiftLog:[], history:[], noteLog:[], inactive:false
       });
       added++;
     }
