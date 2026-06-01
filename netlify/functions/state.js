@@ -70,6 +70,40 @@ function validateStateKey(key, value) {
   return null;
 }
 
+
+// ── RATE LIMITING ────────────────────────────────────────────────────────────
+// In-memory store — resets when the function cold-starts (fine for our use case)
+// Limits: 60 requests per IP per minute for normal use
+//         stricter 10 per minute for DELETE (destructive)
+const rateLimitStore = {};
+
+function isRateLimited(ip, method) {
+  const now = Date.now();
+  const windowMs = 60 * 1000; // 1 minute window
+  const limits = { GET: 60, POST: 60, DELETE: 10 };
+  const limit = limits[method] || 60;
+
+  if (!rateLimitStore[ip]) rateLimitStore[ip] = [];
+
+  // Remove entries outside the current window
+  rateLimitStore[ip] = rateLimitStore[ip].filter(t => now - t < windowMs);
+
+  if (rateLimitStore[ip].length >= limit) return true;
+
+  rateLimitStore[ip].push(now);
+  return false;
+}
+
+// Clean up old IPs every 5 minutes to prevent memory leak
+setInterval(() => {
+  const now = Date.now();
+  const windowMs = 60 * 1000;
+  for (const ip of Object.keys(rateLimitStore)) {
+    rateLimitStore[ip] = rateLimitStore[ip].filter(t => now - t < windowMs);
+    if (rateLimitStore[ip].length === 0) delete rateLimitStore[ip];
+  }
+}, 5 * 60 * 1000);
+
 // ── HANDLER ──────────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
   const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
@@ -77,6 +111,22 @@ exports.handler = async (event) => {
 
   if (!isAllowedOrigin(origin)) {
     return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
+  }
+
+  // Rate limiting — get client IP from Netlify headers
+  const clientIp = (event.headers && (
+    event.headers['x-nf-client-connection-ip'] ||
+    event.headers['x-forwarded-for'] ||
+    event.headers['client-ip'] ||
+    'unknown'
+  )).split(',')[0].trim();
+
+  if (isRateLimited(clientIp, event.httpMethod)) {
+    return {
+      statusCode: 429,
+      headers,
+      body: JSON.stringify({ error: 'Too many requests. Please slow down.' })
+    };
   }
 
   if (event.httpMethod === 'OPTIONS') {
