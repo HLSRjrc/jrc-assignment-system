@@ -514,6 +514,9 @@ function assignJr(jr, slotName){
   if(jr.history[jr.history.length - 1] !== slotName) jr.history.push(slotName);
 }
 function unassignJr(jr, sl){
+  // Log the dismissal
+  var jIdx = juniors.indexOf(jr);
+  if(jIdx >= 0 && sl) addJuniorNote(jIdx, 'Dismissed from ' + (sl.name||sl) + ' back to pool', 'dismissed');
   jr.assignment = null;
   jr.last = jr.prevLast !== null ? jr.prevLast : jr.last;
   if(jr.history.length > 0 && jr.history[jr.history.length - 1] === sl.name) jr.history.pop();
@@ -1568,7 +1571,7 @@ function renderRoster(){
 
     return '<tr class="' + (j.ageout ? 'ao-row' : '') + '">' +
       '<td style="font-size:11px;color:var(--gray-400)">' + j.id + '</td>' +
-      '<td style="font-weight:600;color:var(--navy)">' + (j.hasHat ? '🤠 ' : '') + j.name + '</td>' +
+      '<td style="font-weight:600;color:var(--navy);cursor:pointer" title="View activity log" onclick="openNoteLog(' + ri + ')">' + (j.hasHat ? '🤠 ' : '') + j.name + ' <span style="font-size:10px;color:var(--orange)">&#9998;</span>' + (j.noteLog && j.noteLog.length ? ' <span style="background:var(--orange);color:#fff;border-radius:8px;padding:0 5px;font-size:10px">' + j.noteLog.length + '</span>' : '') + '</td>' +
       '<td><span class="badge b-title" style="font-size:9px">' + j.title.replace('Junior ', '') + '</span></td>' +
       '<td>' + contact + '</td>' +
       '<td style="font-size:12px">' + j.last + '</td>' +
@@ -3712,7 +3715,7 @@ function _applyState(data){
   if(data.adults && Array.isArray(data.adults) && data.adults.length > 0){
     adults = data.adults.map(function(row){
       return {
-        id: row.id, name: row.name||'', title: row.title||'',
+        id: row.id, name: row.name||'', title: row.title||'', noteLog: row.note_log||[],
         phone: row.phone||'', email: row.email||'', inactive: row.inactive||false
       };
     });
@@ -4305,6 +4308,98 @@ function _getDeviceInfo(){
   else if(ua.indexOf('Mac') > -1) os = 'Mac';
   else if(ua.indexOf('Windows') > -1) os = 'Windows';
   return browser + ' / ' + os;
+}
+
+// ── Junior Activity Log ──────────────────────────────────────────────────────
+function addJuniorNote(jIdx, text, type){
+  type = type || 'note';
+  var j = juniors[jIdx];
+  if(!j) return;
+  if(!j.noteLog) j.noteLog = [];
+  var entry = {
+    ts:   new Date().toISOString(),
+    by:   loggedInAdult ? loggedInAdult.name.split(',')[0].trim() : (currentRole || 'System'),
+    type: type,   // 'note' | 'check-in' | 'dismissed' | 'system'
+    text: text
+  };
+  j.noteLog.unshift(entry); // newest first
+  saveState();
+}
+
+function openNoteLog(jIdx){
+  var j = juniors[jIdx];
+  if(!j) return;
+  var log = j.noteLog || [];
+
+  var typeColors = { note:'var(--navy)', 'check-in':'#27AE60', dismissed:'#EF7622', system:'#8899AA' };
+  var typeLabels = { note:'Note', 'check-in':'Check-In', dismissed:'Dismissed to Pool', system:'System' };
+
+  var logHtml = log.length === 0
+    ? '<div style="color:#aaa;font-size:13px;padding:20px 0;text-align:center">No entries yet</div>'
+    : log.map(function(e){
+        var d = new Date(e.ts);
+        var dateStr = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
+        var h = d.getHours(), m = String(d.getMinutes()).padStart(2,'0');
+        var ampm = h >= 12 ? 'PM' : 'AM'; h = h%12||12;
+        var color = typeColors[e.type] || typeColors.note;
+        var label = typeLabels[e.type] || e.type;
+        return '<div style="border-left:3px solid '+color+';padding:8px 12px;margin-bottom:10px;background:#F8FAFC;border-radius:0 6px 6px 0">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+            '<span style="font-size:11px;font-weight:700;color:'+color+';text-transform:uppercase;letter-spacing:.04em">'+label+'</span>' +
+            '<span style="font-size:11px;color:#8899AA">'+dateStr+' '+h+':'+m+' '+ampm+'</span>' +
+          '</div>' +
+          (e.by ? '<div style="font-size:11px;color:#8899AA;margin-bottom:4px">by '+e.by+'</div>' : '') +
+          (e.text ? '<div style="font-size:13px;color:#334455">'+e.text+'</div>' : '') +
+        '</div>';
+      }).join('');
+
+  var modal = document.getElementById('note-log-modal');
+  if(!modal){
+    modal = document.createElement('div');
+    modal.id = 'note-log-modal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,16,40,.6);display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto';
+    modal.onclick = function(e){ if(e.target===modal) closeNoteLog(); };
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = '<div style="background:#fff;border-radius:12px;width:100%;max-width:560px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">' +
+    '<div style="background:var(--navy);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">' +
+      '<div>' +
+        '<div style="color:#fff;font-weight:700;font-size:16px">'+j.name+'</div>' +
+        '<div style="color:rgba(255,255,255,.6);font-size:12px">Member #'+j.id+' &nbsp;&bull;&nbsp; Activity Log</div>' +
+      '</div>' +
+      '<button onclick="closeNoteLog()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;width:30px;height:30px;border-radius:50%;cursor:pointer;line-height:1">&times;</button>' +
+    '</div>' +
+    '<div style="padding:16px 20px;max-height:380px;overflow-y:auto">' +
+      logHtml +
+    '</div>' +
+    '<div style="padding:16px 20px;border-top:1px solid #eee;background:#F8FAFC">' +
+      '<div style="font-size:12px;color:#8899AA;margin-bottom:6px">Add a note — visible to all officers</div>' +
+      '<textarea id="note-log-input" class="finput" rows="3" placeholder="Type a note..." style="width:100%;resize:vertical;margin-bottom:8px"></textarea>' +
+      '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+        '<button class="btn" onclick="closeNoteLog()">Cancel</button>' +
+        '<button class="btn btn-primary" onclick="submitNoteFromLog('+jIdx+')">Add Note</button>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
+  modal.style.display = 'flex';
+  setTimeout(function(){ document.getElementById('note-log-input').focus(); }, 100);
+}
+
+function closeNoteLog(){
+  var modal = document.getElementById('note-log-modal');
+  if(modal) modal.style.display = 'none';
+}
+
+function submitNoteFromLog(jIdx){
+  var input = document.getElementById('note-log-input');
+  var text = (input ? input.value.trim() : '');
+  if(!text){ input.focus(); return; }
+  addJuniorNote(jIdx, text, 'note');
+  closeNoteLog();
+  // Re-open to show the new entry
+  setTimeout(function(){ openNoteLog(jIdx); }, 100);
 }
 
 function _recordLogin(role){
