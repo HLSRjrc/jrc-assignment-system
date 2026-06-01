@@ -95,7 +95,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
         <div class="role-icon" style="background:transparent;padding:4px">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="var(--navy)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
         </div>
-        <div><div class="role-name">Status Board</div><div class="role-desc">Requires PIN 2222</div></div>
+        <div><div class="role-name">Status Board</div><div class="role-desc">Live shift tracking display</div></div>
       </button>
     </div>
 
@@ -183,9 +183,6 @@ if(window.location.search.indexOf('partner=1') >= 0){
         </div>
       </button>
     </div>
-
-    <div id="pin-screen" class="pin-screen">
-      <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:6px" id="pin-role-lbl"></div>
       <div style="font-size:13px;color:#667788;margin-bottom:14px">Enter your 4-digit PIN</div>
       <input class="pin-input" id="pin-input" type="password" maxlength="4" inputmode="numeric" placeholder="&bull;&bull;&bull;&bull;" onkeydown="if(event.key==='Enter')submitPin()">
       <div class="login-err" id="pin-err"></div>
