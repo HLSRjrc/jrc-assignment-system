@@ -3292,7 +3292,10 @@ function manualClockOut(jid, skipConfirm){
   onShiftJuniors.delete(jid);
   onShiftJuniors.delete(String(jid));
   jr.checkedIn = false;
+  jr.plannedShifts = [];
+  jr.checkInShift = '';
   clockedOut[jid] = true;
+  dirtyJuniors.add(jr.id);
   renderOfficer();
   renderBoard();
   saveStateNow();
