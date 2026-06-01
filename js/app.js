@@ -2406,7 +2406,11 @@ function loginAs(role){
   pendingRole = null;
 
   // Persist login so refresh doesn't log out
-  try { localStorage.setItem('jrc_saved_role', role); } catch(e){}
+  try {
+    var sessionExpiry = Date.now() + (8 * 60 * 60 * 1000);
+    localStorage.setItem('jrc_saved_role', role);
+    localStorage.setItem('jrc_session_expiry', String(sessionExpiry));
+  } catch(e){{}}
 
   // Hide login, show app
   document.getElementById('login-screen').style.display = 'none';
@@ -2458,6 +2462,7 @@ function doLogout(){
   loggedInAdult = null;
   try { localStorage.removeItem('jrc_saved_role'); } catch(e){}
   try { localStorage.removeItem('jrc_logged_adult'); } catch(e){}
+  try { localStorage.removeItem('jrc_session_expiry'); } catch(e){}
   pendingRole = null;
 
   // Hide app, show login
@@ -4391,11 +4396,17 @@ function _restoreLogin(){
   // Then restore role
   try {
     var saved = localStorage.getItem('jrc_saved_role');
-    if(saved && ROLE_TABS[saved]){
+    var expiry = parseInt(localStorage.getItem('jrc_session_expiry') || '0', 10);
+    if(saved && ROLE_TABS[saved] && expiry && Date.now() < expiry){
       window._restoringSession = true;
       loginAs(saved);
       window._restoringSession = false;
       return true;
+    } else if(saved) {
+      // Session expired — clear it
+      try { localStorage.removeItem('jrc_saved_role'); } catch(e){}
+      try { localStorage.removeItem('jrc_logged_adult'); } catch(e){}
+      try { localStorage.removeItem('jrc_session_expiry'); } catch(e){}
     }
   } catch(e){}
   return false;
