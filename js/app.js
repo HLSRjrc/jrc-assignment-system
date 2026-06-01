@@ -338,7 +338,7 @@ function promptBoardPin(){
 }
 
 function switchTab(t, el){
-  // Status board requires PIN 2222 unless already unlocked this session
+  // Status board requires PIN unless already unlocked this session
   // Skip PIN check if this is an auto/initial tab switch (el === null means programmatic)
   if(t === 'board' && !_boardUnlocked && el !== null){
     promptBoardPin();
@@ -2202,7 +2202,7 @@ function activateShift(){
 //   officer: 5678
 //   kiosk:   0000  (no PIN needed — just tap Enter or the button)
 // ============================================================
-var PINS = { admin:'1234', officer:'5678', scheduling:'1111', kiosk:'0000', board:'2222' };
+var PINS = { admin:'1234', officer:'5678', scheduling:'1111', kiosk:'0000', board:'' };
 var BOARD_PIN = ''; // set at runtime from server config
 var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'Scheduling', mentor:'Mentor', kiosk:'Kiosk Mode', board:'Status Board' };
 
