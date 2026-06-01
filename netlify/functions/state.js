@@ -1,12 +1,33 @@
 const { getDb } = require('./db');
 
-const headers = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'Content-Type',
-  'Content-Type': 'application/json'
-};
+// Allowed origins — only our own domains can call this function
+const ALLOWED_ORIGINS = [
+  'https://jrc.hlsr.app',
+  'https://jrcpartner.hlsr.app',
+  'https://www.jrc.hlsr.app'
+];
+
+function getCorsHeaders(event) {
+  const origin = event.headers && (event.headers.origin || event.headers.Origin);
+  // Allow the request if origin matches, or if it's a same-origin/server request (no origin header)
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : (origin ? null : 'https://jrc.hlsr.app');
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin || 'https://jrc.hlsr.app',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+    'Content-Type': 'application/json'
+  };
+}
 
 exports.handler = async (event) => {
+  const headers = getCorsHeaders(event);
+  const origin = event.headers && (event.headers.origin || event.headers.Origin);
+
+  // Block requests from disallowed origins (but allow no-origin for server-side/Netlify calls)
+  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+    return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
+  }
+
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' };
   }
@@ -101,21 +122,18 @@ exports.handler = async (event) => {
         ));
       }
 
-      // Upsert active slots (preserves existing if not sent, updates if sent)
+      // Upsert active slots
       if (body.activeSlots !== undefined) {
         if (body.activeSlots.length === 0) {
           await sql`DELETE FROM active_slots`;
         } else {
-          // Get current slot IDs to detect deletions
           const existing = await sql`SELECT id FROM active_slots`;
           const existingIds = new Set(existing.map(r => r.id));
           const newIds = new Set(body.activeSlots.map(s => String(s.id)));
-          // Delete slots no longer present
           const toDelete = [...existingIds].filter(id => !newIds.has(id));
           if (toDelete.length > 0) {
             await sql`DELETE FROM active_slots WHERE id = ANY(${toDelete})`;
           }
-          // Upsert current slots
           await Promise.all(body.activeSlots.map(s =>
             sql`INSERT INTO active_slots (
                   id, name, shift, capacity, assigned, hat,
