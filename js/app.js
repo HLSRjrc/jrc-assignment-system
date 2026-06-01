@@ -329,7 +329,7 @@ var _boardUnlocked = false;
 
 function promptBoardPin(){
   var pin = prompt('Enter Status Board PIN:');
-  if(pin === '2222'){
+  if(pin === BOARD_PIN){
     _boardUnlocked = true;
     switchTab('board', null);
   } else if(pin !== null){
@@ -2203,6 +2203,7 @@ function activateShift(){
 //   kiosk:   0000  (no PIN needed — just tap Enter or the button)
 // ============================================================
 var PINS = { admin:'1234', officer:'5678', scheduling:'1111', kiosk:'0000', board:'2222' };
+var BOARD_PIN = '2222'; // overwritten at runtime from server config
 var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'Scheduling', mentor:'Mentor', kiosk:'Kiosk Mode', board:'Status Board' };
 
 // Tabs each role can see
@@ -2347,7 +2348,7 @@ function doPersonalLogin(){
 
 function openBoardWithPin(){
   var pin = prompt('Enter Status Board PIN:');
-  if(pin === '2222'){
+  if(pin === BOARD_PIN){
     _boardUnlocked = true;
     document.getElementById('mentor-picker').style.display = 'none';
     loginAs('mentor');
@@ -3735,6 +3736,7 @@ function _applyState(data){
     } catch(e){}
   }
   if(state.userRoles) userRoles = state.userRoles;
+  if(data.config && data.config.boardPin) BOARD_PIN = data.config.boardPin;
   if(state.loginLog)  loginLog  = state.loginLog;
   if(data.committeeRequests && data.committeeRequests.length){
     committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
