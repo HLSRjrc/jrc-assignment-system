@@ -1,5 +1,5 @@
 [build]
-  command = "npm install && npm run build && sed -i \"s/__API_SECRET__/$API_SECRET/g\" js/app.js"
+  command = "npm install && npm run build"
   functions = "netlify/functions"
   publish = "."
 
