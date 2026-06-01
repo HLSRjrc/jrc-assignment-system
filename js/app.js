@@ -3708,6 +3708,7 @@ function _applyState(data){
         plannedShifts:   row.planned_shifts  || [],
         history:         row.history         || [],
         inactive:        row.inactive        || false,
+        noteLog:         row.note_log        || [],
       };
     });
   }
