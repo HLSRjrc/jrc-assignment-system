@@ -2,7 +2,7 @@
   "name": "jrc-rodeo",
   "version": "1.0.0",
   "scripts": {
-    "build": "esbuild js/app.js --bundle=false --minify --allow-overwrite --outfile=js/app.js && esbuild css/app.css --bundle=false --minify --allow-overwrite --log-level=silent --outfile=css/app.css"
+    "build": "esbuild js/app.js --bundle=false --minify --allow-overwrite --outfile=js/app.js && esbuild css/app.css --bundle=false --minify --allow-overwrite --log-level=silent --outfile=css/app.css && node inject-token.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.0"
