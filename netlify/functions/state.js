@@ -221,7 +221,7 @@ exports.handler = async (event) => {
                   id, name, title, ageout, has_hat, notes, phone, email,
                   shift_log, checked_in, assignment, last_assignment,
                   check_in_order, check_in_shift, shift_assignments,
-                  planned_shifts, history, inactive, updated_at
+                  planned_shifts, history, inactive, note_log, updated_at
                 ) VALUES (
                   ${j.id}, ${j.name||''}, ${j.title||'Committeeman'},
                   ${j.ageout||false}, ${j.hasHat||j.has_hat||false},
@@ -235,7 +235,8 @@ exports.handler = async (event) => {
                   ${JSON.stringify(j.shiftAssignments||j.shift_assignments||{})},
                   ${JSON.stringify(j.plannedShifts||j.planned_shifts||[])},
                   ${JSON.stringify(j.history||[])},
-                  ${j.inactive||false}, NOW()
+                  ${j.inactive||false},
+                  ${JSON.stringify(j.noteLog||j.note_log||[])}, NOW()
                 )
                 ON CONFLICT (id) DO UPDATE SET
                   name=EXCLUDED.name, title=EXCLUDED.title,
@@ -246,7 +247,8 @@ exports.handler = async (event) => {
                   check_in_order=EXCLUDED.check_in_order, check_in_shift=EXCLUDED.check_in_shift,
                   shift_assignments=EXCLUDED.shift_assignments,
                   planned_shifts=EXCLUDED.planned_shifts, history=EXCLUDED.history,
-                  inactive=EXCLUDED.inactive, updated_at=NOW()`
+                  inactive=EXCLUDED.inactive, note_log=EXCLUDED.note_log,
+                updated_at=NOW()`
           ));
         }
       }
@@ -270,7 +272,8 @@ exports.handler = async (event) => {
                 ON CONFLICT (id) DO UPDATE SET
                   name=EXCLUDED.name, title=EXCLUDED.title,
                   phone=EXCLUDED.phone, email=EXCLUDED.email,
-                  inactive=EXCLUDED.inactive, updated_at=NOW()`
+                  inactive=EXCLUDED.inactive, note_log=EXCLUDED.note_log,
+                updated_at=NOW()`
           ));
         }
       }
