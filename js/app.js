@@ -381,7 +381,7 @@ function kLookup(){
   // Already checked in and NOT clocked out → show clock-out screen
   if(jr.checkedIn && !clockedOut[jr.id]){
     pendingJr = jr;
-    document.getElementById('kco-name').textContent = (jr.hasHat ? '🤠 ' : '') + jr.name;
+    document.getElementById('kco-name').innerHTML = (jr.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
     document.getElementById('kco-assignment').textContent = jr.assignment ? 'Currently assigned to: ' + jr.assignment : 'Not yet assigned to a committee';
     var nextEl = document.getElementById('kco-next-shift');
     if(nextEl) nextEl.textContent = '';
@@ -390,7 +390,7 @@ function kLookup(){
     return;
   }
   pendingJr = jr;
-  document.getElementById('kc-name').textContent = (jr.hasHat ? '🤠 ' : '') + jr.name;
+  document.getElementById('kc-name').innerHTML = (jr.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
   document.getElementById('kc-title').textContent = jr.title;
   document.getElementById('kc-last').textContent = 'Last assignment: ' + jr.last;
   var b = '<span class="badge b-title">' + jr.title.replace('Junior ', '') + '</span>';
@@ -399,7 +399,7 @@ function kLookup(){
   document.getElementById('k-entry').style.display = 'none';
   // Age-outs get extra shift-selection screen
   if(jr.ageout){
-    document.getElementById('kao-name').textContent = (jr.hasHat ? '🤠 ' : '') + jr.name;
+    document.getElementById('kao-name').innerHTML = (jr.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
     // Pre-check current shift
     ['8am','12pm','4pm'].forEach(function(sh){
       var cb = document.getElementById('kao-shift-' + sh);
@@ -417,7 +417,7 @@ function kAoNext(){
     var cb = document.getElementById('kao-shift-' + sh);
     if(cb && cb.checked) pendingJr.plannedShifts.push(sh);
   });
-  document.getElementById('kc-name').textContent = (pendingJr.hasHat ? '🤠 ' : '') + pendingJr.name;
+  document.getElementById('kc-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
   document.getElementById('kc-title').textContent = pendingJr.title;
   document.getElementById('kc-last').textContent = 'Last assignment: ' + pendingJr.last;
   var b = '<span class="badge b-title">' + pendingJr.title.replace('Junior ', '') + '</span>';
@@ -451,7 +451,7 @@ function kConfirm(){
   // Reset inputs
   document.getElementById('k-hat').checked = false;
   document.getElementById('k-notes').value = '';
-  document.getElementById('kd-name').textContent = (pendingJr.hasHat ? '🤠 ' : '') + pendingJr.name;
+  document.getElementById('kd-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
   // Done screen age-out message
   var aoMsg = '';
   if(pendingJr.ageout){
@@ -479,7 +479,7 @@ function kClockOut(){
   clockedOut[pendingJr.id] = true;
   dirtyJuniors.add(pendingJr.id);
   saveStateNow();
-  document.getElementById('kdo-name').textContent = (pendingJr.hasHat ? '🤠 ' : '') + pendingJr.name;
+  document.getElementById('kdo-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
   document.getElementById('k-clockout').style.display = 'none';
   document.getElementById('k-clockout-done').style.display = 'block';
   renderOfficer();
@@ -582,7 +582,7 @@ function buildReports(slots){
       var jr = jrs[i];
       html += '<div class="rpt-jrow">' +
         '<span class="rpt-num">' + (i+1) + '.</span>' +
-        '<span class="rpt-name">' + (jr ? (jr.hasHat ? '🤠 ' : '') + jr.name + (jr.ageout?' &#9733;':'') : '') + '</span>' +
+        '<span class="rpt-name">' + (jr ? (jr.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name + (jr.ageout?' &#9733;':'') : '') + '</span>' +
       '</div>';
     }
     html += '</div>';
@@ -700,7 +700,7 @@ function renderNotesQueue(){
     var isDismissed = state === 'dismissed';
 
     html += '<div class="notes-item' + (isDismissed ? ' dismissed' : isAssigned && state === 'locked' ? ' locked' : '') + '">' +
-      '<div class="notes-item-name">' + (j.hasHat ? '🤠 ' : '') + j.name +
+      '<div class="notes-item-name">' + (j.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name +
         (isAssigned && state === 'locked' ? ' <span class="locked-tag">&#128274; ' + j.assignment + '</span>' : '') +
         (isDismissed ? ' <span style="font-size:11px;color:#999;font-style:italic">&mdash; dismissed to regular pool</span>' : '') +
       '</div>' +
@@ -753,7 +753,7 @@ function renderNotePick(){
     '<button class="btn btn-sm" onclick="closeNotePick()">Close</button></div>' :
     '<div class="pick-panel">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
-        '<div class="pick-header">' + (jr.hasHat ? '🤠 ' : '') + jr.name + ' &mdash; choose assignment</div>' +
+        '<div class="pick-header">' + (jr.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name + ' &mdash; choose assignment</div>' +
         '<button class="btn btn-sm" onclick="closeNotePick()">Cancel</button>' +
       '</div>' +
       '<div class="pick-sub" style="margin-bottom:8px">' +
@@ -896,7 +896,7 @@ function renderOfficer(search){
         return '<button class="ao-btn' + (assigned ? ' done' : isActive ? ' active' : '') + '" onclick="' + (assigned ? '' : 'openPickForShift(\'' + j.id + '\',\'' + sh + '\')') + '">' +
           '<span class="order-badge">' + (i + 1) + '</span>' +
           (assigned ? '&#10003; ' : '') +
-          (j.hasHat ? '🤠 ' : '') + j.name +
+          (j.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name +
           ' <span style="font-size:10px;opacity:.75">' + shiftLabel + '</span>' +
           (assigned ? ' &rarr; ' + assigned : '') +
         '</button>' +
@@ -920,7 +920,7 @@ function renderOfficer(search){
       '<div class="pick-panel"><div class="pick-header">No open slots</div><div class="pick-sub">All slots for this shift are full.</div><button class="btn btn-sm" onclick="closePick()">Close</button></div>' :
       '<div class="pick-panel">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
-          '<div class="pick-header">' + (pickJr.hasHat ? '🤠 ' : '') + pickJr.name + ', choose your assignment</div>' +
+          '<div class="pick-header">' + (pickJr.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pickJr.name + ', choose your assignment</div>' +
           (pickJr.plannedShifts && pickJr.plannedShifts.length > 1 ? '<div style="font-size:12px;color:#2A3DB5;margin-top:3px">&#9432; Planned shifts: <strong>' + pickJr.plannedShifts.map(function(s){ return SL[s]; }).join(', ') + '</strong></div>' : '') +
         '</div>' +
           '<button class="btn btn-sm" onclick="closePick()">Cancel</button>' +
@@ -958,7 +958,7 @@ function renderOfficer(search){
         'draggable="true" data-jid="' + j.id + '" ' +
         'title="Last: ' + j.last + (j.notes ? ' | Note: ' + j.notes : '') + ' — drag to assign" ' +
         'ondragstart="onPoolChipDragStart(event)" ondragend="onPoolChipDragEnd(event)">' +
-        (j.hasHat ? '🤠 ' : '') + j.name +
+        (j.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name +
         ' <button onclick="event.stopPropagation();manualClockOut(\'' + j.id + '\')" ' +
         'style="background:none;border:none;cursor:pointer;color:#999;font-size:11px;padding:0 2px;line-height:1;margin-left:2px" ' +
         'title="Sign out" style="color:#CC6600">&#x2715;</button>' +
@@ -989,7 +989,7 @@ function renderOfficer(search){
       return '<span class="pill' + (jr.ageout ? ' ao' : '') + (jr.hasHat ? ' has-hat' : '') + '" ' +
              'style="' + (isOut ? 'opacity:.5;text-decoration:line-through;' : '') + '" ' +
              'title="' + (jr.notes ? 'Note: ' + jr.notes : '') + (isOut ? ' [Clocked out]' : '') + '">' +
-             (jr.hasHat ? '🤠 ' : '') + jr.name +
+             (jr.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name +
              (jr.ageout ? ' <span class="badge b-ageout" style="font-size:11px;padding:1px 4px;background:none;border:none;color:#F5A623">⭐</span>' : '') +
              (jr.notes ? ' <span style="font-size:11px;color:var(--orange);font-weight:700">&#9432;</span>' : '') +
              (isOut ? ' <span style="font-size:10px;color:#888">(out)</span>' : '') +
@@ -1010,7 +1010,7 @@ function renderOfficer(search){
           '<div class="slot-name">' + s.name + '</div>' +
           '<div class="slot-meta">' +
             '<span class="badge b-shift">' + SL[s.shift] + '</span>' +
-            (s.hat ? '<span class="badge b-hat">🤠 Hat Required</span>' : '') +
+            (s.hat ? '<span class="badge b-hat"><img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> Hat Required</span>' : '') +
             (s.highPriority ? '<span class="badge" style="background:#CC0000;color:#fff">&#9650; HIGH PRIORITY</span>' : '') +
             '<button onclick="toggleHighPriority(' + s.id + ')" style="font-size:10px;padding:1px 6px;border:1px solid ' + (s.highPriority ? '#CC0000' : '#ccc') + ';border-radius:8px;background:' + (s.highPriority ? '#FFF0F0' : '#F8F8F8') + ';color:' + (s.highPriority ? '#CC0000' : '#888') + ';cursor:pointer">&#9650; Priority</button>' +
           '</div>' +
@@ -1027,7 +1027,7 @@ function renderOfficer(search){
           '<option value="">+ Assign a junior manually&hellip;</option>' +
           avail.map(function(j){
             var rep = j.last === s.name;
-            return '<option value="' + j.id + '">' + (j.ageout ? '[Age-out] ' : '') + (j.hasHat ? '🤠 ' : '') + j.name + (j.notes ? ' [NOTE]' : '') + ' — last: ' + j.last + (rep ? ' (repeat!)' : '') + '</option>';
+            return '<option value="' + j.id + '">' + (j.ageout ? '[Age-out] ' : '') + (j.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name + (j.notes ? ' [NOTE]' : '') + ' — last: ' + j.last + (rep ? ' (repeat!)' : '') + '</option>';
           }).join('') +
         '</select></div>' : '') +
       (s.assigned.length > 0 ?
@@ -1571,7 +1571,7 @@ function renderRoster(){
 
     return '<tr class="' + (j.ageout ? 'ao-row' : '') + '">' +
       '<td style="font-size:11px;color:var(--gray-400)">' + j.id + '</td>' +
-      '<td style="font-weight:600;color:var(--navy);cursor:pointer" title="View activity log" onclick="openNoteLog(' + ri + ')">' + (j.hasHat ? '🤠 ' : '') + j.name + ' <span style="font-size:10px;color:var(--orange)">&#9998;</span>' + (j.noteLog && j.noteLog.length ? ' <span style="background:var(--orange);color:#fff;border-radius:8px;padding:0 5px;font-size:10px">' + j.noteLog.length + '</span>' : '') + '</td>' +
+      '<td style="font-weight:600;color:var(--navy);cursor:pointer" title="View activity log" onclick="openNoteLog(' + ri + ')">' + (j.hasHat ? '<img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name + ' <span style="font-size:10px;color:var(--orange)"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"></span>' + (j.noteLog && j.noteLog.length ? ' <span style="background:var(--orange);color:#fff;border-radius:8px;padding:0 5px;font-size:10px">' + j.noteLog.length + '</span>' : '') + '</td>' +
       '<td><span class="badge b-title" style="font-size:9px">' + j.title.replace('Junior ', '') + '</span></td>' +
       '<td>' + contact + '</td>' +
       '<td style="font-size:12px">' + j.last + '</td>' +
@@ -1899,7 +1899,7 @@ function onSetupDateChange(){
       var isAdded = activeSlots.some(function(a){ return a.name===s.name && a.shift===sh; });
       html += '<div class="preview-row' + (isAdded ? ' added' : '') + '">' +
         '<div class="preview-name">' +
-          (s.hat ? '<span class="hat-icon" style="font-size:12px">🤠 </span>' : '') +
+          (s.hat ? '<span class="hat-icon"><img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"></span>' : '') +
           s.name +
           (s.isNew ? ' <span class="badge" style="background:#E8F4E8;color:#155724;font-size:9px">New</span>' : '') +
         '</div>' +
@@ -2008,7 +2008,7 @@ function renderSetup(){
               (s.chair ? '<span style="color:#667788">Chair: ' + s.chair + (s.chairPhone ? ' ' + s.chairPhone : '') + '</span><br>' : '') +
               '<span style="color:#667788">' + (s.location||'No location entered') + '</span>' +
             '</div>' +
-            '<button class="btn btn-sm" style="flex-shrink:0" onclick="editCustomSlot(' + sid + ')">&#9998; Edit</button>' +
+            '<button class="btn btn-sm" style="flex-shrink:0" onclick="editCustomSlot(' + sid + ')"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"> Edit</button>' +
           '</div>';
       } else {
         // Edit state — show full form with Save button
@@ -2019,7 +2019,7 @@ function renderSetup(){
             '</div>' +
             '<div style="margin-bottom:10px">' +
               '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:700;color:var(--navy)">' +
-              '<input type="checkbox" ' + (s.hat ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--navy)" onchange="activeSlots[' + i + '].hat=this.checked"> 🤠 Hat required for this assignment' +
+              '<input type="checkbox" ' + (s.hat ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--navy)" onchange="activeSlots[' + i + '].hat=this.checked"> <img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> Hat required for this assignment' +
               '</label></div>' +
               '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
               '<div>' +
@@ -2840,7 +2840,7 @@ function renderRequests(){
       approvedFrom =
         '<div style="font-size:11px;color:#155724;margin-top:6px;margin-bottom:10px">&#10003; Approved — visible in Shift Setup.</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-          '<button class="btn" style="font-size:12px;padding:5px 12px" onclick="editRequest(' + r.id + ')">&#9998; Edit</button>' +
+          '<button class="btn" style="font-size:12px;padding:5px 12px" onclick="editRequest(' + r.id + ')"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"> Edit</button>' +
           '<button class="btn btn-danger" style="font-size:12px;padding:5px 12px" onclick="revokeRequest(' + r.id + ')">&#x21A9; Revoke Approval</button>' +
           '<button class="btn" style="font-size:12px;padding:5px 12px;border-color:#CC0000;color:#CC0000" onclick="rejectRequest(' + r.id + ')">&#x2715; Deny &amp; Archive</button>' +
           '<button class="btn" style="font-size:12px;padding:5px 10px;border-color:#CC0000;color:#CC0000" onclick="deleteRequest(' + r.id + ')" title="Delete">&#x1F5D1;</button>' +
@@ -2850,7 +2850,7 @@ function renderRequests(){
     return '<div class="req-card ' + r.status + '">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">' +
         '<div>' +
-          '<div style="font-size:15px;font-weight:700;color:var(--navy)">' + r.name + (r.hat ? ' <span class="badge b-hat">🤠 Hat req.</span>' : '') + '</div>' +
+          '<div style="font-size:15px;font-weight:700;color:var(--navy)">' + r.name + (r.hat ? ' <span class="badge b-hat"><img src="assets/hat.png" style="width:20px;height:18px;vertical-align:middle;margin-right:3px"> Hat req.</span>' : '') + '</div>' +
           '<div style="font-size:12px;color:#667788;margin-top:2px">' + dateStr + ' &bull; ' + r.chair + ' &bull; ' + r.chairPhone + '</div>' +
         '</div>' +
         '<span class="req-badge ' + r.status + '">' + r.status + '</span>' +
@@ -2865,7 +2865,7 @@ function renderRequests(){
           '<div style="font-size:12px;color:#667788;margin-bottom:4px">Scheduling notes (optional — visible to officers)</div>' +
           '<input class="finput" id="req-note-' + r.id + '" style="font-size:12px;margin-bottom:8px" placeholder="e.g. Approved with reduced capacity, check location" value="' + (r.schedulingNotes||'') + '">' +
           '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-            '<button class="btn" style="font-size:12px;padding:5px 12px" onclick="editRequest(' + r.id + ')">&#9998; Edit</button>' +
+            '<button class="btn" style="font-size:12px;padding:5px 12px" onclick="editRequest(' + r.id + ')"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"> Edit</button>' +
             '<button class="btn btn-primary" style="flex:1" onclick="approveRequest(' + r.id + ')">&#10003; Approve</button>' +
             '<button class="btn btn-danger" style="flex:1" onclick="rejectRequest(' + r.id + ')">&#x2715; Reject</button>' +
             '<button class="btn" style="padding:5px 10px;border-color:#CC0000;color:#CC0000" onclick="deleteRequest(' + r.id + ')" title="Delete">&#x1F5D1;</button>' +
