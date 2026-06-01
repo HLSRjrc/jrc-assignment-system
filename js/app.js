@@ -1068,6 +1068,8 @@ function renderTabs(activeTab){
       ['officer',  'Shift Officer Dashboard',   1],
       ['setup',    'Shift Setup',               1],
       ['kiosk',    'Kiosk',                     1],
+      ['roster',   'Roster',                    1],
+      ['board',    'Status Board',              1],
     ],
     scheduling: [
       ['reqform',  '&#43; Submit Request',      1],
@@ -1571,7 +1573,7 @@ function renderRoster(){
 
     return '<tr class="' + (j.ageout ? 'ao-row' : '') + '">' +
       '<td style="font-size:11px;color:var(--gray-400)">' + j.id + '</td>' +
-      '<td style="font-weight:600;color:var(--navy);cursor:pointer" title="View activity log" onclick="openNoteLog(' + ri + ')">' + (j.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name + ' <span style="font-size:10px;color:var(--orange)"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"></span>' + (j.noteLog && j.noteLog.length ? ' <span style="background:var(--orange);color:#fff;border-radius:8px;padding:0 5px;font-size:10px">' + j.noteLog.length + '</span>' : '') + '</td>' +
+      '<td style="font-weight:600;color:var(--navy);cursor:pointer" title="View activity log" onclick="openNoteLog(' + ri + ')">' + (j.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name + ' <span style="font-size:10px;color:var(--orange)"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"></span>' + '</td>' +
       '<td><span class="badge b-title" style="font-size:9px">' + j.title.replace('Junior ', '') + '</span></td>' +
       '<td>' + contact + '</td>' +
       '<td style="font-size:12px">' + j.last + '</td>' +
@@ -2213,7 +2215,7 @@ var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'
 // Tabs each role can see
 var ROLE_TABS = {
   admin:       ['officer','kiosk','roster','setup','requests','reqform','simulate','board','hours'],
-  officer:     ['officer','setup','kiosk','roster'],
+  officer:     ['officer','setup','kiosk','roster','board'],
   scheduling:  ['reqform','requests','setup'],
   mentor:      ['kiosk','board'],
   kiosk:       ['kiosk'],
