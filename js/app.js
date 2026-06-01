@@ -1420,7 +1420,7 @@ function clearAssignments(){
   renderOfficer();
   renderBoard();
   // Reset Neon session state — DELETE clears app_state + active_slots + resets checked_in
-  fetch('/.netlify/functions/state', {method:'DELETE'})
+  fetch('/.netlify/functions/state', {method:'DELETE',headers:{'x-api-token':API_TOKEN}})
     .then(function(){ console.log('Session cleared in Neon'); })
     .catch(function(e){ console.warn('Neon session clear failed:', e.message); });
   // Also save all juniors with checkedIn=false to Neon so no ghost check-ins remain
@@ -2204,6 +2204,7 @@ function activateShift(){
 // ============================================================
 var PINS = { admin:'1234', officer:'5678', scheduling:'1111', kiosk:'0000', board:'' };
 var BOARD_PIN = ''; // set at runtime from server config
+var API_TOKEN  = '__API_SECRET__'; // replaced at build time by netlify
 var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'Scheduling', mentor:'Mentor', kiosk:'Kiosk Mode', board:'Status Board' };
 
 // Tabs each role can see
@@ -2254,7 +2255,7 @@ function enterPartnerMode(){
   }, 500);
 
   // Load state for show dates (no render side-effects)
-  fetch('/.netlify/functions/state')
+  fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
     .then(function(r){ return r.json(); })
     .then(function(data){ if(data && !data.error) _applyState(data); })
     .catch(function(){});
@@ -3577,7 +3578,7 @@ function _doSave(){
   if(!DB_AVAILABLE) return;
   fetch('/.netlify/functions/state', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json', 'x-api-token': API_TOKEN},
     body: JSON.stringify(payload)
   }).then(function(r){
     if(!r.ok){
@@ -3619,7 +3620,7 @@ function saveRosterToNeon(callback){
   console.log('Saving full roster to Neon (' + juniors.length + ' juniors)...');
   fetch('/.netlify/functions/state', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json', 'x-api-token': API_TOKEN},
     body: JSON.stringify({ juniors: juniors, adults: adults })
   }).then(function(r){
     if(!r.ok) return r.text().then(function(b){ throw new Error(r.status + ': ' + b); });
@@ -3633,7 +3634,7 @@ function saveRosterToNeon(callback){
 
 function loadState(){
   if(!DB_AVAILABLE){ _loadFromLocalStorage(); return; }
-  fetch('/.netlify/functions/state')
+  fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
     .then(function(r){ return r.json(); })
     .then(function(data){
       _applyState(data);
@@ -3834,7 +3835,7 @@ function pollForUpdates(){
   if(isSaving) return;
   // Don't poll if we saved very recently — our local state is newer than Neon
   if(Date.now() - lastSaveTime < 60000) return; // 60s grace after any save — prevents poll from overwriting recent changes
-  fetch('/.netlify/functions/state')
+  fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(!data || data.error) return;
@@ -4365,7 +4366,7 @@ function _preloadAdults(){
   if(btn) btn.disabled = true;
   if(errEl){ errEl.style.color = '#667788'; errEl.textContent = 'Connecting...'; }
 
-  fetch('/.netlify/functions/state')
+  fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(data && !data.error){

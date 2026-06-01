@@ -113,6 +113,13 @@ exports.handler = async (event) => {
     return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
   }
 
+  // API token validation — reject requests without valid token
+  const clientToken = event.headers && (event.headers['x-api-token'] || event.headers['X-Api-Token']);
+  const validToken = process.env.API_SECRET;
+  if (validToken && clientToken !== validToken) {
+    return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
+  }
+
   // Rate limiting — get client IP from Netlify headers
   const clientIp = (event.headers && (
     event.headers['x-nf-client-connection-ip'] ||
