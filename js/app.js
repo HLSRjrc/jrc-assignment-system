@@ -2203,7 +2203,7 @@ function activateShift(){
 //   kiosk:   0000  (no PIN needed — just tap Enter or the button)
 // ============================================================
 var PINS = { admin:'1234', officer:'5678', scheduling:'1111', kiosk:'0000', board:'2222' };
-var BOARD_PIN = '2222'; // overwritten at runtime from server config
+var BOARD_PIN = ''; // set at runtime from server config
 var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'Scheduling', mentor:'Mentor', kiosk:'Kiosk Mode', board:'Status Board' };
 
 // Tabs each role can see
