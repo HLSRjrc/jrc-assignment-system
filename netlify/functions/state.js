@@ -159,7 +159,7 @@ exports.handler = async (event) => {
           activeSlots: slotRows,
           committeeRequests: reqRows,
           config: {
-            boardPin: process.env.STATUS_BOARD_PIN || '2222'
+            boardPin: process.env.STATUS_BOARD_PIN || ''
           }
         })
       };
