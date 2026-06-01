@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 19;  // Major version — milestone releases
-var APP_BUILD   = 49;  // Minor build — increments every small change
+var APP_BUILD   = 48;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -325,26 +325,9 @@ function applySimDate(){
 // ============================================================
 // TABS
 // ============================================================
-var _boardUnlocked = false;
 
-function promptBoardPin(){
-  var pin = prompt('Enter Status Board PIN:');
-  if(pin === BOARD_PIN){
-    _boardUnlocked = true;
-    switchTab('board', null);
-  } else if(pin !== null){
-    alert('Incorrect PIN.');
-  }
-}
 
 function switchTab(t, el){
-  // Status board requires PIN unless already unlocked this session
-  // Skip PIN check if this is an auto/initial tab switch (el === null means programmatic)
-  if(t === 'board' && !_boardUnlocked && el !== null){
-    promptBoardPin();
-    return;
-  }
-  if(t === 'board' && el !== null) _boardUnlocked = true;
   currentTab = t;
   // Re-render tabs to update active state
   renderTabs(t);
@@ -2343,33 +2326,21 @@ function doPersonalLogin(){
     document.getElementById('personal-login').style.display = 'none';
     document.getElementById('role-select').style.display = 'block';
   } else if(role === 'mentor'){
-    // Mentor sees kiosk/status board choice
+    // Mentor goes straight to kiosk
     loggedInAdult = adult;
     try { localStorage.setItem('jrc_logged_adult', JSON.stringify({id:adult.id, name:adult.name, role:role})); } catch(e){}
     document.getElementById('personal-login').style.display = 'none';
-    document.getElementById('mentor-picker').style.display = 'block';
+    loginAs('mentor');
+    return;
   } else {
     // Everyone else goes straight to their dashboard
     loginAs(role);
   }
 }
 
-function openBoardWithPin(){
-  var pin = prompt('Enter Status Board PIN:');
-  if(pin === BOARD_PIN){
-    _boardUnlocked = true;
-    document.getElementById('mentor-picker').style.display = 'none';
-    loginAs('mentor');
-    // Switch to board after login
-    setTimeout(function(){ switchTab('board', 'pinVerified'); }, 300);
-  } else if(pin !== null){
-    alert('Incorrect PIN. Please try again.');
-  }
-}
 
 
 function selectRole(role){
-  pendingRole = role;
   loginAs(role);
 }
 
@@ -2377,7 +2348,6 @@ function selectRole(role){
 
 function loginAs(role){
   currentRole = role;
-  pendingRole = null;
 
   // Persist login so refresh doesn't log out
   try {
@@ -2431,13 +2401,11 @@ function applyRoleTabs(role){
 
 function doLogout(){
   _clearInactivityTimer();
-  _boardUnlocked = false;
   currentRole = null;
   loggedInAdult = null;
   try { localStorage.removeItem('jrc_saved_role'); } catch(e){}
   try { localStorage.removeItem('jrc_logged_adult'); } catch(e){}
   try { localStorage.removeItem('jrc_session_expiry'); } catch(e){}
-  pendingRole = null;
 
   // Hide app, show login
   document.getElementById('main-app').style.display = 'none';
@@ -2448,12 +2416,9 @@ function doLogout(){
   // Reset login form to personal login
   document.getElementById('personal-login').style.display = 'block';
   document.getElementById('role-select').style.display = 'none';
-  document.getElementById('pin-screen').style.display = 'none';
   var e = document.getElementById('pl-email'); if(e) e.value = '';
   var p = document.getElementById('pl-password'); if(p) p.value = '';
   var err = document.getElementById('pl-err'); if(err) err.textContent = '';
-  var pin = document.getElementById('pin-input'); if(pin) pin.value = '';
-  var perr = document.getElementById('pin-err'); if(perr) perr.textContent = '';
 }
 
 // Logo set by hlsrB64 block above
@@ -3721,7 +3686,6 @@ function _applyState(data){
     } catch(e){}
   }
   if(state.userRoles) userRoles = state.userRoles;
-  if(data.config && data.config.boardPin) BOARD_PIN = data.config.boardPin;
   if(state.loginLog)  loginLog  = state.loginLog;
   if(data.committeeRequests && data.committeeRequests.length){
     committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
