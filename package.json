@@ -1,8 +1,13 @@
 {
-  "name": "jrc-rodeo-functions",
+  "name": "jrc-rodeo",
   "version": "1.0.0",
-  "description": "Netlify functions for JRC Rodeo app",
+  "scripts": {
+    "build": "esbuild js/app.js --bundle=false --minify --allow-overwrite --outfile=js/app.js && esbuild css/app.css --bundle=false --minify --allow-overwrite --log-level=silent --outfile=css/app.css"
+  },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.21.0"
   }
 }
