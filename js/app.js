@@ -3558,6 +3558,7 @@ function _doSave(){
     return j.checkedIn || j.assignment || j.order > 0 ||
            (j.shiftLog && j.shiftLog.length > 0) ||
            (j.history && j.history.length > 0) ||
+           (j.noteLog && j.noteLog.length > 0) ||
            j.last !== 'None' || j.hasHat || j.notes || j.ageout ||
            dirtyJuniors.has(j.id);
   });
@@ -4323,7 +4324,8 @@ function addJuniorNote(jIdx, text, type){
     text: text
   };
   j.noteLog.unshift(entry); // newest first
-  saveState();
+  dirtyJuniors.add(j.id);   // ensure this junior is included in next save
+  saveStateNow();            // save immediately — don't wait for debounce
 }
 
 function openNoteLog(jIdx){
