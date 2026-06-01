@@ -1,11 +1,10 @@
 const { getDb } = require('./db');
 
+// ── CORS ─────────────────────────────────────────────────────────────────────
 function isAllowedOrigin(origin) {
-  if (!origin) return true; // server-side / same-origin calls
-  // Production domains
+  if (!origin) return true;
   if (origin === 'https://jrc.hlsr.app') return true;
   if (origin === 'https://jrcpartner.hlsr.app') return true;
-  // Any Netlify preview deploy for this site
   if (/https:\/\/[a-z0-9-]+--jrc-rodeo\.netlify\.app$/.test(origin)) return true;
   if (/https:\/\/[a-z0-9-]+--jrc-assignment-system\.netlify\.app$/.test(origin)) return true;
   return false;
@@ -20,6 +19,58 @@ function getCorsHeaders(origin) {
   };
 }
 
+// ── INPUT VALIDATION ─────────────────────────────────────────────────────────
+function isString(v)  { return typeof v === 'string'; }
+function isBool(v)    { return typeof v === 'boolean'; }
+function isNumber(v)  { return typeof v === 'number' && isFinite(v); }
+function isArray(v)   { return Array.isArray(v); }
+function isObject(v)  { return v !== null && typeof v === 'object' && !Array.isArray(v); }
+
+function validateJunior(j) {
+  if (!j || !isString(j.id) || j.id.length === 0) return 'junior missing id';
+  if (j.id.length > 20)        return 'junior id too long';
+  if (!isString(j.name))       return 'junior missing name';
+  if (j.name.length > 200)     return 'junior name too long';
+  return null;
+}
+
+function validateAdult(a) {
+  if (!a || !isString(a.id) || a.id.length === 0) return 'adult missing id';
+  if (a.id.length > 20)        return 'adult id too long';
+  if (!isString(a.name))       return 'adult missing name';
+  if (a.name.length > 200)     return 'adult name too long';
+  return null;
+}
+
+function validateSlot(s) {
+  if (!s || (s.id === undefined || s.id === null)) return 'slot missing id';
+  if (!isString(s.name) || s.name.length === 0)   return 'slot missing name';
+  if (s.name.length > 200)     return 'slot name too long';
+  const validShifts = ['8am', '12pm', '4pm'];
+  if (!validShifts.includes(s.shift)) return `slot has invalid shift: ${s.shift}`;
+  if (!isNumber(s.capacity) || s.capacity < 1 || s.capacity > 100) return 'slot capacity out of range';
+  if (!isArray(s.assigned))    return 'slot assigned must be array';
+  return null;
+}
+
+function validateRequest(r) {
+  if (!r || !isNumber(r.id))   return 'request missing numeric id';
+  if (!isString(r.name) || r.name.length === 0) return 'request missing name';
+  if (r.name.length > 300)     return 'request name too long';
+  const validStatuses = ['pending', 'approved', 'rejected'];
+  if (!validStatuses.includes(r.status)) return `request has invalid status: ${r.status}`;
+  return null;
+}
+
+function validateStateKey(key, value) {
+  if (!isString(key) || key.length === 0 || key.length > 100) return 'invalid state key';
+  // Value can be any JSON-serializable type — just check it's not enormous
+  const serialized = JSON.stringify(value);
+  if (serialized.length > 500000) return `state key "${key}" value too large`;
+  return null;
+}
+
+// ── HANDLER ──────────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
   const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
   const headers = getCorsHeaders(origin);
@@ -35,6 +86,7 @@ exports.handler = async (event) => {
   const sql = getDb();
 
   try {
+    // GET — load full state
     if (event.httpMethod === 'GET') {
       const [stateRows, juniorRows, adultRows, slotRows, reqRows] = await Promise.all([
         sql`SELECT key, value FROM app_state`,
@@ -54,64 +106,121 @@ exports.handler = async (event) => {
       };
     }
 
+    // POST — save state
     if (event.httpMethod === 'POST') {
-      const body = JSON.parse(event.body);
-
-      if (body.state && Object.keys(body.state).length > 0) {
-        await Promise.all(Object.entries(body.state).map(([key, value]) =>
-          sql`INSERT INTO app_state (key, value, updated_at)
-              VALUES (${key}, ${JSON.stringify(value)}, NOW())
-              ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`
-        ));
+      let body;
+      try {
+        body = JSON.parse(event.body);
+      } catch(e) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Invalid JSON body' }) };
       }
 
-      if (body.juniors && body.juniors.length > 0) {
-        await Promise.all(body.juniors.map(j =>
-          sql`INSERT INTO juniors (
-                id, name, title, ageout, has_hat, notes, phone, email,
-                shift_log, checked_in, assignment, last_assignment,
-                check_in_order, check_in_shift, shift_assignments,
-                planned_shifts, history, inactive, updated_at
-              ) VALUES (
-                ${j.id}, ${j.name||''}, ${j.title||'Committeeman'},
-                ${j.ageout||false}, ${j.hasHat||j.has_hat||false},
-                ${j.notes||''}, ${j.phone||''}, ${j.email||''},
-                ${JSON.stringify(j.shiftLog||j.shift_log||[])},
-                ${j.checkedIn||j.checked_in||false},
-                ${j.assignment||null},
-                ${j.last||j.last_assignment||'None'},
-                ${j.order||j.check_in_order||0},
-                ${j.checkInShift||j.check_in_shift||''},
-                ${JSON.stringify(j.shiftAssignments||j.shift_assignments||{})},
-                ${JSON.stringify(j.plannedShifts||j.planned_shifts||[])},
-                ${JSON.stringify(j.history||[])},
-                ${j.inactive||false}, NOW()
-              )
-              ON CONFLICT (id) DO UPDATE SET
-                name=EXCLUDED.name, title=EXCLUDED.title,
-                ageout=EXCLUDED.ageout, has_hat=EXCLUDED.has_hat,
-                notes=EXCLUDED.notes, phone=EXCLUDED.phone, email=EXCLUDED.email,
-                shift_log=EXCLUDED.shift_log, checked_in=EXCLUDED.checked_in,
-                assignment=EXCLUDED.assignment, last_assignment=EXCLUDED.last_assignment,
-                check_in_order=EXCLUDED.check_in_order, check_in_shift=EXCLUDED.check_in_shift,
-                shift_assignments=EXCLUDED.shift_assignments,
-                planned_shifts=EXCLUDED.planned_shifts, history=EXCLUDED.history,
-                inactive=EXCLUDED.inactive, updated_at=NOW()`
-        ));
+      if (!isObject(body)) {
+        return { statusCode: 400, headers, body: JSON.stringify({ error: 'Body must be an object' }) };
       }
 
-      if (body.adults && body.adults.length > 0) {
-        await Promise.all(body.adults.map(a =>
-          sql`INSERT INTO adults (id, name, title, phone, email, inactive, updated_at)
-              VALUES (${a.id}, ${a.name||''}, ${a.title||''}, ${a.phone||''}, ${a.email||''}, ${a.inactive||false}, NOW())
-              ON CONFLICT (id) DO UPDATE SET
-                name=EXCLUDED.name, title=EXCLUDED.title,
-                phone=EXCLUDED.phone, email=EXCLUDED.email,
-                inactive=EXCLUDED.inactive, updated_at=NOW()`
-        ));
+      // Validate state keys
+      if (body.state !== undefined) {
+        if (!isObject(body.state)) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'state must be an object' }) };
+        }
+        for (const [key, value] of Object.entries(body.state)) {
+          const err = validateStateKey(key, value);
+          if (err) return { statusCode: 400, headers, body: JSON.stringify({ error: err }) };
+        }
+        if (Object.keys(body.state).length > 0) {
+          await Promise.all(Object.entries(body.state).map(([key, value]) =>
+            sql`INSERT INTO app_state (key, value, updated_at)
+                VALUES (${key}, ${JSON.stringify(value)}, NOW())
+                ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`
+          ));
+        }
       }
 
+      // Validate and upsert juniors
+      if (body.juniors !== undefined) {
+        if (!isArray(body.juniors)) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'juniors must be an array' }) };
+        }
+        if (body.juniors.length > 2000) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'too many juniors in one request' }) };
+        }
+        for (const j of body.juniors) {
+          const err = validateJunior(j);
+          if (err) return { statusCode: 400, headers, body: JSON.stringify({ error: err }) };
+        }
+        if (body.juniors.length > 0) {
+          await Promise.all(body.juniors.map(j =>
+            sql`INSERT INTO juniors (
+                  id, name, title, ageout, has_hat, notes, phone, email,
+                  shift_log, checked_in, assignment, last_assignment,
+                  check_in_order, check_in_shift, shift_assignments,
+                  planned_shifts, history, inactive, updated_at
+                ) VALUES (
+                  ${j.id}, ${j.name||''}, ${j.title||'Committeeman'},
+                  ${j.ageout||false}, ${j.hasHat||j.has_hat||false},
+                  ${j.notes||''}, ${j.phone||''}, ${j.email||''},
+                  ${JSON.stringify(j.shiftLog||j.shift_log||[])},
+                  ${j.checkedIn||j.checked_in||false},
+                  ${j.assignment||null},
+                  ${j.last||j.last_assignment||'None'},
+                  ${j.order||j.check_in_order||0},
+                  ${j.checkInShift||j.check_in_shift||''},
+                  ${JSON.stringify(j.shiftAssignments||j.shift_assignments||{})},
+                  ${JSON.stringify(j.plannedShifts||j.planned_shifts||[])},
+                  ${JSON.stringify(j.history||[])},
+                  ${j.inactive||false}, NOW()
+                )
+                ON CONFLICT (id) DO UPDATE SET
+                  name=EXCLUDED.name, title=EXCLUDED.title,
+                  ageout=EXCLUDED.ageout, has_hat=EXCLUDED.has_hat,
+                  notes=EXCLUDED.notes, phone=EXCLUDED.phone, email=EXCLUDED.email,
+                  shift_log=EXCLUDED.shift_log, checked_in=EXCLUDED.checked_in,
+                  assignment=EXCLUDED.assignment, last_assignment=EXCLUDED.last_assignment,
+                  check_in_order=EXCLUDED.check_in_order, check_in_shift=EXCLUDED.check_in_shift,
+                  shift_assignments=EXCLUDED.shift_assignments,
+                  planned_shifts=EXCLUDED.planned_shifts, history=EXCLUDED.history,
+                  inactive=EXCLUDED.inactive, updated_at=NOW()`
+          ));
+        }
+      }
+
+      // Validate and upsert adults
+      if (body.adults !== undefined) {
+        if (!isArray(body.adults)) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'adults must be an array' }) };
+        }
+        if (body.adults.length > 500) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'too many adults in one request' }) };
+        }
+        for (const a of body.adults) {
+          const err = validateAdult(a);
+          if (err) return { statusCode: 400, headers, body: JSON.stringify({ error: err }) };
+        }
+        if (body.adults.length > 0) {
+          await Promise.all(body.adults.map(a =>
+            sql`INSERT INTO adults (id, name, title, phone, email, inactive, updated_at)
+                VALUES (${a.id}, ${a.name||''}, ${a.title||''}, ${a.phone||''}, ${a.email||''}, ${a.inactive||false}, NOW())
+                ON CONFLICT (id) DO UPDATE SET
+                  name=EXCLUDED.name, title=EXCLUDED.title,
+                  phone=EXCLUDED.phone, email=EXCLUDED.email,
+                  inactive=EXCLUDED.inactive, updated_at=NOW()`
+          ));
+        }
+      }
+
+      // Validate and upsert active slots
       if (body.activeSlots !== undefined) {
+        if (!isArray(body.activeSlots)) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'activeSlots must be an array' }) };
+        }
+        if (body.activeSlots.length > 200) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'too many active slots' }) };
+        }
+        for (const s of body.activeSlots) {
+          const err = validateSlot(s);
+          if (err) return { statusCode: 400, headers, body: JSON.stringify({ error: err }) };
+        }
         if (body.activeSlots.length === 0) {
           await sql`DELETE FROM active_slots`;
         } else {
@@ -147,7 +256,18 @@ exports.handler = async (event) => {
         }
       }
 
+      // Validate and replace committee requests
       if (body.committeeRequests !== undefined) {
+        if (!isArray(body.committeeRequests)) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'committeeRequests must be an array' }) };
+        }
+        if (body.committeeRequests.length > 500) {
+          return { statusCode: 400, headers, body: JSON.stringify({ error: 'too many committee requests' }) };
+        }
+        for (const r of body.committeeRequests) {
+          const err = validateRequest(r);
+          if (err) return { statusCode: 400, headers, body: JSON.stringify({ error: err }) };
+        }
         await sql`DELETE FROM committee_requests`;
         if (body.committeeRequests.length > 0) {
           await Promise.all(body.committeeRequests.map(r =>
@@ -162,6 +282,7 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
 
+    // DELETE — clear session state, preserve roster
     if (event.httpMethod === 'DELETE') {
       await Promise.all([
         sql`DELETE FROM app_state`,
