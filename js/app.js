@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 19;  // Major version — milestone releases
-var APP_BUILD   = 49;  // Minor build — increments every small change
+var APP_BUILD   = 48;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -119,7 +119,6 @@ var committeeLibrary = [
 var activeSlots = [];
 var notesState = {};
 var onShiftJuniors = new Set(); // jids marked as out on shift
-var onShiftSlots = new Set();   // slot ids marked as sent
 var onShiftSlots = new Set(); // slot ids marked as sent
 var notesCollapsed = false;
 var committeeRequests = [];
@@ -2221,8 +2220,6 @@ function activateShift(){
 //   officer: 5678
 //   kiosk:   0000  (no PIN needed — just tap Enter or the button)
 // ============================================================
-var PINS = { admin:'1234', officer:'5678', scheduling:'1111', kiosk:'0000', board:'' };
-var BOARD_PIN = ''; // set at runtime from server config
 var API_TOKEN  = '__API_SECRET__'; // replaced at build time by netlify
 var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'Scheduling', mentor:'Mentor', kiosk:'Kiosk Mode', board:'Status Board' };
 
@@ -2238,7 +2235,6 @@ var ROLE_TABS = {
 
 var currentRole = null;
 var currentTab = 'kiosk';
-var pendingRole = null;
 
 function enterPartnerMode(){
   // Hide everything except the partner form
@@ -2286,14 +2282,6 @@ function partnerSubmitAnother(){
   renderReqForm();
 }
 
-function exitPartnerMode(){
-  var po = document.getElementById('partner-orbs'); if(po) po.style.display='none';
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('main-app').style.display = 'none';
-  document.getElementById('partner-header').style.display = 'none';
-  document.getElementById('main-header').style.display = 'block';
-  document.getElementById('tab-bar').style.display = '';
-}
 
 // ── Personal Login ─────────────────────────────────────────────────────
 function showDeviceMode(){
@@ -2379,46 +2367,13 @@ function openBoardWithPin(){
   }
 }
 
-function showDeviceModePins(){
-  document.getElementById('role-select').style.display = 'none';
-  document.getElementById('device-mode-select').style.display = 'block';
-  document.getElementById('personal-login').style.display = 'none';
-}
 
 function selectRole(role){
   pendingRole = role;
-  // If user already authenticated via personal login, skip PIN entirely
-  if(loggedInAdult || role === 'kiosk'){
-    loginAs(role);
-    return;
-  }
-  // Device Mode (no personal login) — still requires PIN
-  document.getElementById('role-select').style.display = 'none';
-  document.getElementById('pin-screen').style.display = 'block';
-  document.getElementById('pin-role-lbl').textContent = ROLE_LABELS[role];
-  document.getElementById('pin-err').textContent = '';
-  document.getElementById('pin-input').value = '';
-  setTimeout(function(){ document.getElementById('pin-input').focus(); }, 50);
+  loginAs(role);
 }
 
-function backToRoles(){
-  pendingRole = null;
-  document.getElementById('pin-screen').style.display = 'none';
-  document.getElementById('role-select').style.display = 'block';
-  document.getElementById('pin-input').value = '';
-  document.getElementById('pin-err').textContent = '';
-}
 
-function submitPin(){
-  var entered = document.getElementById('pin-input').value.trim();
-  if(entered === PINS[pendingRole]){
-    loginAs(pendingRole);
-  } else {
-    document.getElementById('pin-err').textContent = 'Incorrect PIN. Please try again.';
-    document.getElementById('pin-input').value = '';
-    document.getElementById('pin-input').focus();
-  }
-}
 
 function loginAs(role){
   currentRole = role;
@@ -3558,8 +3513,8 @@ function _stateHash(){
     var sig = [
       activeSlots.length,
       activeSlots.map(function(s){ return s.id + ':' + s.assigned.length + ':' + (s.sent?1:0); }).join('|'),
-      juniors.filter(function(j){ return j.checkedIn || j.assignment; }).map(function(j){
-        return j.id + ':' + (j.checkedIn?1:0) + ':' + (j.assignment||'') + ':' + j.order;
+      juniors.filter(function(j){ return j.checkedIn || j.assignment || (j.noteLog && j.noteLog.length); }).map(function(j){
+        return j.id + ':' + (j.checkedIn?1:0) + ':' + (j.assignment||'') + ':' + j.order + ':' + (j.noteLog ? j.noteLog.length : 0);
       }).join('|'),
       committeeRequests.map(function(r){ return r.id + ':' + r.status; }).join('|'),
       currentDate, currentShift
