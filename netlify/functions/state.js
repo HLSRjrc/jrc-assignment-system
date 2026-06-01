@@ -1,18 +1,19 @@
 const { getDb } = require('./db');
 
-// Allowed origins — only our own domains can call this function
-const ALLOWED_ORIGINS = [
-  'https://jrc.hlsr.app',
-  'https://jrcpartner.hlsr.app',
-  'https://www.jrc.hlsr.app'
-];
+function isAllowedOrigin(origin) {
+  if (!origin) return true; // server-side / same-origin calls
+  // Production domains
+  if (origin === 'https://jrc.hlsr.app') return true;
+  if (origin === 'https://jrcpartner.hlsr.app') return true;
+  // Any Netlify preview deploy for this site
+  if (/https:\/\/[a-z0-9-]+--jrc-rodeo\.netlify\.app$/.test(origin)) return true;
+  if (/https:\/\/[a-z0-9-]+--jrc-assignment-system\.netlify\.app$/.test(origin)) return true;
+  return false;
+}
 
-function getCorsHeaders(event) {
-  const origin = event.headers && (event.headers.origin || event.headers.Origin);
-  // Allow the request if origin matches, or if it's a same-origin/server request (no origin header)
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : (origin ? null : 'https://jrc.hlsr.app');
+function getCorsHeaders(origin) {
   return {
-    'Access-Control-Allow-Origin': allowedOrigin || 'https://jrc.hlsr.app',
+    'Access-Control-Allow-Origin': isAllowedOrigin(origin) ? (origin || 'https://jrc.hlsr.app') : 'https://jrc.hlsr.app',
     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Content-Type': 'application/json'
@@ -20,11 +21,10 @@ function getCorsHeaders(event) {
 }
 
 exports.handler = async (event) => {
-  const headers = getCorsHeaders(event);
-  const origin = event.headers && (event.headers.origin || event.headers.Origin);
+  const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
+  const headers = getCorsHeaders(origin);
 
-  // Block requests from disallowed origins (but allow no-origin for server-side/Netlify calls)
-  if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+  if (!isAllowedOrigin(origin)) {
     return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
   }
 
@@ -35,7 +35,6 @@ exports.handler = async (event) => {
   const sql = getDb();
 
   try {
-    // GET — load full state
     if (event.httpMethod === 'GET') {
       const [stateRows, juniorRows, adultRows, slotRows, reqRows] = await Promise.all([
         sql`SELECT key, value FROM app_state`,
@@ -51,21 +50,13 @@ exports.handler = async (event) => {
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify({
-          state,
-          juniors: juniorRows,
-          adults: adultRows,
-          activeSlots: slotRows,
-          committeeRequests: reqRows
-        })
+        body: JSON.stringify({ state, juniors: juniorRows, adults: adultRows, activeSlots: slotRows, committeeRequests: reqRows })
       };
     }
 
-    // POST — save state
     if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body);
 
-      // Save key/value state (parallel)
       if (body.state && Object.keys(body.state).length > 0) {
         await Promise.all(Object.entries(body.state).map(([key, value]) =>
           sql`INSERT INTO app_state (key, value, updated_at)
@@ -74,7 +65,6 @@ exports.handler = async (event) => {
         ));
       }
 
-      // Upsert juniors (only active ones sent — no delete, preserves full roster)
       if (body.juniors && body.juniors.length > 0) {
         await Promise.all(body.juniors.map(j =>
           sql`INSERT INTO juniors (
@@ -110,7 +100,6 @@ exports.handler = async (event) => {
         ));
       }
 
-      // Upsert adults
       if (body.adults && body.adults.length > 0) {
         await Promise.all(body.adults.map(a =>
           sql`INSERT INTO adults (id, name, title, phone, email, inactive, updated_at)
@@ -122,7 +111,6 @@ exports.handler = async (event) => {
         ));
       }
 
-      // Upsert active slots
       if (body.activeSlots !== undefined) {
         if (body.activeSlots.length === 0) {
           await sql`DELETE FROM active_slots`;
@@ -159,7 +147,6 @@ exports.handler = async (event) => {
         }
       }
 
-      // Replace committee requests
       if (body.committeeRequests !== undefined) {
         await sql`DELETE FROM committee_requests`;
         if (body.committeeRequests.length > 0) {
@@ -175,7 +162,6 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
 
-    // DELETE — clear session state, preserve roster
     if (event.httpMethod === 'DELETE') {
       await Promise.all([
         sql`DELETE FROM app_state`,
