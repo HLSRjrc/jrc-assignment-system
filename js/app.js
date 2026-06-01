@@ -2213,7 +2213,7 @@ var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'
 // Tabs each role can see
 var ROLE_TABS = {
   admin:       ['officer','kiosk','roster','setup','requests','reqform','simulate','board','hours'],
-  officer:     ['officer','setup','kiosk'],
+  officer:     ['officer','setup','kiosk','roster'],
   scheduling:  ['reqform','requests','setup'],
   mentor:      ['kiosk','board'],
   kiosk:       ['kiosk'],
