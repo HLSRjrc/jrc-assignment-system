@@ -323,24 +323,19 @@ select.finput{cursor:pointer}
   display:grid;
   grid-template-columns: 1fr 1fr 2fr; /* CI | Assigned | Out (widest) */
   gap:0;
-  flex:1;
-  min-height:0;
-  overflow:hidden;
+  /* Desktop: size to content, scrolls naturally */
+  min-height:400px;
 }
 
 /* ── Waiting columns (CI + Assigned) ──────────────────────── */
 .board-waiting-col{
   padding:12px 14px;
   border-right:1px solid rgba(255,255,255,.1);
-  overflow-y:auto;
-  min-height:0;
 }
 
 /* ── Out-on-shift column ──────────────────────────────────── */
 .board-out-col{
   padding:12px 14px;
-  overflow-y:auto;
-  min-height:0;
 }
 
 /* Column header labels */
