@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 19;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3321,6 +3321,163 @@ function renderBoard(){
 
   var shifts = ['8am','12pm','4pm'];
   var date = (document.getElementById('setup-date') ? document.getElementById('setup-date').value : '') || currentDate;
+  var shiftOrder = {'8am':0, '12pm':1, '4pm':2};
+
+  // Late thresholds: minutes since midnight after which "Out on Shift" names go red
+  // 8am → red at 11:55am (715 min), 12pm → red at 3:55pm (955 min), 4pm → red at 7:55pm (1195 min)
+  var lateAfter = {'8am': 715, '12pm': 955, '4pm': 1195};
+
+  // Current sim-aware time in minutes since midnight
+  var nowDate = getSimTime();
+  var nowMins = nowDate.getHours() * 60 + nowDate.getMinutes();
+
+  // Collect ALL active juniors across all shifts into flat lists for the 3 board columns
+  var ciAll = [], assAll = [], outAll = [];
+
+  shifts.forEach(function(sh){
+    var checkedInForShift = juniors.filter(function(j){
+      if(!j.checkedIn) return false;
+      if(clockedOut[j.id]) return false;
+      var jShift = j.checkInShift || currentShift;
+      return jShift === sh;
+    });
+    checkedInForShift.forEach(function(j){
+      var status = getJuniorStatus(j);
+      var rec = {j:j, sh:sh};
+      if(status === 'checked-in')  ciAll.push(rec);
+      else if(status === 'assigned') assAll.push(rec);
+      else if(status === 'on-shift') outAll.push(rec);
+    });
+
+    // Age-out pending (future shifts) — bucket into CI column with pending style
+    var isFuture = shiftOrder[sh] > shiftOrder[currentShift];
+    if(isFuture){
+      juniors.forEach(function(j){
+        if(!j.ageout) return;
+        if(!j.plannedShifts || j.plannedShifts.indexOf(sh) < 0) return;
+        if(!j.checkInShift) return;
+        if(j.checkedIn && j.checkInShift === sh) return;
+        if(checkedInForShift.indexOf(j) >= 0) return;
+        ciAll.push({j:j, sh:sh, pending:true});
+      });
+    }
+  });
+
+  // Are multiple shifts represented in any column? (drives shift tag visibility)
+  function multiShift(list){
+    var seen = {};
+    list.forEach(function(r){ seen[r.sh] = true; });
+    return Object.keys(seen).length > 1;
+  }
+  var showTagCI  = multiShift(ciAll);
+  var showTagAss = multiShift(assAll);
+  var showTagOut = multiShift(outAll);
+
+  // Shift label pill for a name row (only rendered when tags are shown)
+  function shiftPill(sh){
+    var colors = {'8am':'#4499CC','12pm':'#F0C040','4pm':'#5CDB95'};
+    return '<span class="board-shift-pill" style="background:' + (colors[sh]||'#99BBDD') + '">' + sh + '</span>';
+  }
+
+  // Build Checked-In column HTML
+  function buildCI(){
+    var h = '<div class="board-waiting-col">';
+    // Pending age-outs at top
+    var pending = ciAll.filter(function(r){ return r.pending; });
+    var normal  = ciAll.filter(function(r){ return !r.pending; });
+    if(pending.length > 0){
+      h += '<div class="board-col-hdr pending">&#9711; Pending (' + pending.length + ')</div>';
+      pending.slice().sort(function(a,b){ return a.j.name.localeCompare(b.j.name); })
+        .forEach(function(r){
+          h += '<div class="board-name pending">' +
+            (showTagCI ? shiftPill(r.sh) : '') +
+            fmtNameShort(r.j.name) + '</div>';
+        });
+      h += '<div class="board-col-gap"></div>';
+    }
+    h += '<div class="board-col-hdr ci">&#9679; Checked In (' + normal.length + ')</div>';
+    if(normal.length === 0){
+      h += '<div class="board-empty">None waiting</div>';
+    } else {
+      normal.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
+        .forEach(function(r){
+          h += '<div class="board-name">' +
+            (showTagCI ? shiftPill(r.sh) : '') +
+            fmtNameShort(r.j.name) + '</div>';
+        });
+    }
+    h += '</div>';
+    return h;
+  }
+
+  // Build Assigned column HTML
+  function buildAssigned(){
+    var h = '<div class="board-waiting-col">';
+    h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')</div>';
+    if(assAll.length === 0){
+      h += '<div class="board-empty">None yet</div>';
+    } else {
+      assAll.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
+        .forEach(function(r){
+          h += '<div class="board-name">' +
+            (showTagAss ? shiftPill(r.sh) : '') +
+            fmtNameShort(r.j.name) + '</div>';
+        });
+    }
+    h += '</div>';
+    return h;
+  }
+
+  // Build Out-on-Shift column HTML — grouped by committee, late names in red
+  function buildOut(){
+    // Group by shift → committee
+    var byShift = {};
+    shifts.forEach(function(sh){ byShift[sh] = {}; });
+    outAll.forEach(function(r){
+      var sh = r.sh;
+      var committee = r.j.assignment || (r.j.shiftAssignments && r.j.shiftAssignments[sh]) || 'Unassigned';
+      if(!byShift[sh][committee]) byShift[sh][committee] = [];
+      byShift[sh][committee].push(r.j);
+    });
+
+    // Total committee groups across all shifts — drives sub-column count
+    var totalGroups = 0;
+    shifts.forEach(function(sh){ totalGroups += Object.keys(byShift[sh]).length; });
+    var subCols = totalGroups >= 15 ? 'cols3' : totalGroups >= 6 ? 'cols2' : 'cols1';
+
+    var h = '<div class="board-out-col">';
+    h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + outAll.length + ')</div>';
+
+    if(outAll.length === 0){
+      h += '<div class="board-empty">None sent yet</div>';
+    } else {
+      h += '<div class="board-out-inner ' + subCols + '">';
+      var isLate, shiftLabel;
+      shifts.forEach(function(sh){
+        var committees = Object.keys(byShift[sh]).sort();
+        if(committees.length === 0) return;
+        isLate = nowMins >= lateAfter[sh];
+        // Shift divider — only when multiple shifts are on board
+        if(showTagOut){
+          h += '<div class="board-shift-divider' + (isLate ? ' late' : '') + '">' + SL[sh] + (isLate ? ' &#9888; LATE' : '') + '</div>';
+        }
+        committees.forEach(function(committee){
+          h += '<div class="board-committee-group">';
+          h += '<div class="board-committee-label' + (isLate ? ' late' : '') + '">' + committee + '</div>';
+          byShift[sh][committee].forEach(function(j){
+            h += '<div class="board-name out' + (isLate ? ' late' : '') + '">' + fmtNameShort(j.name) + '</div>';
+          });
+          h += '</div>';
+        });
+      });
+      h += '</div>';
+    }
+    h += '</div>';
+    return h;
+  }
+
+  // Total active across all shifts for header
+  var totalActive = ciAll.filter(function(r){ return !r.pending; }).length + assAll.length + outAll.length;
 
   var html = '<div class="board-wrap">' +
     '<div class="board-header">' +
@@ -3328,117 +3485,18 @@ function renderBoard(){
         '<div class="board-title">JRC Live Status Board</div>' +
         '<div class="board-clock" id="board-date-lbl">' + fmtDateLong(date) + '</div>' +
       '</div>' +
-      '<div id="board-clock" style="font-size:22px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums"></div>' +
+      '<div style="text-align:right">' +
+        '<div id="board-clock" style="font-size:22px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums"></div>' +
+        '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' juniors active</div>' +
+      '</div>' +
     '</div>' +
-    '<div class="board-body">';
+    '<div class="board-body">' +
+      buildCI() +
+      buildAssigned() +
+      buildOut() +
+    '</div>' +
+  '</div>';
 
-  shifts.forEach(function(sh){
-    // Get all juniors who have ANY activity for this shift
-    var slotsForShift = activeSlots.filter(function(s){ return s.shift === sh; });
-    var checkedInForShift = juniors.filter(function(j){
-      if(!j.checkedIn) return false;
-      if(clockedOut[j.id]) return false; // clocked out — don't show on board
-      var jShift = j.checkInShift || currentShift;
-      return jShift === sh;
-    });
-
-    var ciList    = checkedInForShift.filter(function(j){ return getJuniorStatus(j) === 'checked-in'; });
-    var assList   = checkedInForShift.filter(function(j){ return getJuniorStatus(j) === 'assigned'; });
-    var outList   = checkedInForShift.filter(function(j){ return getJuniorStatus(j) === 'on-shift'; });
-
-    // PENDING — age-outs who have pre-selected this shift but haven't physically checked in for it yet
-    // Only shown for FUTURE shifts (not current and not past shifts)
-    var shiftOrder = {'8am':0, '12pm':1, '4pm':2};
-    var isFutureShift = shiftOrder[sh] > shiftOrder[currentShift];
-    var pendList = [];
-    if(isFutureShift){
-      pendList = juniors.filter(function(j){
-        if(!j.ageout) return false;
-        if(!j.plannedShifts || !j.plannedShifts.length) return false;
-        if(j.plannedShifts.indexOf(sh) < 0) return false;
-        // Must have checked in at least once today (checkInShift set) to show as pending
-        // This prevents stale plannedShifts from old sessions from appearing
-        if(!j.checkInShift) return false;
-        // Don't show if currently checked in for this shift
-        if(j.checkedIn && j.checkInShift === sh) return false;
-        // Don't show if already in checkedInForShift list
-        if(checkedInForShift.indexOf(j) >= 0) return false;
-        return true;
-      });
-    }
-
-    var total = ciList.length + assList.length + outList.length + pendList.length;
-
-    html += '<div class="board-shift">' +
-      '<div class="board-shift-header">' +
-        '<span class="board-shift-label">' + SL[sh] + '</span>' +
-        '<span class="board-shift-count">' + (ciList.length + assList.length + outList.length) + ' juniors &bull; ' +
-          outList.length + ' out on shift' + (pendList.length > 0 ? ' &bull; ' + pendList.length + ' pending' : '') +
-        '</span>' +
-      '</div>' +
-      '<div class="board-cols' + (isFutureShift ? ' four' : '') + '">' +
-
-      // Pending column — only shown on future shifts that have pre-assigned juniors
-      (isFutureShift ?
-        '<div class="board-col">' +
-          '<div class="board-col-hdr pending">&#9711; Pending (' + pendList.length + ')</div>' +
-          (pendList.length === 0 ? '<div class="board-empty">None pre-selected</div>' :
-            pendList.slice().sort(function(a,b){ return a.name.localeCompare(b.name); })
-              .map(function(j){ return '<div class="board-name pending">' + fmtNameShort(j.name) + '</div>'; }).join('')) +
-        '</div>' : '') +
-
-      // Checked In column — order by check-in time, no assignment shown
-      '<div class="board-col">' +
-        '<div class="board-col-hdr ci">&#9679; Checked In (' + ciList.length + ')</div>' +
-        (ciList.length === 0 ? '<div class="board-empty">None waiting</div>' :
-          ciList.slice().sort(function(a,b){ return (a.order||0)-(b.order||0); })
-            .map(function(j){ return '<div class="board-name">' + fmtNameShort(j.name) + '</div>'; }).join('')) +
-      '</div>' +
-
-      // Assigned column — order by check-in time, no assignment shown
-      '<div class="board-col">' +
-        '<div class="board-col-hdr assigned">&#9632; Assigned (' + assList.length + ')</div>' +
-        (assList.length === 0 ? '<div class="board-empty">None</div>' :
-          assList.slice().sort(function(a,b){ return (a.order||0)-(b.order||0); })
-            .map(function(j){ return '<div class="board-name">' + fmtNameShort(j.name) + '</div>'; }).join('')) +
-      '</div>' +
-
-      // Out on Shift — sorted by committee name, shows assignment
-      (function(){
-        var sorted = outList.slice().sort(function(a,b){ return (a.assignment||'').localeCompare(b.assignment||''); });
-        var grouped = {};
-        sorted.forEach(function(j){
-          // Use shiftAssignments for the current shift as fallback (age-outs pre-assigned)
-          var committee = j.assignment || (j.shiftAssignments && j.shiftAssignments[sh]) || 'Unassigned';
-          if(!grouped[committee]) grouped[committee]=[];
-          grouped[committee].push(j);
-        });
-        var committeeKeys = Object.keys(grouped).sort();
-        var manyClass = committeeKeys.length >= 8 ? ' many' : '';
-        var html = '<div class="board-col"><div class="board-col-hdr out">&#9650; Out on Shift (' + outList.length + ')</div>';
-        if(outList.length === 0){
-          html += '<div class="board-empty">None sent yet</div>';
-        } else {
-          html += '<div class="board-out-inner' + manyClass + '">';
-          committeeKeys.forEach(function(committee){
-            html += '<div class="board-committee-group">';
-            html += '<div class="board-committee-label">' + committee + '</div>';
-            grouped[committee].forEach(function(j){
-              html += '<div class="board-name out" style="padding-left:4px">' + fmtNameShort(j.name) + '</div>';
-            });
-            html += '</div>';
-          });
-          html += '</div>';
-        }
-        html += '</div>';
-        return html;
-      })() +
-
-      '</div>' + // board-cols
-    '</div>'; // board-shift
-  });
-
-  html += '</div></div>'; // board-body, board-wrap
   el.innerHTML = html;
 
   // Live clock
