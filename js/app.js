@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 19;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -28,13 +28,43 @@ function getSimTime(){
   return new Date(Date.now() + (simTimeEnabled ? simTimeOffset : 0));
 }
 function getShiftFromTime(t){
-  // t = Date object
-  var h = t.getHours() + t.getMinutes()/60;
-  if(h >= 6  && h < 10) return '8am';
-  if(h >= 10 && h < 14) return '12pm';
-  if(h >= 14 && h < 21) return '4pm';
-  return '8am'; // default outside show hours
+  // Returns the shift a junior is checking in for based on the current time.
+  // Windows are strict — outside them returns null so kiosk can warn.
+  //   8am  shift: 7:00am – 9:59am
+  //   12pm shift: 11:00am – 12:59pm   (1:00pm exclusive)
+  //   4pm  shift: 2:30pm – 4:59pm     (5:00pm exclusive)
+  var h = t.getHours();
+  var m = t.getMinutes();
+  var mins = h * 60 + m; // minutes since midnight
+  if(mins >= 420 && mins < 600)  return '8am';   // 7:00–9:59
+  if(mins >= 660 && mins < 780)  return '12pm';  // 11:00–12:59
+  if(mins >= 870 && mins < 1020) return '4pm';   // 14:30–16:59
+  return null; // outside check-in windows
 }
+
+function getShiftLabel(sh){
+  return {'8am':'8:00 AM','12pm':'12:00 PM','4pm':'4:00 PM'}[sh] || sh;
+}
+function updateKioskShiftBanner(){
+  var el = document.getElementById('kc-shift-banner');
+  if(!el) return;
+  var detected = getShiftFromTime(getSimTime());
+  var shiftNames = {'8am':'8:00 AM Shift','12pm':'12:00 PM Shift','4pm':'4:00 PM Shift'};
+  if(detected){
+    el.style.background = 'var(--navy-lt)';
+    el.style.color = 'var(--navy)';
+    el.style.border = '1.5px solid var(--navy)';
+    el.innerHTML = '&#9553; Checking in for <strong>' + (shiftNames[detected]||detected) + '</strong>';
+  } else {
+    // Outside window — show warning, will fall back to currentShift on confirm
+    var fallback = shiftNames[currentShift] || currentShift;
+    el.style.background = '#FFF3CD';
+    el.style.color = '#856404';
+    el.style.border = '1.5px solid #FFEAA7';
+    el.innerHTML = '&#9888; Outside normal check-in hours &mdash; will be logged under <strong>' + fallback + '</strong> (current officer shift)';
+  }
+}
+
 function setSimTime(h, m){
   var now = new Date();
   var target = new Date();
@@ -53,7 +83,7 @@ function clearSimTime(){
   simTimeEnabled = false;
   simDateSet = false;
   currentDate = new Date().toISOString().slice(0,10);
-  currentShift = getShiftFromTime(new Date());
+  currentShift = getShiftFromTime(new Date()) || '8am'; // default to 8am outside check-in windows
   try { localStorage.removeItem(('jrc_simstate_v' + APP_VERSION)); } catch(e){}
   try { localStorage.removeItem('jrc_simstate'); } catch(e){}
   updateHeaderDate();
@@ -350,7 +380,7 @@ function switchTab(t, el){
   if(t === 'reqform') renderReqForm();
   if(t === 'board') renderBoard();
   if(t === 'hours') renderHours();
-  if(t === 'simulate') renderUserMgmt();
+  if(t === 'simulate'){ renderUserMgmt(); renderStrandedPanel(); }
 }
 
 // ============================================================
@@ -380,6 +410,12 @@ function kLookup(){
     document.getElementById('k-clockout').style.display = 'block';
     return;
   }
+  // Block check-in if outside the strict time windows
+  if(!getShiftFromTime(getSimTime())){
+    document.getElementById('k-entry').style.display = 'none';
+    document.getElementById('k-outside').style.display = 'block';
+    return;
+  }
   pendingJr = jr;
   document.getElementById('kc-name').innerHTML = (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
   document.getElementById('kc-title').textContent = jr.title;
@@ -398,6 +434,7 @@ function kLookup(){
     });
     document.getElementById('k-ao-shifts').style.display = 'block';
   } else {
+    updateKioskShiftBanner();
     document.getElementById('k-confirm').style.display = 'block';
   }
 }
@@ -418,6 +455,7 @@ function kAoNext(){
   }
   document.getElementById('kc-badges').innerHTML = b;
   document.getElementById('k-ao-shifts').style.display = 'none';
+  updateKioskShiftBanner();
   document.getElementById('k-confirm').style.display = 'block';
 }
 
@@ -428,7 +466,9 @@ function kConfirm(){
   pendingJr.order = checkInOrder;
   pendingJr.hasHat = document.getElementById('k-hat').checked;
   pendingJr.notes = document.getElementById('k-notes').value.trim();
-  pendingJr.checkInShift = getShiftFromTime(getSimTime()); // record which shift they checked in for
+  // Shift is guaranteed valid here — kLookup blocks outside-window check-ins
+  pendingJr.checkInShift = getShiftFromTime(getSimTime()) || currentShift;
+  pendingJr.checkInDate  = currentDate; // stamp today's date — used for stale check-in detection
   clockedOut[pendingJr.id] = false;
   delete clockedOut[pendingJr.id];
   // If age-out has a pre-assignment for the current shift, restore it
@@ -491,6 +531,7 @@ function kReset(){
   document.getElementById('k-done').style.display = 'none';
   document.getElementById('k-clockout').style.display = 'none';
   document.getElementById('k-clockout-done').style.display = 'none';
+  document.getElementById('k-outside').style.display = 'none';
   document.getElementById('k-ao-shifts').style.display = 'none';
   document.getElementById('kid').focus();
 }
@@ -1456,6 +1497,69 @@ function resetShift(){
 function clearAll(){
   if(!confirm('Clear all check-ins and assignments for today?')) return;
   resetShift();
+}
+
+function clearStrandedCheckins(){
+  var stranded = juniors.filter(function(j){
+    if(!j.checkedIn) return false;
+    return !j.checkInDate || j.checkInDate !== currentDate;
+  });
+  if(stranded.length === 0){
+    showAlert('No stranded check-ins — all checked-in juniors match today (' + currentDate + ').', 'info');
+    renderStrandedPanel();
+    return;
+  }
+  if(!confirm('Clear ' + stranded.length + ' stranded check-in' + (stranded.length !== 1 ? 's' : '') + ' from dates other than ' + currentDate + '?')) return;
+  stranded.forEach(function(j){
+    j.checkedIn    = false;
+    j.assignment   = null;
+    j.checkInShift = '';
+    j.checkInDate  = '';
+    j.order        = 0;
+    clockedOut[j.id] = false;
+    delete clockedOut[j.id];
+    activeSlots.forEach(function(s){
+      var idx = s.assigned.indexOf(j.id);
+      if(idx >= 0) s.assigned.splice(idx, 1);
+    });
+  });
+  saveState();
+  showAlert(stranded.length + ' stranded check-in' + (stranded.length !== 1 ? 's' : '') + ' cleared.', 'success');
+  renderStrandedPanel();
+  renderBoard();
+}
+
+function renderStrandedPanel(){
+  var el = document.getElementById('stranded-list');
+  if(!el) return;
+  var allCI = juniors.filter(function(j){ return j.checkedIn; });
+  if(allCI.length === 0){
+    el.innerHTML = '<div style="font-size:12px;color:var(--gray-400);font-style:italic">No juniors currently checked in.</div>';
+    return;
+  }
+  var byDate = {};
+  allCI.forEach(function(j){
+    var d = j.checkInDate || '(unknown date)';
+    if(!byDate[d]) byDate[d] = [];
+    byDate[d].push(j);
+  });
+  var dates = Object.keys(byDate).sort();
+  var html = '';
+  dates.forEach(function(d){
+    var isToday = d === currentDate;
+    var color = isToday ? 'var(--green)' : '#FF6B6B';
+    var label = isToday ? '&#10003; Today (' + d + ')' : '&#9888; ' + d + ' &mdash; NOT today';
+    html += '<div style="margin-bottom:10px">';
+    html += '<div style="font-size:11px;font-weight:700;color:' + color + ';margin-bottom:4px">' + label + ' &mdash; ' + byDate[d].length + ' junior' + (byDate[d].length !== 1 ? 's' : '') + '</div>';
+    html += '<div style="display:flex;flex-wrap:wrap;gap:4px">';
+    byDate[d].forEach(function(j){
+      var status = getJuniorStatus(j);
+      html += '<span style="font-size:11px;background:' + (isToday ? 'var(--navy-lt)' : '#FDEDED') + ';color:' + (isToday ? 'var(--navy)' : 'var(--red)') + ';padding:2px 8px;border-radius:20px;border:1px solid ' + (isToday ? 'var(--gray-200)' : '#F5C6CB') + '">' +
+        j.name + ' <span style="opacity:.6">(' + (j.checkInShift||'?') + ' / ' + status + ')</span></span>';
+    });
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
 }
 
 function resetAllHistory(){
