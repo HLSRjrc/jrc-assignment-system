@@ -17,11 +17,12 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 19;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
 var simTimeEnabled = false;
+var simTargetEpoch = 0; // absolute epoch ms of sim time target — cross-device safe
 var simDateSet = false;   // true once user has explicitly set date/time
 function getSimTime(){
   // Always apply offset — when sim not enabled, offset is 0 (real time behavior)
@@ -72,9 +73,12 @@ function setSimTime(h, m){
   simTimeOffset = target - now;
   simTimeEnabled = true;
   simDateSet = true;
+  // Store the absolute target epoch so other devices (TV) can reconstruct the offset correctly
+  simTargetEpoch = target.getTime();
   // Persist sim settings to localStorage immediately — independent of Neon
   try { localStorage.setItem('jrc_simstate', JSON.stringify({
     simTimeEnabled: true, simTimeOffset: simTimeOffset,
+    simTargetEpoch: simTargetEpoch,
     simDateSet: true, currentDate: currentDate, currentShift: currentShift
   })); } catch(e){}
 }
@@ -3690,6 +3694,7 @@ function _doSave(){
       lockedJuniors: Array.from(lockedJuniors),
       simTimeEnabled: simTimeEnabled,
       simTimeOffset: simTimeOffset,
+      simTargetEpoch: simTargetEpoch,
       simDateSet: simDateSet,
     userRoles: userRoles,
     loginLog: loginLog,
@@ -3780,8 +3785,13 @@ function _restoreSimFromLocalStorage(){
     if(!simRaw) return;
     var sim = JSON.parse(simRaw);
     simTimeEnabled = sim.simTimeEnabled || false;
-    simTimeOffset  = sim.simTimeOffset  || 0;
     simDateSet     = sim.simDateSet     || false;
+    if(sim.simTargetEpoch){
+      simTargetEpoch = sim.simTargetEpoch;
+      simTimeOffset  = sim.simTargetEpoch - Date.now();
+    } else {
+      simTimeOffset  = sim.simTimeOffset || 0;
+    }
     if(sim.currentDate)  currentDate  = sim.currentDate;
     if(sim.currentShift) currentShift = sim.currentShift;
   } catch(e){}
@@ -3874,8 +3884,14 @@ function _applyState(data){
   if(state.checkInOrder)   checkInOrder   = state.checkInOrder;
   if(state.lockedJuniors)  lockedJuniors  = new Set(state.lockedJuniors);
   if(state.simTimeEnabled !== undefined) simTimeEnabled = state.simTimeEnabled;
-  if(state.simTimeOffset  !== undefined) simTimeOffset  = state.simTimeOffset;
   if(state.simDateSet     !== undefined) simDateSet      = state.simDateSet;
+  // Recompute simTimeOffset from absolute target epoch so TV/other devices show correct sim time
+  if(state.simTargetEpoch){
+    simTargetEpoch = state.simTargetEpoch;
+    simTimeOffset  = state.simTargetEpoch - Date.now();
+  } else if(state.simTimeOffset !== undefined){
+    simTimeOffset  = state.simTimeOffset;
+  }
 }
 
 function clearSavedState(){
