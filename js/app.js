@@ -199,6 +199,14 @@ var CD = {
 // LOGO — embed real JRC logo
 // ============================================================
 document.addEventListener('DOMContentLoaded', function(){
+  // TV mode — add ?tv=1 to URL to activate full-screen board layout
+  if(window.location.search.indexOf('tv=1') >= 0){
+    document.documentElement.classList.add('tv-mode');
+    // Auto-login to status board role so the TV goes straight to the board
+    setTimeout(function(){ loginAs('board'); }, 150);
+    return;
+  }
+
   var hlsrB64 = null; // loaded from /assets/hlsr-header.webp
   var loginHlsrB64 = null; // loaded from /assets/hlsr-logo-login.png
   var h = document.getElementById('hlsr-logo');
@@ -3405,16 +3413,22 @@ function renderBoard(){
           if(!grouped[committee]) grouped[committee]=[];
           grouped[committee].push(j);
         });
+        var committeeKeys = Object.keys(grouped).sort();
+        var manyClass = committeeKeys.length >= 8 ? ' many' : '';
         var html = '<div class="board-col"><div class="board-col-hdr out">&#9650; Out on Shift (' + outList.length + ')</div>';
         if(outList.length === 0){
           html += '<div class="board-empty">None sent yet</div>';
         } else {
-          Object.keys(grouped).sort().forEach(function(committee){
-            html += '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--orange);margin-top:6px;margin-bottom:2px">' + committee + '</div>';
+          html += '<div class="board-out-inner' + manyClass + '">';
+          committeeKeys.forEach(function(committee){
+            html += '<div class="board-committee-group">';
+            html += '<div class="board-committee-label">' + committee + '</div>';
             grouped[committee].forEach(function(j){
-              html += '<div class="board-name out" style="padding-left:6px">' + fmtNameShort(j.name) + '</div>';
+              html += '<div class="board-name out" style="padding-left:4px">' + fmtNameShort(j.name) + '</div>';
             });
+            html += '</div>';
           });
+          html += '</div>';
         }
         html += '</div>';
         return html;
