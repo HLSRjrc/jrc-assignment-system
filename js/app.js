@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 19;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1659,8 +1659,8 @@ function renderCheckins(){
       '<td style="padding:8px 12px">' + assignment + '</td>' +
       '<td style="padding:8px 12px;text-align:right">' +
         (!isClockedOut ?
-          '<button class="btn btn-sm btn-danger" onclick="adminClockOut('' + j.id + '')">Clock Out</button>' :
-          '<button class="btn btn-sm" style="color:#999;border-color:#ccc" onclick="adminUndoClockOut('' + j.id + '')">Undo</button>'
+          '<button class="btn btn-sm btn-danger" onclick="adminClockOut(\''+ j.id +'\')">Clock Out</button>' :
+          '<button class="btn btn-sm" style="color:#999;border-color:#ccc" onclick="adminUndoClockOut(\''+ j.id +'\')">Undo</button>'
         ) +
       '</td>' +
     '</tr>';
