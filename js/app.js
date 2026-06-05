@@ -383,6 +383,7 @@ function switchTab(t, el){
   if(t === 'requests') renderRequests();
   if(t === 'reqform') renderReqForm();
   if(t === 'board') renderBoard();
+  if(t === 'checkins') renderCheckins();
   if(t === 'hours') renderHours();
   if(t === 'simulate'){ renderUserMgmt(); renderStrandedPanel(); }
 }
@@ -471,8 +472,9 @@ function kConfirm(){
   pendingJr.hasHat = document.getElementById('k-hat').checked;
   pendingJr.notes = document.getElementById('k-notes').value.trim();
   // Shift is guaranteed valid here — kLookup blocks outside-window check-ins
-  pendingJr.checkInShift = getShiftFromTime(getSimTime()) || currentShift;
-  pendingJr.checkInDate  = currentDate; // stamp today's date — used for stale check-in detection
+  pendingJr.checkInShift     = getShiftFromTime(getSimTime()) || currentShift;
+  pendingJr.checkInDate      = currentDate; // stamp today's date — used for stale check-in detection
+  pendingJr.checkInTimestamp = getSimTime().getTime(); // epoch ms — used in Check-ins tab
   clockedOut[pendingJr.id] = false;
   delete clockedOut[pendingJr.id];
   // If age-out has a pre-assignment for the current shift, restore it
@@ -1094,6 +1096,7 @@ function renderTabs(activeTab){
       ['officer',  'Officer Dashboard',         1],
       ['setup',    'Shift Setup',               1],
       ['board',    'Status Board',              2],
+      ['checkins', 'Check-ins',                 2],
       ['roster',   'Roster',                    2],
       ['requests', 'Requests',                  2],
       ['reqform',  'Submit Request',            3],
@@ -1105,6 +1108,7 @@ function renderTabs(activeTab){
       ['setup',    'Shift Setup',               1],
       ['kiosk',    'Kiosk',                     1],
       ['roster',   'Roster',                    1],
+      ['checkins', 'Check-ins',                 1],
       ['board',    'Status Board',              1],
     ],
     scheduling: [
@@ -1589,6 +1593,146 @@ function showAlert(msg, type){
     setTimeout(function(){ el.style.display='none'; el.style.opacity=''; el.style.transition=''; }, 300);
   }, 4000);
 }
+
+
+// ============================================================
+// CHECK-INS TAB
+// ============================================================
+function renderCheckins(){
+  var el = document.getElementById('checkins-content');
+  if(!el) return;
+
+  // All juniors currently checked in (not clocked out)
+  var active = juniors.filter(function(j){
+    return j.checkedIn && !clockedOut[j.id];
+  });
+
+  // Also show recently clocked-out (clockedOut = true) so officer can see full picture
+  var clockedOutList = juniors.filter(function(j){
+    return j.checkedIn && clockedOut[j.id];
+  });
+
+  var allCI = active.concat(clockedOutList);
+
+  if(allCI.length === 0){
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);font-style:italic">No juniors checked in right now.</div>';
+    return;
+  }
+
+  // Group by checkInDate so stranded ones from other dates are obvious
+  var today = [];
+  var stale  = [];
+  allCI.forEach(function(j){
+    if(!j.checkInDate || j.checkInDate === currentDate) today.push(j);
+    else stale.push(j);
+  });
+
+  function fmtTs(j){
+    if(!j.checkInTimestamp) return j.checkInDate || '—';
+    var d = new Date(j.checkInTimestamp);
+    var h = d.getHours(), m = d.getMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + String(m).padStart(2,'0') + ' ' + ampm + ', ' + (j.checkInDate || '');
+  }
+
+  function buildRow(j){
+    var status = getJuniorStatus(j);
+    var isClockedOut = clockedOut[j.id];
+    var isStale = j.checkInDate && j.checkInDate !== currentDate;
+
+    var statusLabel = {
+      'checked-in':  '<span style="color:#4A90D9">&#9679; Checked In</span>',
+      'assigned':    '<span style="color:#F0C040">&#9632; Assigned</span>',
+      'on-shift':    '<span style="color:#5CDB95;font-weight:700">&#9650; Out on Shift</span>',
+      'checked-out': '<span style="color:#999">&#10003; Clocked Out</span>',
+    }[status] || '<span style="color:#999">' + status + '</span>';
+
+    var rowStyle = isStale ? 'background:#FFF5F5;' : isClockedOut ? 'opacity:.55;' : '';
+    var assignment = j.assignment || '—';
+
+    return '<tr style="' + rowStyle + '">' +
+      '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:10px;color:#CC0000;font-weight:700">STALE</span>' : '') + '</td>' +
+      '<td style="padding:8px 12px;color:#667788">' + (j.checkInShift ? j.checkInShift : '—') + '</td>' +
+      '<td style="padding:8px 12px">' + fmtTs(j) + '</td>' +
+      '<td style="padding:8px 12px">' + statusLabel + '</td>' +
+      '<td style="padding:8px 12px">' + assignment + '</td>' +
+      '<td style="padding:8px 12px;text-align:right">' +
+        (!isClockedOut ?
+          '<button class="btn btn-sm btn-danger" onclick="adminClockOut('' + j.id + '')">Clock Out</button>' :
+          '<button class="btn btn-sm" style="color:#999;border-color:#ccc" onclick="adminUndoClockOut('' + j.id + '')">Undo</button>'
+        ) +
+      '</td>' +
+    '</tr>';
+  }
+
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">' +
+    '<div style="font-size:13px;color:#667788">' +
+      '<strong style="color:var(--navy)">' + active.length + '</strong> currently checked in' +
+      (clockedOutList.length > 0 ? ' &bull; <strong>' + clockedOutList.length + '</strong> clocked out this session' : '') +
+      (stale.length > 0 ? ' &bull; <strong style="color:#CC0000">' + stale.length + '</strong> from a different date' : '') +
+    '</div>' +
+    '<div style="display:flex;gap:6px">' +
+      (stale.length > 0 ? '<button class="btn btn-sm btn-danger" onclick="clearStrandedCheckins()">Clear Stale</button>' : '') +
+      '<button class="btn btn-sm" style="border-color:var(--navy);color:var(--navy)" onclick="renderCheckins()">&#8635; Refresh</button>' +
+    '</div>' +
+  '</div>';
+
+  if(allCI.length === 0){
+    html += '<div style="text-align:center;padding:40px;color:var(--gray-400);font-style:italic">No juniors checked in.</div>';
+  } else {
+    html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">' +
+      '<thead><tr style="background:var(--navy);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.07em">' +
+        '<th style="padding:8px 12px;text-align:left;font-weight:600">Name</th>' +
+        '<th style="padding:8px 12px;text-align:left;font-weight:600">Shift</th>' +
+        '<th style="padding:8px 12px;text-align:left;font-weight:600">Checked In At</th>' +
+        '<th style="padding:8px 12px;text-align:left;font-weight:600">Status</th>' +
+        '<th style="padding:8px 12px;text-align:left;font-weight:600">Assignment</th>' +
+        '<th style="padding:8px 12px;text-align:right;font-weight:600">Action</th>' +
+      '</tr></thead>' +
+      '<tbody>' +
+        allCI.sort(function(a,b){
+          // Sort: active today first, then by check-in time
+          var aStale = a.checkInDate && a.checkInDate !== currentDate ? 1 : 0;
+          var bStale = b.checkInDate && b.checkInDate !== currentDate ? 1 : 0;
+          if(aStale !== bStale) return aStale - bStale;
+          return (a.checkInTimestamp||0) - (b.checkInTimestamp||0);
+        }).map(buildRow).join('') +
+      '</tbody>' +
+    '</table></div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function adminClockOut(jid){
+  var jr = juniors.find(function(j){ return j.id === jid; });
+  if(!jr) return;
+  if(!confirm('Clock out ' + jr.name + '? This will remove them from the queue and any assignment.')) return;
+  clockedOut[jr.id] = true;
+  // Remove from any active slots
+  activeSlots.forEach(function(s){
+    var idx = s.assigned.indexOf(jr.id);
+    if(idx >= 0) s.assigned.splice(idx, 1);
+  });
+  onShiftJuniors.delete(jr.id);
+  saveState();
+  renderCheckins();
+  renderOfficer();
+  renderBoard();
+}
+
+function adminUndoClockOut(jid){
+  var jr = juniors.find(function(j){ return j.id === jid; });
+  if(!jr) return;
+  clockedOut[jr.id] = false;
+  delete clockedOut[jr.id];
+  saveState();
+  renderCheckins();
+  renderOfficer();
+  renderBoard();
+}
+
 
 
 function renderRoster(){
@@ -2324,8 +2468,8 @@ var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'
 
 // Tabs each role can see
 var ROLE_TABS = {
-  admin:       ['officer','kiosk','roster','setup','requests','reqform','simulate','board','hours'],
-  officer:     ['officer','setup','kiosk','roster','board'],
+  admin:       ['officer','kiosk','checkins','roster','setup','requests','reqform','simulate','board','hours'],
+  officer:     ['officer','setup','kiosk','checkins','roster','board'],
   scheduling:  ['reqform','requests','setup'],
   mentor:      ['kiosk','board'],
   kiosk:       ['kiosk'],
