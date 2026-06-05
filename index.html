@@ -339,6 +339,11 @@ if(window.location.search.indexOf('partner=1') >= 0){
 </div>
 
 <!-- ROSTER -->
+<div id="panel-checkins" class="panel">
+  <div class="section-lbl" style="margin-bottom:12px">Active Check-ins</div>
+  <div id="checkins-content"></div>
+</div>
+
 <div id="panel-roster" class="panel">
   <div class="action-row">
     <input class="finput" style="max-width:210px" id="r-search" placeholder="Search name or ID..." oninput="renderRoster()">
@@ -717,16 +722,10 @@ if(window.location.search.indexOf('partner=1') >= 0){
     <div id="pill-modal-slot" style="font-size:13px;color:#667788;margin-bottom:20px"></div>
     <div id="pill-modal-btns" style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-primary" id="pill-modal-queue" onclick="pillModalQueue()" style="width:100%;padding:11px">&#8617; Return to Queue</button>
-      <button class="btn" id="pill-modal-signout" onclick="pillModalSignOut()" style="width:100%;padding:11px;border-color:#CC0000;color:#CC0000">&#x2715; Sign Out</button>
+      <div id="pill-modal-signout-note" style="font-size:12px;color:#667788;text-align:center;padding:6px 0">To clock a junior out, use the <a href="#" onclick="pillModalClose();switchTab('checkins',null);return false;" style="color:var(--navy);font-weight:600">Check-ins tab</a>.</div>
       <button class="btn" onclick="pillModalClose()" style="width:100%;padding:9px;font-size:13px">Cancel</button>
     </div>
-    <div id="pill-modal-confirm" style="display:none;margin-top:16px;padding:14px;background:#FFF5F5;border-radius:8px;border:1px solid #ffcccc">
-      <div style="font-size:13px;color:#7B1F1F;margin-bottom:12px">&#9888; Are you sure you want to sign out <strong id="pill-modal-confirm-name"></strong>? This will remove them from the shift entirely.</div>
-      <div style="display:flex;gap:8px">
-        <button class="btn" onclick="pillModalConfirmSignOut()" style="flex:1;background:#CC0000;color:#fff;border-color:#CC0000;padding:9px">Yes, Sign Out</button>
-        <button class="btn" onclick="document.getElementById('pill-modal-confirm').style.display='none'" style="flex:1;padding:9px">Cancel</button>
-      </div>
-    </div>
+    <div id="pill-modal-confirm" style="display:none"></div>
   </div>
 </div>
 
