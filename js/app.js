@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2599,12 +2599,20 @@ function renderCullPreview(results, date){
     });
 
     if(r.dropped.length > 0){
-      r.dropped.forEach(function(s){
-        html += '<tr style="border-top:1px solid #F0F0F0;background:#FFF5F5">';
-        html += '<td style="padding:6px 12px;color:#CC0000;text-decoration:line-through">' + s.name + '</td>';
+      r.dropped.forEach(function(s, di){
+        // Store dropped slots in _cullResults so updateCullCap can reach them
+        if(!window._cullResults[sh + '_dropped']) window._cullResults[sh + '_dropped'] = [];
+        window._cullResults[sh + '_dropped'][di] = Object.assign({}, s, {cap: 0});
+        var dropKey = 'cull-cap-' + sh + '-d' + di;
+        html += '<tr id="cull-drop-row-' + sh + '-' + di + '" style="border-top:1px solid #F0F0F0;background:#FFF5F5">';
+        html += '<td style="padding:6px 12px;color:#CC0000;text-decoration:line-through" id="cull-drop-name-' + sh + '-' + di + '">' + s.name + '</td>';
         html += '<td style="padding:6px 10px;text-align:center;color:#CC0000">' + s.originalCap + '</td>';
-        html += '<td style="padding:6px 10px;text-align:center;color:#CC0000;font-weight:700">0</td>';
-        html += '<td style="padding:6px 12px;color:#CC0000;font-size:11px">&#10007; ' + s.reason + '</td>';
+        html += '<td style="padding:4px 10px;text-align:center">' +
+          '<input type="number" id="' + dropKey + '" value="0" min="0" ' +
+          'style="width:52px;text-align:center;font-size:12px;font-weight:700;padding:3px 4px;border:1.5px solid #CC0000;border-radius:4px;color:#CC0000;background:#FFF5F5" ' +
+          'onchange="updateDroppedCap(\'' + sh + '\',' + di + ',this.value)" oninput="updateDroppedCap(\'' + sh + '\',' + di + ',this.value)">' +
+          '</td>';
+        html += '<td style="padding:6px 12px;color:#CC0000;font-size:11px" id="cull-drop-note-' + sh + '-' + di + '">&#10007; dropped</td>';
         html += '</tr>';
       });
     }
@@ -2633,6 +2641,53 @@ function renderCullPreview(results, date){
 }
 
 // Called when user edits a culled-to number in the preview table
+function updateDroppedCap(sh, di, val){
+  if(!window._cullResults) return;
+  var n = Math.max(0, parseInt(val)||0);
+  if(!window._cullResults[sh + '_dropped']) return;
+  window._cullResults[sh + '_dropped'][di].cap = n;
+
+  var inputEl = document.getElementById('cull-cap-' + sh + '-d' + di);
+  var nameEl  = document.getElementById('cull-drop-name-' + sh + '-' + di);
+  var noteEl  = document.getElementById('cull-drop-note-' + sh + '-' + di);
+
+  if(n > 0){
+    // Restored from dropped — style like an over-request (red but usable)
+    if(inputEl){ inputEl.style.borderColor='#CC0000'; inputEl.style.color='#CC0000'; inputEl.style.background='#FFF5F5'; }
+    if(nameEl) nameEl.style.textDecoration = 'none';
+    if(noteEl) noteEl.innerHTML = '<span style="color:#CC0000">&#9650; added back (' + n + ' of ' + (window._cullResults[sh+'_dropped'][di].originalCap||'?') + ' requested)</span>';
+  } else {
+    if(inputEl){ inputEl.style.borderColor='#CC0000'; inputEl.style.color='#CC0000'; inputEl.style.background='#FFF5F5'; }
+    if(nameEl) nameEl.style.textDecoration = 'line-through';
+    if(noteEl) noteEl.innerHTML = '&#10007; dropped';
+  }
+
+  // Recalculate total from kept + restored dropped
+  _recalcCullTotal(sh);
+}
+
+function _recalcCullTotal(sh){
+  if(!window._cullResults || !window._cullResults[sh]) return;
+  var keptTotal = window._cullResults[sh].reduce(function(a,s){return a+s.cap;},0);
+  var dropTotal = ((window._cullResults[sh+'_dropped'])||[]).reduce(function(a,s){return a+(s.cap||0);},0);
+  var total = keptTotal + dropTotal;
+
+  var totalEl = document.getElementById('cull-total-' + sh);
+  if(totalEl) totalEl.textContent = total;
+
+  var droppedEl = document.getElementById('cull-dropped-total-' + sh);
+  var requestedBase = window._cullResults[sh].reduce(function(a,s){return a+(s.originalCap||s.cap);},0);
+  var droppedRequested = droppedEl ? parseInt(droppedEl.getAttribute('data-requested')||0) : 0;
+  var requested = requestedBase + droppedRequested;
+
+  var diff = requested - total;
+  var reducedEl = document.getElementById('cull-reduced-' + sh);
+  if(reducedEl){
+    reducedEl.textContent = diff > 0 ? diff + ' spots reduced' : diff < 0 ? Math.abs(diff) + ' spots added above request' : 'matches requested';
+    reducedEl.style.color = diff < 0 ? '#CC0000' : '#667788';
+  }
+}
+
 function updateCullCap(sh, ki, val){
   if(!window._cullResults || !window._cullResults[sh]) return;
   var n = Math.max(0, parseInt(val)||0);
@@ -2648,28 +2703,25 @@ function updateCullCap(sh, ki, val){
     inputEl.style.background  = over ? '#FFF5F5' : '';
   }
 
-  // Update culled total
-  var total = window._cullResults[sh].reduce(function(a,s){return a+s.cap;},0);
-  var totalEl = document.getElementById('cull-total-' + sh);
-  if(totalEl) totalEl.textContent = total;
-
-  // Update "spots reduced/added" cell
-  var requested = window._cullResults[sh].reduce(function(a,s){return a+(s.originalCap||s.cap);},0);
-  var droppedEl = document.getElementById('cull-dropped-total-' + sh);
-  if(droppedEl) requested += parseInt(droppedEl.getAttribute('data-requested')||0);
-  var diff = requested - total;
-  var reducedEl = document.getElementById('cull-reduced-' + sh);
-  if(reducedEl){
-    reducedEl.textContent = diff > 0 ? diff + ' spots reduced' : diff < 0 ? Math.abs(diff) + ' spots added above request' : 'matches requested';
-    reducedEl.style.color = diff < 0 ? '#CC0000' : '#667788';
+  // If zeroed out — strikethrough the name cell to show it's effectively dropped
+  var nameCell = inputEl ? inputEl.closest('tr').querySelector('td:first-child') : null;
+  if(nameCell){
+    nameCell.style.textDecoration = n === 0 ? 'line-through' : 'none';
+    nameCell.style.color = n === 0 ? '#CC0000' : '';
   }
+  var noteCell = inputEl ? inputEl.closest('tr').querySelector('td:last-child') : null;
+  if(noteCell && n === 0) noteCell.innerHTML = '<span style="color:#CC0000">&#10007; zeroed out</span>';
+
+  _recalcCullTotal(sh);
 }
 
 function applyCullByShift(btn){
   var sh = btn.getAttribute('data-shift');
   var slots = (window._cullResults || {})[sh];
   if(!slots){ showAlert('Preview data not found — run Preview first.', 'warn'); return; }
-  applyCull(slots, sh);
+  // Include any dropped slots that were manually given a cap > 0
+  var restored = ((window._cullResults || {})[sh + '_dropped'] || []).filter(function(s){ return s.cap > 0; });
+  applyCull(slots.concat(restored), sh);
 }
 
 function applyCull(keptSlots, shift){
