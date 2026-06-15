@@ -2129,6 +2129,7 @@ function clearAllSlots(){
 function initSetupDatePicker(){
   var sel = document.getElementById('setup-date');
   if(!sel) return;
+  var current = sel.value; // preserve selected date before rebuild
   sel.innerHTML = '<option value="">-- Select a date --</option>';
 
   // ── 2026 show dates ───────────────────────────────────────────────────
@@ -2247,6 +2248,8 @@ function setSlotCapacityById(slotId, val, inputEl){
   }
   saveState();
   return n;
+  // Restore previously selected date if still valid
+  if(current) sel.value = current;
 }
 
 function onSetupDateChange(){
@@ -2267,7 +2270,7 @@ function onSetupDateChange(){
     }
     activeSlots = [];
     juniors.forEach(function(j){ j.assignment = null; });
-    document.getElementById('bulk-result').textContent = '';
+    var brEl = document.getElementById('bulk-result'); if(brEl) brEl.textContent = '';
   }
   // Note: we do NOT update currentDate or header here — only activateShift does that
   var prev = document.getElementById('setup-date-slots-preview');
@@ -2306,9 +2309,6 @@ function onSetupDateChange(){
       '<div class="shift-preview-title">' + fmtDateLong(date) + '</div>' +
       '<div class="shift-preview-count">' + totalSlots + ' committee slots &bull; ' + totalJuniors + ' junior spots requested</div>' +
     '</div>' +
-    '<div style="display:flex;gap:6px">' +
-      '<button class="btn btn-orange" style="font-size:12px;padding:6px 12px" onclick="bulkAddAllShifts()">+ Load Entire Day</button>' +
-    '</div>' +
   '</div>';
 
   ['8am','12pm','4pm'].forEach(function(sh){
@@ -2323,12 +2323,7 @@ function onSetupDateChange(){
         '<span class="shift-block-title">' + SL[sh] + '</span>' +
         '<span class="shift-block-meta" style="margin-left:8px">' + list.length + ' committees &bull; ' + shJuniors + ' juniors</span>' +
       '</div>' +
-      '<div class="shift-block-actions">' +
-        (allAdded
-          ? '<span style="font-size:11px;color:#155724;font-weight:600">&#10003; All added</span>'
-          : '<button class="btn btn-primary" style="font-size:11px;padding:4px 10px" onclick="bulkAddShift(\'' + sh + '\')">+ Add All ' + SL[sh].split('–')[0].trim() + ' Committees</button>'
-        ) +
-      '</div>' +
+      '<div class="shift-block-actions"></div>' +
     '</div>';
 
     list.forEach(function(s){
@@ -2340,12 +2335,7 @@ function onSetupDateChange(){
           (s.isNew ? ' <span class="badge" style="background:#E8F4E8;color:#155724;font-size:9px">New</span>' : '') +
         '</div>' +
         '<div class="preview-cap">' + s.cap + '</div>' +
-        '<div class="preview-status">' +
-          (isAdded
-            ? '<span style="color:#155724;font-size:11px;font-weight:600">&#10003; Added</span>'
-            : '<button class="btn btn-sm btn-add-one" onclick="addSinglePreviewSlotEl(this)" data-name=\'\'' + s.name + '\'\' data-shift=\'\'' + sh + '\'\' data-cap=\'\'' + s.cap + '\'\' data-hat=\'\'' + (s.hat?1:0) + '\'\'>+ Add</button>'
-          ) +
-        '</div>' +
+        '<div class="preview-status"></div>' +
       '</div>';
     });
 
@@ -2363,6 +2353,7 @@ function addSinglePreviewSlot(name, shift, cap, hat){
   activeSlots.push({id:Date.now()+Math.random(), name:name, capacity:cap, shift:shift, hat:hat, assigned:[]});
   onSetupDateChange();
   renderSetup();
+  renderSetupApproved();
 }
 
 function addSinglePreviewSlotEl(btn){
@@ -2707,6 +2698,58 @@ function setRequestPriority(rid, si, val){
     if(sl) sl.highPriority = val;
   }
   saveState();
+  renderSetupApproved();
+}
+
+
+function renderSetupApproved(){
+  var approvedEl = document.getElementById('setup-approved-section');
+  if(!approvedEl) return;
+  var date = document.getElementById('setup-date') ? document.getElementById('setup-date').value : '';
+  var approved = committeeRequests.filter(function(r){ return r.status === 'approved'; });
+  var relevant = [];
+  approved.forEach(function(r){
+    r.shifts.forEach(function(s, si){
+      if(!s.all20 && s.date !== date) return;
+      var effShift = s.preshow ? psTimeToShift(s.startTime) : s.shift;
+      var effLabel = s.preshow ? ((s.startTime||'') + (s.endTime ? '–'+s.endTime : '')) : (SL[s.shift]||'');
+      var slotName = s.preshow ? (r.name + ' (' + effLabel + ')') : r.name;
+      var existingSlot = activeSlots.find(function(sl){ return sl.name === slotName && sl.shift === effShift; });
+      var isPriority = existingSlot ? !!existingSlot.highPriority : !!(r.highPriority);
+      relevant.push({name:slotName, shift:effShift, shiftLabel:effLabel, cap:s.cap, rid:r.id, si:si, isPriority:isPriority});
+    });
+  });
+
+  if(relevant.length === 0){
+    approvedEl.innerHTML = '<div style="font-size:12px;color:#667788;font-style:italic">No approved requests for this date.</div>';
+    return;
+  }
+
+  var byShift = {'8am':[],'12pm':[],'4pm':[]};
+  relevant.forEach(function(r){ if(byShift[r.shift]) byShift[r.shift].push(r); });
+  var shiftColors = {'8am':'#4499CC','12pm':'#D4860A','4pm':'#27AE60'};
+  var shiftNames  = {'8am':'8:00 AM','12pm':'12:00 PM','4pm':'4:00 PM'};
+  var apHtml = '';
+  ['8am','12pm','4pm'].forEach(function(sh){
+    var rows = byShift[sh];
+    if(!rows.length) return;
+    apHtml += '<div style="margin-bottom:12px">';
+    apHtml += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:' + shiftColors[sh] + ';margin-bottom:6px">' + shiftNames[sh] + ' Shift (' + rows.length + ' committees, ' + rows.reduce(function(a,r){return a+r.cap;},0) + ' spots requested)</div>';
+    apHtml += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    apHtml += '<thead><tr style="background:#F5F6F8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667788"><th style="padding:5px 10px;text-align:left;font-weight:600">Committee</th><th style="padding:5px 10px;text-align:center;font-weight:600">Spots</th><th style="padding:5px 10px;text-align:center;font-weight:600">Priority</th></tr></thead>';
+    apHtml += '<tbody>';
+    rows.forEach(function(r){
+      apHtml += '<tr style="border-top:1px solid #F0F0F0' + (r.isPriority ? ';background:#FFF8F8' : '') + '">';
+      apHtml += '<td style="padding:6px 10px;font-weight:500">' + r.name + '</td>';
+      apHtml += '<td style="padding:6px 10px;text-align:center;color:#667788">' + r.cap + '</td>';
+      apHtml += '<td style="padding:6px 10px;text-align:center">' +
+        '<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:#CC0000;font-weight:600">' +
+        '<input type="checkbox"' + (r.isPriority ? ' checked' : '') + ' onchange="setRequestPriority(' + r.rid + ',' + r.si + ',this.checked)" style="accent-color:#CC0000;width:15px;height:15px"> Priority</label>' +
+        '</td></tr>';
+    });
+    apHtml += '</tbody></table></div>';
+  });
+  approvedEl.innerHTML = apHtml;
 }
 
 
@@ -2723,57 +2766,7 @@ function renderSetup(){
     return '<option value="' + c.id + '">' + c.name + ' &mdash; ' + SL[s.shift] + ' (cap: ' + s.cap + ')' + (c.hat ? ' [hat]' : '') + '</option>';
   }).join('');
 
-  // Show approved requests panel — read-only with priority checkbox
-  var approvedEl = document.getElementById('setup-approved-section');
-  if(approvedEl){
-    var date = document.getElementById('setup-date') ? document.getElementById('setup-date').value : '';
-    var approved = committeeRequests.filter(function(r){ return r.status === 'approved'; });
-    // Filter to slots relevant to selected date
-    var relevant = [];
-    approved.forEach(function(r){
-      r.shifts.forEach(function(s, si){
-        if(!s.all20 && s.date !== date) return;
-        var effShift = s.preshow ? psTimeToShift(s.startTime) : s.shift;
-        var effLabel = s.preshow ? ((s.startTime||'') + (s.endTime ? '–'+s.endTime : '')) : (SL[s.shift]||'');
-        var slotName = s.preshow ? (r.name + ' (' + effLabel + ')') : r.name;
-        // Read priority from activeSlots if already applied, else from committeeRequests flag
-        var existingSlot = activeSlots.find(function(sl){ return sl.name === slotName && sl.shift === effShift; });
-        var isPriority = existingSlot ? !!existingSlot.highPriority : !!(r.highPriority);
-        relevant.push({name:slotName, shift:effShift, shiftLabel:effLabel, cap:s.cap, rid:r.id, si:si, isPriority:isPriority, slotName:slotName});
-      });
-    });
-
-    if(relevant.length === 0){
-      approvedEl.innerHTML = '<div style="font-size:12px;color:#667788;font-style:italic">No approved requests for this date.</div>';
-    } else {
-      // Group by shift
-      var byShift = {'8am':[],'12pm':[],'4pm':[]};
-      relevant.forEach(function(r){ if(byShift[r.shift]) byShift[r.shift].push(r); });
-      var shiftColors = {'8am':'#4499CC','12pm':'#D4860A','4pm':'#27AE60'};
-      var shiftNames  = {'8am':'8:00 AM','12pm':'12:00 PM','4pm':'4:00 PM'};
-      var apHtml = '';
-      ['8am','12pm','4pm'].forEach(function(sh){
-        var rows = byShift[sh];
-        if(!rows.length) return;
-        apHtml += '<div style="margin-bottom:12px">';
-        apHtml += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:' + shiftColors[sh] + ';margin-bottom:6px">' + shiftNames[sh] + ' Shift (' + rows.length + ' committees, ' + rows.reduce(function(a,r){return a+r.cap;},0) + ' spots requested)</div>';
-        apHtml += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-        apHtml += '<thead><tr style="background:#F5F6F8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667788"><th style="padding:5px 10px;text-align:left;font-weight:600">Committee</th><th style="padding:5px 10px;text-align:center;font-weight:600">Spots</th><th style="padding:5px 10px;text-align:center;font-weight:600">Priority</th></tr></thead>';
-        apHtml += '<tbody>';
-        rows.forEach(function(r){
-          apHtml += '<tr style="border-top:1px solid #F0F0F0' + (r.isPriority ? ';background:#FFF8F8' : '') + '">';
-          apHtml += '<td style="padding:6px 10px;font-weight:500">' + r.name + '</td>';
-          apHtml += '<td style="padding:6px 10px;text-align:center;color:#667788">' + r.cap + '</td>';
-          apHtml += '<td style="padding:6px 10px;text-align:center">' +
-            '<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:#CC0000;font-weight:600">' +
-            '<input type="checkbox"' + (r.isPriority ? ' checked' : '') + ' onchange="setRequestPriority(' + r.rid + ',' + r.si + ',this.checked)" style="accent-color:#CC0000;width:15px;height:15px"> Priority</label>';
-          apHtml += '</td></tr>';
-        });
-        apHtml += '</tbody></table></div>';
-      });
-      approvedEl.innerHTML = apHtml;
-    }
-  }
+  renderSetupApproved();
 
   var sl = document.getElementById('setup-list');
   if(!sl) return; // setup-list removed from panel
