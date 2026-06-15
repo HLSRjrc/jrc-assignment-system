@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 19;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1611,30 +1611,12 @@ function renderCheckins(){
   var el = document.getElementById('checkins-content');
   if(!el) return;
 
-  // All juniors currently checked in (not clocked out)
-  var active = juniors.filter(function(j){
-    return j.checkedIn && !clockedOut[j.id];
-  });
+  var active       = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id]; });
+  var clockedOutList = juniors.filter(function(j){ return j.checkedIn && clockedOut[j.id]; });
+  var allCI        = active.concat(clockedOutList);
 
-  // Also show recently clocked-out (clockedOut = true) so officer can see full picture
-  var clockedOutList = juniors.filter(function(j){
-    return j.checkedIn && clockedOut[j.id];
-  });
-
-  var allCI = active.concat(clockedOutList);
-
-  if(allCI.length === 0){
-    el.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);font-style:italic">No juniors checked in right now.</div>';
-    return;
-  }
-
-  // Group by checkInDate so stranded ones from other dates are obvious
-  var today = [];
-  var stale  = [];
-  allCI.forEach(function(j){
-    if(!j.checkInDate || j.checkInDate === currentDate) today.push(j);
-    else stale.push(j);
-  });
+  // Group by date
+  var stale = allCI.filter(function(j){ return j.checkInDate && j.checkInDate !== currentDate; });
 
   function fmtTs(j){
     if(!j.checkInTimestamp) return j.checkInDate || '—';
@@ -1649,37 +1631,34 @@ function renderCheckins(){
     var status = getJuniorStatus(j);
     var isClockedOut = clockedOut[j.id];
     var isStale = j.checkInDate && j.checkInDate !== currentDate;
-
     var statusLabel = {
       'checked-in':  '<span style="color:#4A90D9">&#9679; Checked In</span>',
       'assigned':    '<span style="color:#F0C040">&#9632; Assigned</span>',
       'on-shift':    '<span style="color:#5CDB95;font-weight:700">&#9650; Out on Shift</span>',
       'checked-out': '<span style="color:#999">&#10003; Clocked Out</span>',
     }[status] || '<span style="color:#999">' + status + '</span>';
-
     var rowStyle = isStale ? 'background:#FFF5F5;' : isClockedOut ? 'opacity:.55;' : '';
-    var assignment = j.assignment || '—';
-
     return '<tr style="' + rowStyle + '">' +
       '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:10px;color:#CC0000;font-weight:700">STALE</span>' : '') + '</td>' +
-      '<td style="padding:8px 12px;color:#667788">' + (j.checkInShift ? j.checkInShift : '—') + '</td>' +
+      '<td style="padding:8px 12px;color:#667788">' + (j.checkInShift||'—') + '</td>' +
       '<td style="padding:8px 12px">' + fmtTs(j) + '</td>' +
       '<td style="padding:8px 12px">' + statusLabel + '</td>' +
-      '<td style="padding:8px 12px">' + assignment + '</td>' +
+      '<td style="padding:8px 12px">' + (j.assignment||'—') + '</td>' +
       '<td style="padding:8px 12px;text-align:right">' +
         (!isClockedOut ?
-          '<button class="btn btn-sm btn-danger" onclick="adminClockOut(\''+ j.id +'\')">Clock Out</button>' :
-          '<button class="btn btn-sm" style="color:#999;border-color:#ccc" onclick="adminUndoClockOut(\''+ j.id +'\')">Undo</button>'
+          '<button class="btn btn-sm btn-danger" onclick="adminClockOut(\''+ j.id +'\')" >Clock Out</button>' :
+          '<button class="btn btn-sm" style="color:#999;border-color:#ccc" onclick="adminUndoClockOut(\''+ j.id +'\')" >Undo</button>'
         ) +
       '</td>' +
     '</tr>';
   }
 
-  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">' +
+  // ── Active check-ins section ──────────────────────────────
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">' +
     '<div style="font-size:13px;color:#667788">' +
       '<strong style="color:var(--navy)">' + active.length + '</strong> currently checked in' +
       (clockedOutList.length > 0 ? ' &bull; <strong>' + clockedOutList.length + '</strong> clocked out this session' : '') +
-      (stale.length > 0 ? ' &bull; <strong style="color:#CC0000">' + stale.length + '</strong> from a different date' : '') +
+      (stale.length > 0 ? ' &bull; <strong style="color:#CC0000">' + stale.length + '</strong> stale' : '') +
     '</div>' +
     '<div style="display:flex;gap:6px">' +
       (stale.length > 0 ? '<button class="btn btn-sm btn-danger" onclick="clearStrandedCheckins()">Clear Stale</button>' : '') +
@@ -1688,9 +1667,9 @@ function renderCheckins(){
   '</div>';
 
   if(allCI.length === 0){
-    html += '<div style="text-align:center;padding:40px;color:var(--gray-400);font-style:italic">No juniors checked in.</div>';
+    html += '<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;color:var(--gray-400);font-style:italic;margin-bottom:16px">No juniors checked in right now.</div>';
   } else {
-    html += '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">' +
+    html += '<div style="overflow-x:auto;margin-bottom:16px"><table style="width:100%;border-collapse:collapse;font-size:13px">' +
       '<thead><tr style="background:var(--navy);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.07em">' +
         '<th style="padding:8px 12px;text-align:left;font-weight:600">Name</th>' +
         '<th style="padding:8px 12px;text-align:left;font-weight:600">Shift</th>' +
@@ -1700,8 +1679,7 @@ function renderCheckins(){
         '<th style="padding:8px 12px;text-align:right;font-weight:600">Action</th>' +
       '</tr></thead>' +
       '<tbody>' +
-        allCI.sort(function(a,b){
-          // Sort: active today first, then by check-in time
+        allCI.slice().sort(function(a,b){
           var aStale = a.checkInDate && a.checkInDate !== currentDate ? 1 : 0;
           var bStale = b.checkInDate && b.checkInDate !== currentDate ? 1 : 0;
           if(aStale !== bStale) return aStale - bStale;
@@ -1711,7 +1689,119 @@ function renderCheckins(){
     '</table></div>';
   }
 
+  // ── Quick Check-in Roster ─────────────────────────────────
+  // Collapsed by default; toggled via button
+  var notCI = juniors.filter(function(j){
+    return !j.inactive && !j.checkedIn;
+  }).slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
+
+  var outsideWindow = !getShiftFromTime(getSimTime());
+  var windowWarn = outsideWindow
+    ? '<div style="font-size:11px;color:#856404;background:#FFF3CD;border:1px solid #FFEAA7;border-radius:6px;padding:6px 10px;margin-bottom:10px">&#9888; Outside check-in hours &mdash; quick check-ins will be logged under the current officer shift (' + currentShift + ').</div>'
+    : '';
+
+  // Search filter state stored on the element via data attribute trick — re-read from DOM
+  var searchVal = '';
+  var searchEl = document.getElementById('ci-roster-search');
+  if(searchEl) searchVal = searchEl.value || '';
+  var filtered = searchVal
+    ? notCI.filter(function(j){ return j.name.toLowerCase().indexOf(searchVal.toLowerCase()) >= 0; })
+    : notCI;
+
+  function buildRosterRow(j){
+    return '<tr>' +
+      '<td style="padding:6px 10px;font-size:13px;font-weight:500">' + j.name + '</td>' +
+      '<td style="padding:6px 10px;font-size:11px;color:#667788">' + (j.title||'').replace('Junior ','') + '</td>' +
+      '<td style="padding:6px 10px;text-align:right">' +
+        '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy);padding:4px 12px" ' +
+        'onclick="quickCheckIn(\''+ j.id +'\')">&#43; Check In</button>' +
+      '</td>' +
+    '</tr>';
+  }
+
+  html += '<div style="border:1px solid var(--gray-200);border-radius:8px;overflow:hidden">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--gray-50);cursor:pointer;user-select:none" onclick="toggleCIRoster()">' +
+      '<div style="font-size:13px;font-weight:600;color:var(--navy)">&#9660; Quick Check-in Roster <span style="font-weight:400;color:#667788;font-size:12px">(' + notCI.length + ' not yet checked in)</span></div>' +
+      '<span id="ci-roster-toggle-icon" style="font-size:11px;color:#667788">tap to expand</span>' +
+    '</div>' +
+    '<div id="ci-roster-body" style="display:none">' +
+      '<div style="padding:10px 14px;border-top:1px solid var(--gray-200)">' +
+        windowWarn +
+        '<input type="text" id="ci-roster-search" placeholder="Search by name..." ' +
+        'style="width:100%;padding:7px 10px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;margin-bottom:10px;font-family:var(--font)" ' +
+        'oninput="renderCIRosterRows()" />' +
+        '<div id="ci-roster-rows">' +
+          (filtered.length === 0
+            ? '<div style="text-align:center;color:var(--gray-400);font-style:italic;padding:12px">All juniors are already checked in.</div>'
+            : '<table style="width:100%;border-collapse:collapse"><tbody>' + filtered.map(buildRosterRow).join('') + '</tbody></table>'
+          ) +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+  '</div>';
+
   el.innerHTML = html;
+}
+
+// Toggle the quick check-in roster drawer
+function toggleCIRoster(){
+  var body = document.getElementById('ci-roster-body');
+  var icon = document.getElementById('ci-roster-toggle-icon');
+  if(!body) return;
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  if(icon) icon.textContent = isOpen ? 'tap to expand' : 'tap to collapse';
+}
+
+// Re-render just the roster rows based on current search input (avoids full re-render)
+function renderCIRosterRows(){
+  var searchEl = document.getElementById('ci-roster-search');
+  var rowsEl   = document.getElementById('ci-roster-rows');
+  if(!searchEl || !rowsEl) return;
+  var q = searchEl.value.toLowerCase();
+  var notCI = juniors.filter(function(j){
+    return !j.inactive && !j.checkedIn;
+  }).slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
+  var filtered = q ? notCI.filter(function(j){ return j.name.toLowerCase().indexOf(q) >= 0; }) : notCI;
+  if(filtered.length === 0){
+    rowsEl.innerHTML = '<div style="text-align:center;color:var(--gray-400);font-style:italic;padding:12px">' + (q ? 'No matches.' : 'All juniors are already checked in.') + '</div>';
+    return;
+  }
+  var rows = filtered.map(function(j){
+    return '<tr>' +
+      '<td style="padding:6px 10px;font-size:13px;font-weight:500">' + j.name + '</td>' +
+      '<td style="padding:6px 10px;font-size:11px;color:#667788">' + (j.title||'').replace('Junior ','') + '</td>' +
+      '<td style="padding:6px 10px;text-align:right">' +
+        '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy);padding:4px 12px" ' +
+        'onclick="quickCheckIn(\''+ j.id +'\')">&#43; Check In</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+  rowsEl.innerHTML = '<table style="width:100%;border-collapse:collapse"><tbody>' + rows + '</tbody></table>';
+}
+
+// One-click check-in from the roster — no hat, no notes, uses current shift window
+function quickCheckIn(jid){
+  var jr = juniors.find(function(j){ return j.id === jid; });
+  if(!jr) return;
+  if(jr.checkedIn){ showAlert(jr.name + ' is already checked in.', 'info'); return; }
+  checkInOrder++;
+  jr.checkedIn        = true;
+  jr.order            = checkInOrder;
+  jr.hasHat           = false;
+  jr.notes            = '';
+  jr.checkInShift     = getShiftFromTime(getSimTime()) || currentShift;
+  jr.checkInDate      = currentDate;
+  jr.checkInTimestamp = getSimTime().getTime();
+  // Clear any previous assignment/clock-out state
+  jr.assignment       = null;
+  clockedOut[jr.id]   = false;
+  delete clockedOut[jr.id];
+  saveState();
+  showAlert(jr.name + ' checked in for ' + jr.checkInShift + '.', 'success');
+  renderCheckins();
+  renderOfficer();
+  renderBoard();
 }
 
 function adminClockOut(jid){
