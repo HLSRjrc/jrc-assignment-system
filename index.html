@@ -377,21 +377,11 @@ if(window.location.search.indexOf('partner=1') >= 0){
   <!-- STEP 1: Date + Shift selector -->
   <div class="setup-section">
     <div class="section-lbl">1. Select Show Date</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <div>
-        <div style="font-size:12px;color:#667788;margin-bottom:4px">Show date</div>
-        <select class="finput" id="setup-date" onchange="onSetupDateChange()">
-          <option value="">-- Select a date --</option>
-        </select>
-      </div>
-      <div>
-        <div style="font-size:12px;color:#667788;margin-bottom:4px">Active shift for dashboard</div>
-        <select class="finput" id="setup-shift">
-          <option value="8am" selected>8:00am &ndash; 12:00pm</option>
-          <option value="12pm">12:00pm &ndash; 4:00pm</option>
-          <option value="4pm">4:00pm &ndash; 8:00pm</option>
-        </select>
-      </div>
+    <div style="margin-bottom:10px">
+      <div style="font-size:12px;color:#667788;margin-bottom:4px">Show date</div>
+      <select class="finput" style="max-width:260px" id="setup-date" onchange="onSetupDateChange()">
+        <option value="">-- Select a date --</option>
+      </select>
     </div>
     <div id="setup-date-slots-preview" style="display:none;margin-top:8px;padding:10px 12px;background:var(--navy-lt);border-radius:8px;font-size:12px;color:var(--navy)"></div>
   </div>
@@ -429,6 +419,12 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- SETTINGS / DATE SIMULATOR -->
 <div id="panel-simulate" class="panel">
+  <!-- ONE-TIME MIGRATION -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-lbl" style="margin-bottom:4px">&#128257; 2026 Schedule Migration</div>
+    <div style="font-size:12px;color:#667788;margin-bottom:10px">One-time operation: converts all hardcoded 2026 schedule slots into proper request records so they show up in the Requests tab with full contact info, priority toggles, and editing. Run this once only.</div>
+    <div id="migration-status"><div style="font-size:12px;color:var(--gray-400);font-style:italic">Loading...</div></div>
+  </div>
   <div class="card" style="border:2px solid #FF6B6B;background:#FFF5F5">
     <div class="section-lbl" style="margin-bottom:4px;color:var(--red)">&#9888; Stranded Check-ins</div>
     <div style="font-size:12px;color:#667788;margin-bottom:12px">Juniors still marked as checked-in from a previous test date. These appear on the status board but won't show in the dashboard. Check below and clear any that don't match today's date.</div>
