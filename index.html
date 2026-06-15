@@ -543,8 +543,9 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- REQUESTS APPROVAL PANEL -->
 <div id="panel-requests" class="panel">
+  <!-- Tray: pending/approved/rejected requests -->
   <div class="action-row">
-    <div style="font-size:13px;color:#667788;flex:1">Review and approve committee shift requests. Approved requests appear in the officer&apos;s approved list for shift setup.</div>
+    <div style="font-size:13px;color:#667788;flex:1">Review and approve committee shift requests. Approved requests appear in Shift Setup.</div>
     <select class="finput" style="max-width:160px" id="req-filter" onchange="renderRequests()">
       <option value="all" selected>All requests</option>
       <option value="pending">Pending only</option>
@@ -553,6 +554,23 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </select>
   </div>
   <div id="req-list"></div>
+
+  <!-- Date lookup: see all approved requests for a specific date -->
+  <div style="margin-top:24px;border-top:2px solid var(--gray-100);padding-top:18px">
+    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none" onclick="toggleReqDateLookup()">
+      <div class="section-lbl" style="margin-bottom:0">&#128197; View Requests by Date</div>
+      <span id="req-date-lookup-toggle" style="font-size:11px;color:#667788;background:var(--gray-100);padding:3px 10px;border-radius:12px">&#9660; Show</span>
+    </div>
+    <div id="req-date-lookup-body" style="display:none;margin-top:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <select class="finput" id="req-date-lookup-sel" style="max-width:220px" onchange="renderReqByDate()">
+          <option value="">-- Select a date --</option>
+        </select>
+        <span id="req-date-lookup-summary" style="font-size:12px;color:#667788"></span>
+      </div>
+      <div id="req-date-lookup-list"></div>
+    </div>
+  </div>
 </div>
 
 <!-- COMMITTEE REQUEST FORM PANEL -->
