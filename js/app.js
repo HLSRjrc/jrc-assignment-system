@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2590,7 +2590,7 @@ function renderCullPreview(results, date){
       html += '<td style="padding:6px 10px;text-align:center;color:#667788">' + s.originalCap + '</td>';
       // Editable number input
       html += '<td style="padding:4px 10px;text-align:center">' +
-        '<input type="number" id="' + rowKey + '" value="' + s.cap + '" min="0" max="' + s.originalCap + '" ' +
+        '<input type="number" id="' + rowKey + '" value="' + s.cap + '" min="0" ' +
         'style="width:52px;text-align:center;font-size:12px;font-weight:700;padding:3px 4px;border:1.5px solid ' + (trimmed ? '#D4860A' : 'var(--gray-200)') + ';border-radius:4px;color:' + (trimmed ? '#D4860A' : 'var(--navy)') + '" ' +
         'onchange="updateCullCap(\'' + sh + '\',' + ki + ',this.value)" oninput="updateCullCap(\'' + sh + '\',' + ki + ',this.value)">' +
         '</td>';
@@ -2610,11 +2610,13 @@ function renderCullPreview(results, date){
     }
 
     // Totals row
+    // Store dropped requested total for live update calculations
+    var droppedRequested = r.dropped.reduce(function(a,s){return a+(s.originalCap||0);},0);
     html += '<tr style="border-top:2px solid var(--navy);background:#F0F4F8;font-weight:700">';
     html += '<td style="padding:7px 12px;font-size:12px">TOTAL</td>';
-    html += '<td style="padding:7px 10px;text-align:center;font-size:12px">' + totalRequested + '</td>';
+    html += '<td style="padding:7px 10px;text-align:center;font-size:12px" id="cull-dropped-total-' + sh + '" data-requested="' + droppedRequested + '">' + totalRequested + '</td>';
     html += '<td style="padding:7px 10px;text-align:center;font-size:12px" id="cull-total-' + sh + '">' + totalCulled + '</td>';
-    html += '<td style="padding:7px 12px;font-size:11px;color:#667788">' + (totalRequested - totalCulled) + ' spots reduced</td>';
+    html += '<td style="padding:7px 12px;font-size:11px;color:#667788" id="cull-reduced-' + sh + '">' + (totalRequested - totalCulled) + ' spots reduced</td>';
     html += '</tr>';
 
     html += '</tbody></table>';
@@ -2635,10 +2637,17 @@ function updateCullCap(sh, ki, val){
   if(!window._cullResults || !window._cullResults[sh]) return;
   var n = Math.max(0, parseInt(val)||0);
   window._cullResults[sh][ki].cap = n;
-  // Update the total display
+  // Update culled total
   var total = window._cullResults[sh].reduce(function(a,s){return a+s.cap;},0);
-  var el = document.getElementById('cull-total-' + sh);
-  if(el) el.textContent = total;
+  var totalEl = document.getElementById('cull-total-' + sh);
+  if(totalEl) totalEl.textContent = total;
+  // Update "spots reduced" cell — find requested total from originalCap
+  var requested = window._cullResults[sh].reduce(function(a,s){return a+(s.originalCap||s.cap);},0);
+  // Add back dropped slots if stored
+  var droppedEl = document.getElementById('cull-dropped-total-' + sh);
+  if(droppedEl) requested += parseInt(droppedEl.getAttribute('data-requested')||0);
+  var reducedEl = document.getElementById('cull-reduced-' + sh);
+  if(reducedEl) reducedEl.textContent = Math.max(0, requested - total) + ' spots reduced';
 }
 
 function applyCullByShift(btn){
@@ -3522,6 +3531,147 @@ function submitRequest(){
 // ============================================================
 // REQUEST APPROVALS
 // ============================================================
+
+function toggleReqDateLookup(){
+  var body = document.getElementById('req-date-lookup-body');
+  var icon = document.getElementById('req-date-lookup-toggle');
+  if(!body) return;
+  var open = body.style.display !== 'none';
+  if(!open){
+    // Populate date picker on first open
+    initReqDateLookupPicker();
+  }
+  body.style.display = open ? 'none' : 'block';
+  if(icon) icon.innerHTML = open ? '&#9660; Show' : '&#9650; Hide';
+}
+
+function initReqDateLookupPicker(){
+  var sel = document.getElementById('req-date-lookup-sel');
+  if(!sel || sel.options.length > 1) return; // already populated
+  // Collect all unique dates from approved requests + SCHEDULE_2026
+  var dateSet = {};
+  Object.keys(SCHEDULE_2026).forEach(function(d){ dateSet[d] = true; });
+  committeeRequests.filter(function(r){ return r.status === 'approved'; }).forEach(function(r){
+    r.shifts.forEach(function(s){
+      if(s.date && !s.all20) dateSet[s.date] = true;
+    });
+  });
+  var dates = Object.keys(dateSet).sort();
+  dates.forEach(function(d){
+    var opt = document.createElement('option');
+    opt.value = d;
+    opt.textContent = fmtDateLong(d);
+    sel.appendChild(opt);
+  });
+}
+
+function renderReqByDate(){
+  var sel = document.getElementById('req-date-lookup-sel');
+  var listEl = document.getElementById('req-date-lookup-list');
+  var summaryEl = document.getElementById('req-date-lookup-summary');
+  if(!sel || !listEl) return;
+  var date = sel.value;
+  if(!date){ listEl.innerHTML = ''; if(summaryEl) summaryEl.textContent = ''; return; }
+
+  // Gather all requests (any status) that touch this date
+  var hits = [];
+  committeeRequests.forEach(function(r){
+    r.shifts.forEach(function(s){
+      if(s.all20 || s.date === date){
+        var effShift = s.preshow ? psTimeToShift(s.startTime) : s.shift;
+        var effLabel = s.preshow
+          ? ((s.startTime||'') + (s.endTime ? '–'+s.endTime : ''))
+          : (SL[s.shift]||s.shift);
+        hits.push({
+          name: r.name, status: r.status, shift: effShift, shiftLabel: effLabel,
+          cap: s.cap, hat: r.hat, all20: s.all20,
+          liaison: r.liaison, liaisonPhone: r.liaisonPhone,
+          chair: r.chair, location: r.location,
+          rid: r.id
+        });
+      }
+    });
+  });
+
+  // Also include SCHEDULE_2026 slots for this date (which don't have requests)
+  var schedSlots = (SCHEDULE_2026[date] || []).map(function(s){
+    return {name:s.name, status:'schedule', shift:s.shift, shiftLabel:SL[s.shift]||s.shift,
+      cap:s.cap, hat:s.hat, all20:false, liaison:'', liaisonPhone:'', chair:'', location:''};
+  });
+
+  // Merge: prefer request record over schedule entry for same name+shift
+  var merged = hits.slice();
+  schedSlots.forEach(function(ss){
+    var exists = hits.some(function(h){ return h.name === ss.name && h.shift === ss.shift; });
+    if(!exists) merged.push(ss);
+  });
+
+  if(merged.length === 0){
+    listEl.innerHTML = '<div style="text-align:center;color:var(--gray-400);font-style:italic;padding:20px">No requests or scheduled slots found for this date.</div>';
+    if(summaryEl) summaryEl.textContent = '';
+    return;
+  }
+
+  // Group by shift
+  var byShift = {'8am':[],'12pm':[],'4pm':[],'other':[]};
+  merged.forEach(function(h){
+    if(byShift[h.shift]) byShift[h.shift].push(h);
+    else byShift.other.push(h);
+  });
+
+  var shiftColors = {'8am':'#4499CC','12pm':'#D4860A','4pm':'#27AE60'};
+  var shiftNames  = {'8am':'8:00 AM Shift','12pm':'12:00 PM Shift','4pm':'4:00 PM Shift'};
+  var statusColors = {
+    'approved':'#155724', 'pending':'#856404', 'rejected':'#721c24', 'schedule':'#445566'
+  };
+  var statusBg = {
+    'approved':'#D4EDDA', 'pending':'#FFF3CD', 'rejected':'#F8D7DA', 'schedule':'#F0F4F8'
+  };
+
+  var totalApproved = merged.filter(function(h){ return h.status==='approved'||h.status==='schedule'; }).length;
+  var totalCap = merged.filter(function(h){ return h.status==='approved'||h.status==='schedule'; })
+    .reduce(function(a,h){ return a+h.cap; }, 0);
+
+  if(summaryEl) summaryEl.textContent = totalApproved + ' committees • ' + totalCap + ' spots';
+
+  var html = '';
+  ['8am','12pm','4pm'].forEach(function(sh){
+    var rows = byShift[sh];
+    if(!rows.length) return;
+    var shiftCap = rows.reduce(function(a,h){ return a+h.cap; }, 0);
+
+    html += '<div style="margin-bottom:16px;border:1px solid var(--gray-200);border-radius:8px;overflow:hidden">';
+    html += '<div style="background:var(--navy);color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center">';
+    html += '<span style="font-weight:700;font-size:13px">' + (shiftNames[sh]||sh) + '</span>';
+    html += '<span style="font-size:11px;opacity:.85">' + rows.length + ' committees &bull; ' + shiftCap + ' spots</span>';
+    html += '</div>';
+
+    html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html += '<thead><tr style="background:#F8F9FA;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667788">';
+    html += '<th style="padding:6px 12px;text-align:left;font-weight:600">Committee</th>';
+    html += '<th style="padding:6px 10px;text-align:center;font-weight:600">Spots</th>';
+    html += '<th style="padding:6px 10px;text-align:center;font-weight:600">Hat</th>';
+    html += '<th style="padding:6px 12px;text-align:left;font-weight:600">Liaison</th>';
+    html += '<th style="padding:6px 10px;text-align:center;font-weight:600">Status</th>';
+    html += '</tr></thead><tbody>';
+
+    rows.sort(function(a,b){ return a.name.localeCompare(b.name); }).forEach(function(h){
+      html += '<tr style="border-top:1px solid #F0F0F0">';
+      html += '<td style="padding:7px 12px;font-weight:500">' + h.name + (h.all20 ? ' <span style="font-size:9px;color:#667788;font-weight:400">(all 20)</span>' : '') + '</td>';
+      html += '<td style="padding:7px 10px;text-align:center;color:#667788">' + h.cap + '</td>';
+      html += '<td style="padding:7px 10px;text-align:center">' + (h.hat ? '<img src="assets/hat.png" style="height:16px;vertical-align:middle">' : '<span style="color:#ccc">—</span>') + '</td>';
+      html += '<td style="padding:7px 12px;color:#667788;font-size:11px">' + (h.liaison ? h.liaison + (h.liaisonPhone ? ' &bull; ' + h.liaisonPhone : '') : '—') + '</td>';
+      html += '<td style="padding:7px 10px;text-align:center">';
+      html += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:' + (statusBg[h.status]||'#eee') + ';color:' + (statusColors[h.status]||'#333') + '">' + h.status + '</span>';
+      html += '</td></tr>';
+    });
+
+    html += '</tbody></table></div>';
+  });
+
+  listEl.innerHTML = html;
+}
+
 
 function renderRequests(){
   var filter = (document.getElementById('req-filter') ? document.getElementById('req-filter').value : 'all');
