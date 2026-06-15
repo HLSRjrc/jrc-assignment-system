@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2705,10 +2705,11 @@ function updateCullCap(sh, ki, val){
   // Color the input: blue if at or below original request, red if above
   var inputEl = document.getElementById('cull-cap-' + sh + '-' + ki);
   if(inputEl){
-    var over = n > originalCap;
-    inputEl.style.borderColor = over ? '#CC0000' : (n < originalCap ? '#D4860A' : 'var(--gray-200)');
-    inputEl.style.color       = over ? '#CC0000' : (n < originalCap ? '#D4860A' : 'var(--navy)');
-    inputEl.style.background  = over ? '#FFF5F5' : '';
+    var over   = n > originalCap;
+    var zeroed = n === 0;
+    inputEl.style.borderColor = zeroed ? '#CC0000' : over ? '#CC0000' : (n < originalCap ? '#D4860A' : 'var(--gray-200)');
+    inputEl.style.color       = zeroed ? '#CC0000' : over ? '#CC0000' : (n < originalCap ? '#D4860A' : 'var(--navy)');
+    inputEl.style.background  = (zeroed || over) ? '#FFF5F5' : '';
   }
 
   // If zeroed out — strikethrough the name cell to show it's effectively dropped
