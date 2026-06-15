@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 19;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1102,6 +1102,15 @@ function renderTabs(activeTab){
       ['reqform',  'Submit Request',            3],
       ['simulate', 'Settings',                  3],
       ['hours',    'Hours Report',              3],
+    ],
+    slt: [
+      ['officer',  'Officer Dashboard',         1],
+      ['kiosk',    'Junior Login',              1],
+      ['checkins', 'Check-ins',                 1],
+      ['roster',   'Roster',                    1],
+      ['setup',    'Shift Setup',               2],
+      ['board',    'Status Board',              2],
+      ['hours',    'Hours Report',              2],
     ],
     officer: [
       ['officer',  'Shift Officer Dashboard',   1],
@@ -2469,6 +2478,7 @@ var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'
 // Tabs each role can see
 var ROLE_TABS = {
   admin:       ['officer','kiosk','checkins','roster','setup','requests','reqform','simulate','board','hours'],
+  slt:         ['officer','kiosk','checkins','roster','setup','board','hours'],
   officer:     ['officer','setup','kiosk','checkins','roster','board'],
   scheduling:  ['reqform','requests','setup'],
   mentor:      ['kiosk','board'],
@@ -4229,6 +4239,7 @@ function renderUserMgmt(){
   var roleOpts = [
     {val:'', lbl:'-- No Access (uses title default if set) --'},
     {val:'admin', lbl:'Administrator (all tabs)'},
+    {val:'slt', lbl:'SLT (dashboard, kiosk, check-ins, roster, setup, board, hours)'},
     {val:'officer', lbl:'Shift Officer'},
     {val:'scheduling', lbl:'Scheduler (requests + partner)'}
   ];
