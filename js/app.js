@@ -2926,10 +2926,47 @@ function migrateSchedule2026(){
     });
   });
 
-  saveStateNow();
-  showAlert('Migration complete — ' + count + ' schedule slots converted to request records.', 'success');
-  renderSimulateMigrationStatus();
-  renderRequests();
+  // Send migrated records to Neon in batches of 200 using batchMode (upsert only, no delete)
+  var CHUNK_SIZE = 200;
+  var newRecords = committeeRequests.filter(function(r){ return r.source === 'schedule_2026'; });
+  var chunks = [];
+  for(var ci = 0; ci < newRecords.length; ci += CHUNK_SIZE){
+    chunks.push(newRecords.slice(ci, ci + CHUNK_SIZE));
+  }
+
+  var el = document.getElementById('migration-status');
+  if(el) el.innerHTML = '<div style="padding:12px;background:#FFF3CD;border-radius:8px;font-size:13px;color:#856404">&#9203; Saving ' + newRecords.length + ' records to Neon in ' + chunks.length + ' batches...</div>';
+
+  function sendChunk(idx){
+    if(idx >= chunks.length){
+      showAlert('Migration complete — ' + count + ' slots saved to Neon.', 'success');
+      renderSimulateMigrationStatus();
+      renderRequests();
+      return;
+    }
+    fetch('/.netlify/functions/state', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json', 'x-api-token': API_TOKEN},
+      body: JSON.stringify({
+        committeeRequests: chunks[idx],
+        batchMode: true  // upsert only — don't delete existing records
+      })
+    }).then(function(r){
+      if(!r.ok){
+        return r.text().then(function(body){
+          showAlert('Batch ' + (idx+1) + ' failed: ' + body, 'error');
+          if(el) el.innerHTML = '<div style="padding:12px;background:#FFF5F5;border-radius:8px;font-size:13px;color:#CC0000">&#9888; Batch ' + (idx+1) + '/' + chunks.length + ' failed: ' + body + '</div>';
+        });
+      }
+      // Update progress
+      if(el) el.innerHTML = '<div style="padding:12px;background:#FFF3CD;border-radius:8px;font-size:13px;color:#856404">&#9203; Saved batch ' + (idx+1) + ' of ' + chunks.length + '...</div>';
+      sendChunk(idx + 1);
+    }).catch(function(e){
+      showAlert('Migration network error: ' + e.message, 'error');
+    });
+  }
+
+  sendChunk(0);
 }
 
 function renderSimulateMigrationStatus(){
@@ -4751,7 +4788,7 @@ function _doSave(){
     },
     juniors: activeJuniors,
     activeSlots: activeSlots,
-    committeeRequests: committeeRequests,
+    // committeeRequests sent separately below when changed, to avoid payload size issues
   };
   try { localStorage.setItem(LS_KEY, JSON.stringify({state: payload.state, juniors: juniors, activeSlots: activeSlots, adults: adults})); } catch(e){}
   if(!DB_AVAILABLE) return;
@@ -4776,7 +4813,31 @@ function _doSave(){
     isSaving = false;
     showSyncError(e.message);
   });
+
+  // Save committeeRequests separately in batch mode (upsert only) to avoid size limits
+  // Only when something changed — check against a hash
+  var reqHash = committeeRequests.length + ':' + (committeeRequests[0] ? committeeRequests[0].id : '');
+  if(reqHash !== (_lastReqHash || '')){
+    _lastReqHash = reqHash;
+    var CREQ_CHUNK = 200;
+    function _saveReqChunk(start){
+      var chunk = committeeRequests.slice(start, start + CREQ_CHUNK);
+      if(!chunk.length) return;
+      fetch('/.netlify/functions/state', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
+        body: JSON.stringify({committeeRequests: chunk, batchMode: start > 0})
+      }).then(function(r){
+        if(r.ok && start + CREQ_CHUNK < committeeRequests.length){
+          _saveReqChunk(start + CREQ_CHUNK);
+        }
+      }).catch(function(e){ console.warn('committeeRequests save error:', e.message); });
+    }
+    _saveReqChunk(0);
+  }
 }
+
+var _lastReqHash = '';
 
 var syncErrorShown = false;
 function showSyncError(msg){
@@ -4918,6 +4979,7 @@ function _applyState(data){
           activeSlots = lsData.activeSlots;
           console.warn('Active slots recovered from localStorage backup');
         }
+
       }
     } catch(e){}
   }
