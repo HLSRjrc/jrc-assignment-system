@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2768,6 +2768,20 @@ function toggleSetupRequests(){
   if(icon) icon.innerHTML = open ? '&#9660; Show' : '&#9650; Hide';
 }
 
+function toggleRequestPriority(rid, val){
+  var r = committeeRequests.find(function(x){ return x.id === rid; });
+  if(!r) return;
+  r.highPriority = val;
+  // Update any matching activeSlots already applied
+  activeSlots.forEach(function(s){
+    // Match by committee name prefix
+    if(s.name === r.name || s.name.indexOf(r.name) === 0) s.highPriority = val;
+  });
+  saveState();
+  renderRequests();
+  showAlert((val ? '&#9650; Priority set' : 'Priority removed') + ' for ' + r.name + '.', 'success');
+}
+
 function setRequestPriority(rid, si, val){
   // Set priority flag on the committeeRequest so runCullPreview picks it up
   var r = committeeRequests.find(function(x){ return x.id === rid; });
@@ -3798,8 +3812,15 @@ function renderRequests(){
 
     var approvedFrom = '';
     if(r.status === 'approved'){
+      var isPriority = !!r.highPriority;
       approvedFrom =
-        '<div style="font-size:11px;color:#155724;margin-top:6px;margin-bottom:10px">&#10003; Approved — visible in Shift Setup.</div>' +
+        '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:6px;margin-bottom:10px">' +
+          '<div style="font-size:11px;color:#155724">&#10003; Approved — visible in Shift Setup.</div>' +
+          '<label style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:4px 10px;border-radius:20px;border:1.5px solid ' + (isPriority ? '#CC0000' : '#DDD') + ';background:' + (isPriority ? '#FFF0F0' : '#FAFAFA') + '">' +
+            '<input type="checkbox" id="req-priority-' + r.id + '"' + (isPriority ? ' checked' : '') + ' onchange="toggleRequestPriority(' + r.id + ',this.checked)" style="accent-color:#CC0000;width:14px;height:14px">' +
+            '<span style="font-size:11px;font-weight:700;color:' + (isPriority ? '#CC0000' : '#667788') + '">&#9650; Priority</span>' +
+          '</label>' +
+        '</div>' +
         '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
           '<button class="btn" style="font-size:12px;padding:5px 12px" onclick="editRequest(' + r.id + ')"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"> Edit</button>' +
           '<button class="btn btn-danger" style="font-size:12px;padding:5px 12px" onclick="revokeRequest(' + r.id + ')">&#x21A9; Revoke Approval</button>' +
