@@ -374,6 +374,27 @@ if(window.location.search.indexOf('partner=1') >= 0){
 <!-- SHIFT SETUP -->
 <div id="panel-setup" class="panel">
   <div class="setup-section">
+    <div class="section-lbl">Junior Count Planner</div>
+    <div style="font-size:12px;color:#667788;margin-bottom:10px">Enter how many juniors are scheduled per shift. The system will auto-distribute spots across committees — priority committees get full capacity first, then the rest are filled round-robin (everyone gets 1 before anyone gets a 2nd). Committees that show up most days are cut first if needed.</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
+      <div>
+        <div style="font-size:11px;color:#667788;margin-bottom:4px;font-weight:600">8:00 AM Shift</div>
+        <input type="number" id="cull-target-8am" class="finput" placeholder="# juniors" min="0" style="font-size:13px">
+      </div>
+      <div>
+        <div style="font-size:11px;color:#667788;margin-bottom:4px;font-weight:600">12:00 PM Shift</div>
+        <input type="number" id="cull-target-12pm" class="finput" placeholder="# juniors" min="0" style="font-size:13px">
+      </div>
+      <div>
+        <div style="font-size:11px;color:#667788;margin-bottom:4px;font-weight:600">4:00 PM Shift</div>
+        <input type="number" id="cull-target-4pm" class="finput" placeholder="# juniors" min="0" style="font-size:13px">
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;padding:10px;font-size:13px" onclick="runCullPreview()">&#9654; Preview Culled Assignments</button>
+    <div id="cull-preview" style="display:none;margin-top:14px"></div>
+  </div>
+
+  <div class="setup-section">
     <div class="section-lbl">Select show date</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
       <div>
