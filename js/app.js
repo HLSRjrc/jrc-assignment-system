@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -386,7 +386,7 @@ function switchTab(t, el){
   if(t === 'board') renderBoard();
   if(t === 'checkins') renderCheckins();
   if(t === 'hours') renderHours();
-  if(t === 'simulate'){ renderUserMgmt(); renderStrandedPanel(); }
+  if(t === 'simulate'){ renderUserMgmt(); renderStrandedPanel(); renderSimulateMigrationStatus(); }
 }
 
 // ============================================================
@@ -2870,6 +2870,88 @@ function renderSetupApproved(){
   approvedEl.innerHTML = apHtml;
 }
 
+
+// ============================================================
+// SCHEDULE_2026 → committeeRequests ONE-TIME MIGRATION
+// ============================================================
+function hasMigratedSchedule(){
+  return committeeRequests.some(function(r){ return r.source === 'schedule_2026'; });
+}
+
+function migrateSchedule2026(){
+  if(hasMigratedSchedule()){
+    showAlert('Migration already completed — schedule data is already in the requests system.', 'info');
+    renderSimulateMigrationStatus();
+    return;
+  }
+
+  var dates = Object.keys(SCHEDULE_2026).sort();
+  var nextId = Date.now();
+  var count = 0;
+
+  dates.forEach(function(date){
+    var slots = SCHEDULE_2026[date];
+    slots.forEach(function(slot){
+      var cd = CD[slot.name] || {};
+      // Each date+committee+shift = one request record
+      var record = {
+        id: nextId++,
+        name: slot.name,
+        status: 'approved',
+        source: 'schedule_2026',
+        submittedAt: new Date('2025-01-01').toISOString(), // placeholder submission date
+        // Contact info from CD
+        chair: cd.chair || '',
+        chairPhone: cd.cp || '',
+        liaison: cd.liaison || '',
+        liaisonPhone: cd.lp || '',
+        liaisonEmail: cd.le || '',
+        location: cd.loc || '',
+        duties: cd.duties || '',
+        notes: cd.notes || '',
+        hat: slot.hat || false,
+        highPriority: false,
+        schedulingNotes: '',
+        // Single shift entry for this specific date
+        shifts: [{
+          date: date,
+          shift: slot.shift,
+          cap: slot.cap,
+          all20: false,
+          preshow: false
+        }]
+      };
+      committeeRequests.push(record);
+      count++;
+    });
+  });
+
+  saveStateNow();
+  showAlert('Migration complete — ' + count + ' schedule slots converted to request records.', 'success');
+  renderSimulateMigrationStatus();
+  renderRequests();
+}
+
+function renderSimulateMigrationStatus(){
+  var el = document.getElementById('migration-status');
+  if(!el) return;
+  var done = hasMigratedSchedule();
+  var count = committeeRequests.filter(function(r){ return r.source === 'schedule_2026'; }).length;
+  if(done){
+    el.innerHTML =
+      '<div style="padding:12px 14px;background:#D4EDDA;border:1px solid #97C459;border-radius:8px;font-size:13px;color:#155724">' +
+        '&#10003; Schedule migration complete — <strong>' + count + '</strong> slots are now in the requests system. ' +
+        'The "Migrate" button has been disabled.' +
+      '</div>';
+  } else {
+    el.innerHTML =
+      '<div style="padding:12px 14px;background:#FFF3CD;border:1px solid #FFEAA7;border-radius:8px;font-size:13px;color:#856404;margin-bottom:10px">' +
+        '&#9888; The 2026 hardcoded schedule has <strong>not yet been migrated</strong>. ' +
+        'Click the button below to convert all ' + Object.values(SCHEDULE_2026).reduce(function(a,v){return a+v.length;},0) + ' schedule slots into request records.' +
+      '</div>' +
+      '<button class="btn btn-primary" style="font-size:13px;padding:10px 18px" onclick="migrateSchedule2026()">&#9654; Migrate SCHEDULE_2026 to Request Records</button>';
+  }
+}
 
 function renderSetup(){
   // Initialize sim-date picker to today if not already set
