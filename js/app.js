@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2651,14 +2651,22 @@ function updateDroppedCap(sh, di, val){
   var nameEl  = document.getElementById('cull-drop-name-' + sh + '-' + di);
   var noteEl  = document.getElementById('cull-drop-note-' + sh + '-' + di);
 
+  var orig = window._cullResults[sh+'_dropped'][di].originalCap || 0;
   if(n > 0){
-    // Restored from dropped — style like an over-request (red but usable)
-    if(inputEl){ inputEl.style.borderColor='#CC0000'; inputEl.style.color='#CC0000'; inputEl.style.background='#FFF5F5'; }
-    if(nameEl) nameEl.style.textDecoration = 'none';
-    if(noteEl) noteEl.innerHTML = '<span style="color:#CC0000">&#9650; added back (' + n + ' of ' + (window._cullResults[sh+'_dropped'][di].originalCap||'?') + ' requested)</span>';
+    // Restored — black name, navy input (within request) or orange (above request)
+    var over = n > orig;
+    if(inputEl){
+      inputEl.style.borderColor = over ? '#D4860A' : 'var(--gray-200)';
+      inputEl.style.color       = over ? '#D4860A' : 'var(--navy)';
+      inputEl.style.background  = '';
+    }
+    if(nameEl){ nameEl.style.textDecoration='none'; nameEl.style.color=''; }
+    if(noteEl) noteEl.innerHTML = over
+      ? '<span style="color:#D4860A">&#9650; ' + n + ' (above ' + orig + ' requested)</span>'
+      : '<span style="color:var(--green)">&#10003; restored (' + n + ' of ' + orig + ')</span>';
   } else {
     if(inputEl){ inputEl.style.borderColor='#CC0000'; inputEl.style.color='#CC0000'; inputEl.style.background='#FFF5F5'; }
-    if(nameEl) nameEl.style.textDecoration = 'line-through';
+    if(nameEl){ nameEl.style.textDecoration='line-through'; nameEl.style.color='#CC0000'; }
     if(noteEl) noteEl.innerHTML = '&#10007; dropped';
   }
 
@@ -3640,36 +3648,41 @@ function renderReqByDate(){
   var date = sel.value;
   if(!date){ listEl.innerHTML = ''; if(summaryEl) summaryEl.textContent = ''; return; }
 
-  // Gather all requests (any status) that touch this date
+  // Gather all submitted requests that touch this date
   var hits = [];
   committeeRequests.forEach(function(r){
     r.shifts.forEach(function(s){
       if(s.all20 || s.date === date){
         var effShift = s.preshow ? psTimeToShift(s.startTime) : s.shift;
-        var effLabel = s.preshow
-          ? ((s.startTime||'') + (s.endTime ? '–'+s.endTime : ''))
-          : (SL[s.shift]||s.shift);
         hits.push({
-          name: r.name, status: r.status, shift: effShift, shiftLabel: effLabel,
-          cap: s.cap, hat: r.hat, all20: s.all20,
-          liaison: r.liaison, liaisonPhone: r.liaisonPhone,
-          chair: r.chair, location: r.location,
-          rid: r.id
+          name:r.name, status:r.status, shift:effShift,
+          cap:s.cap, hat:r.hat, all20:s.all20,
+          liaison:r.liaison, liaisonPhone:r.liaisonPhone, liaisonEmail:r.liaisonEmail||'',
+          chair:r.chair, chairPhone:r.chairPhone||'',
+          location:r.location, duties:r.duties||'', notes:r.notes||'',
+          rid:r.id, fromRequest:true
         });
       }
     });
   });
 
-  // Also include SCHEDULE_2026 slots for this date (which don't have requests)
+  // Also include SCHEDULE_2026 slots — pull full detail from CD directory
   var schedSlots = (SCHEDULE_2026[date] || []).map(function(s){
-    return {name:s.name, status:'schedule', shift:s.shift, shiftLabel:SL[s.shift]||s.shift,
-      cap:s.cap, hat:s.hat, all20:false, liaison:'', liaisonPhone:'', chair:'', location:''};
+    var cd = CD[s.name] || {};
+    return {
+      name:s.name, status:'schedule', shift:s.shift,
+      cap:s.cap, hat:s.hat, all20:false,
+      liaison:cd.liaison||'', liaisonPhone:cd.lp||'', liaisonEmail:cd.le||'',
+      chair:cd.chair||'', chairPhone:cd.cp||'',
+      location:cd.loc||'', duties:cd.duties||'', notes:cd.notes||'',
+      fromRequest:false
+    };
   });
 
-  // Merge: prefer request record over schedule entry for same name+shift
+  // Merge: prefer submitted request over schedule for same name+shift
   var merged = hits.slice();
   schedSlots.forEach(function(ss){
-    var exists = hits.some(function(h){ return h.name === ss.name && h.shift === ss.shift; });
+    var exists = hits.some(function(h){ return h.name===ss.name && h.shift===ss.shift; });
     if(!exists) merged.push(ss);
   });
 
@@ -3679,33 +3692,27 @@ function renderReqByDate(){
     return;
   }
 
-  // Group by shift
-  var byShift = {'8am':[],'12pm':[],'4pm':[],'other':[]};
-  merged.forEach(function(h){
-    if(byShift[h.shift]) byShift[h.shift].push(h);
-    else byShift.other.push(h);
-  });
+  var byShift = {'8am':[],'12pm':[],'4pm':[]};
+  merged.forEach(function(h){ if(byShift[h.shift]) byShift[h.shift].push(h); });
 
   var shiftColors = {'8am':'#4499CC','12pm':'#D4860A','4pm':'#27AE60'};
   var shiftNames  = {'8am':'8:00 AM Shift','12pm':'12:00 PM Shift','4pm':'4:00 PM Shift'};
-  var statusColors = {
-    'approved':'#155724', 'pending':'#856404', 'rejected':'#721c24', 'schedule':'#445566'
-  };
-  var statusBg = {
-    'approved':'#D4EDDA', 'pending':'#FFF3CD', 'rejected':'#F8D7DA', 'schedule':'#F0F4F8'
-  };
+  var statusColors = {'approved':'#155724','pending':'#856404','rejected':'#721c24','schedule':'#445566'};
+  var statusBg     = {'approved':'#D4EDDA','pending':'#FFF3CD','rejected':'#F8D7DA','schedule':'#F0F4F8'};
 
-  var totalApproved = merged.filter(function(h){ return h.status==='approved'||h.status==='schedule'; }).length;
-  var totalCap = merged.filter(function(h){ return h.status==='approved'||h.status==='schedule'; })
-    .reduce(function(a,h){ return a+h.cap; }, 0);
+  var totalCount = merged.filter(function(h){ return h.status!=='rejected'; }).length;
+  var totalCap   = merged.filter(function(h){ return h.status!=='rejected'; }).reduce(function(a,h){ return a+h.cap; },0);
+  if(summaryEl) summaryEl.textContent = totalCount + ' committees • ' + totalCap + ' spots';
 
-  if(summaryEl) summaryEl.textContent = totalApproved + ' committees • ' + totalCap + ' spots';
+  // Store rows for detail toggle
+  window._reqByDateRows = merged;
 
   var html = '';
   ['8am','12pm','4pm'].forEach(function(sh){
     var rows = byShift[sh];
     if(!rows.length) return;
-    var shiftCap = rows.reduce(function(a,h){ return a+h.cap; }, 0);
+    rows.sort(function(a,b){ return a.name.localeCompare(b.name); });
+    var shiftCap = rows.reduce(function(a,h){ return a+h.cap; },0);
 
     html += '<div style="margin-bottom:16px;border:1px solid var(--gray-200);border-radius:8px;overflow:hidden">';
     html += '<div style="background:var(--navy);color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center">';
@@ -3713,30 +3720,52 @@ function renderReqByDate(){
     html += '<span style="font-size:11px;opacity:.85">' + rows.length + ' committees &bull; ' + shiftCap + ' spots</span>';
     html += '</div>';
 
-    html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-    html += '<thead><tr style="background:#F8F9FA;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667788">';
-    html += '<th style="padding:6px 12px;text-align:left;font-weight:600">Committee</th>';
-    html += '<th style="padding:6px 10px;text-align:center;font-weight:600">Spots</th>';
-    html += '<th style="padding:6px 10px;text-align:center;font-weight:600">Hat</th>';
-    html += '<th style="padding:6px 12px;text-align:left;font-weight:600">Liaison</th>';
-    html += '<th style="padding:6px 10px;text-align:center;font-weight:600">Status</th>';
-    html += '</tr></thead><tbody>';
+    rows.forEach(function(h, ri){
+      var rowKey = sh + '-' + ri;
+      var cd = h;
+      var hasDetail = h.liaison||h.location||h.duties||h.notes;
+      var detailHtml = '';
+      if(hasDetail){
+        detailHtml +=
+          '<div style="padding:10px 14px 12px 28px;background:#F8F9FA;border-top:1px solid #EEE;font-size:12px;line-height:1.7">' +
+          (h.chair ? '<div><strong>Chair:</strong> ' + h.chair + (h.chairPhone ? ' &bull; ' + h.chairPhone : '') + '</div>' : '') +
+          (h.liaison ? '<div><strong>Liaison:</strong> ' + h.liaison + (h.liaisonPhone ? ' &bull; ' + h.liaisonPhone : '') + (h.liaisonEmail ? ' &bull; <a href="mailto:' + h.liaisonEmail + '" style="color:var(--navy)">' + h.liaisonEmail + '</a>' : '') + '</div>' : '') +
+          (h.location ? '<div><strong>Location:</strong> ' + h.location + '</div>' : '') +
+          (h.duties ? '<div><strong>Duties:</strong> ' + h.duties + '</div>' : '') +
+          (h.notes ? '<div><strong>Notes:</strong> ' + h.notes + '</div>' : '') +
+          '</div>';
+      }
 
-    rows.sort(function(a,b){ return a.name.localeCompare(b.name); }).forEach(function(h){
-      html += '<tr style="border-top:1px solid #F0F0F0">';
-      html += '<td style="padding:7px 12px;font-weight:500">' + h.name + (h.all20 ? ' <span style="font-size:9px;color:#667788;font-weight:400">(all 20)</span>' : '') + '</td>';
-      html += '<td style="padding:7px 10px;text-align:center;color:#667788">' + h.cap + '</td>';
-      html += '<td style="padding:7px 10px;text-align:center">' + (h.hat ? '<img src="assets/hat.png" style="height:16px;vertical-align:middle">' : '<span style="color:#ccc">—</span>') + '</td>';
-      html += '<td style="padding:7px 12px;color:#667788;font-size:11px">' + (h.liaison ? h.liaison + (h.liaisonPhone ? ' &bull; ' + h.liaisonPhone : '') : '—') + '</td>';
-      html += '<td style="padding:7px 10px;text-align:center">';
-      html += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:' + (statusBg[h.status]||'#eee') + ';color:' + (statusColors[h.status]||'#333') + '">' + h.status + '</span>';
-      html += '</td></tr>';
+      html += '<div style="border-top:1px solid #F0F0F0">';
+      // Clickable summary row
+      html += '<div style="display:flex;align-items:center;padding:7px 14px;cursor:' + (hasDetail?'pointer':'default') + ';gap:10px" ' +
+        (hasDetail ? 'onclick="toggleReqRow(\'' + rowKey + '\')"' : '') + '>';
+      html += (hasDetail ? '<span id="req-row-icon-' + rowKey + '" style="font-size:10px;color:#99AABB;flex-shrink:0">&#9654;</span>' : '<span style="width:12px;flex-shrink:0"></span>');
+      html += '<div style="flex:1;font-weight:500;font-size:13px">' + h.name + (h.all20 ? ' <span style="font-size:9px;color:#667788;font-weight:400">(all 20)</span>' : '') + '</div>';
+      html += '<div style="font-size:12px;color:#667788;flex-shrink:0">' + h.cap + ' spots</div>';
+      html += (h.hat ? '<img src="assets/hat.png" style="height:16px;vertical-align:middle;flex-shrink:0">' : '');
+      html += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;background:' + (statusBg[h.status]||'#eee') + ';color:' + (statusColors[h.status]||'#333') + '">' + h.status + '</span>';
+      html += '</div>';
+      // Collapsible detail panel
+      if(hasDetail){
+        html += '<div id="req-row-detail-' + rowKey + '" style="display:none">' + detailHtml + '</div>';
+      }
+      html += '</div>';
     });
 
-    html += '</tbody></table></div>';
+    html += '</div>';
   });
 
   listEl.innerHTML = html;
+}
+
+function toggleReqRow(key){
+  var detail = document.getElementById('req-row-detail-' + key);
+  var icon   = document.getElementById('req-row-icon-' + key);
+  if(!detail) return;
+  var open = detail.style.display !== 'none';
+  detail.style.display = open ? 'none' : 'block';
+  if(icon) icon.innerHTML = open ? '&#9654;' : '&#9660;';
 }
 
 
