@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1050,7 +1050,6 @@ function renderOfficer(search){
             '<span class="badge b-shift">' + SL[s.shift] + '</span>' +
             (s.hat ? '<span class="badge b-hat"><img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> Hat Required</span>' : '') +
             (s.highPriority ? '<span class="badge" style="background:#CC0000;color:#fff">&#9650; HIGH PRIORITY</span>' : '') +
-            '<button onclick="toggleHighPriority(' + s.id + ')" style="font-size:10px;padding:1px 6px;border:1px solid ' + (s.highPriority ? '#CC0000' : '#ccc') + ';border-radius:8px;background:' + (s.highPriority ? '#FFF0F0' : '#F8F8F8') + ';color:' + (s.highPriority ? '#CC0000' : '#888') + ';cursor:pointer">&#9650; Priority</button>' +
           '</div>' +
         '</div>' +
         '<span class="badge ' + (full ? 'b-full' : 'b-open') + '">' + s.assigned.length + ' / ' + s.capacity + '</span>' +
@@ -2525,8 +2524,18 @@ function runCullPreview(){
   // Count only the 20 main show days (March dates)
   var totalShowDays = Object.keys(SCHEDULE_2026).filter(function(d){ return d.indexOf('2026-03') === 0; }).length;
 
-  // Get current highPriority flags from activeSlots if loaded for this date
+  // Get priority flag — check committeeRequests first (source of truth from setup panel),
+  // then fall back to activeSlots if already applied
   function isPriority(name, shift){
+    var fromReq = committeeRequests.find(function(r){
+      return r.status === 'approved' && !!r.highPriority &&
+        r.shifts && r.shifts.some(function(s){
+          var effShift = s.preshow ? psTimeToShift(s.startTime) : s.shift;
+          var effName  = s.preshow ? (r.name + ' (' + (s.startTime||'') + (s.endTime?'–'+s.endTime:'') + ')') : r.name;
+          return effName === name && effShift === shift;
+        });
+    });
+    if(fromReq) return true;
     var as = activeSlots.find(function(s){ return s.name === name && s.shift === shift; });
     return as ? !!as.highPriority : false;
   }
@@ -2548,54 +2557,79 @@ function renderCullPreview(results, date){
   var el = document.getElementById('cull-preview');
   if(!el) return;
 
+  // Store results on window for applyCullByShift
+  window._cullResults = window._cullResults || {};
+
   var shiftNames = {'8am':'8:00 AM Shift','12pm':'12:00 PM Shift','4pm':'4:00 PM Shift'};
   var html = '';
 
   ['8am','12pm','4pm'].forEach(function(sh){
     var r = results[sh];
     if(!r) return;
+
+    window._cullResults[sh] = r.kept;
+
+    var totalRequested = r.kept.reduce(function(a,s){return a+s.originalCap;},0)
+      + r.dropped.reduce(function(a,s){return a+s.originalCap;},0);
+    var totalCulled = r.total;
+
     html += '<div style="margin-bottom:16px;border:1px solid var(--gray-200);border-radius:8px;overflow:hidden">';
+
+    // Header
     html += '<div style="background:var(--navy);color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center">';
     html += '<span style="font-weight:700;font-size:13px">' + shiftNames[sh] + '</span>';
-    html += '<span style="font-size:11px;opacity:.8">' + r.kept.length + ' committees &bull; ' + r.total + ' juniors</span>';
+    html += '<span style="font-size:11px;opacity:.8">' + r.kept.length + ' committees kept' + (r.dropped.length > 0 ? ' &bull; ' + r.dropped.length + ' dropped' : '') + '</span>';
     html += '</div>';
 
-    // Kept table
+    // Table — "Culled To" column is editable
     html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
     html += '<thead><tr style="background:#F8F9FA;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667788">';
     html += '<th style="padding:6px 12px;text-align:left">Committee</th>';
-    html += '<th style="padding:6px 12px;text-align:center">Requested</th>';
-    html += '<th style="padding:6px 12px;text-align:center">Culled To</th>';
+    html += '<th style="padding:6px 10px;text-align:center">Requested</th>';
+    html += '<th style="padding:6px 10px;text-align:center">Culled To<span style="font-weight:400;opacity:.7"> (editable)</span></th>';
     html += '<th style="padding:6px 12px;text-align:left">Note</th>';
     html += '</tr></thead><tbody>';
 
-    r.kept.forEach(function(s){
+    r.kept.forEach(function(s, ki){
       var trimmed = s.cap < s.originalCap;
+      var rowKey = 'cull-cap-' + sh + '-' + ki;
       html += '<tr style="border-top:1px solid #F0F0F0' + (trimmed ? ';background:#FFFDF0' : '') + '">';
-      html += '<td style="padding:6px 12px;font-weight:500">' + s.name + (s.highPriority ? ' <span style="font-size:9px;background:#CC0000;color:#fff;padding:1px 4px;border-radius:3px">PRIORITY</span>' : '') + '</td>';
-      html += '<td style="padding:6px 12px;text-align:center;color:#667788">' + s.originalCap + '</td>';
-      html += '<td style="padding:6px 12px;text-align:center;font-weight:700;color:' + (trimmed ? '#D4860A' : 'var(--green)') + '">' + s.cap + '</td>';
+      html += '<td style="padding:6px 12px;font-weight:500">' + s.name +
+        (s.highPriority ? ' <span style="font-size:9px;background:#CC0000;color:#fff;padding:1px 4px;border-radius:3px">PRIORITY</span>' : '') + '</td>';
+      html += '<td style="padding:6px 10px;text-align:center;color:#667788">' + s.originalCap + '</td>';
+      // Editable number input
+      html += '<td style="padding:4px 10px;text-align:center">' +
+        '<input type="number" id="' + rowKey + '" value="' + s.cap + '" min="0" max="' + s.originalCap + '" ' +
+        'style="width:52px;text-align:center;font-size:12px;font-weight:700;padding:3px 4px;border:1.5px solid ' + (trimmed ? '#D4860A' : 'var(--gray-200)') + ';border-radius:4px;color:' + (trimmed ? '#D4860A' : 'var(--navy)') + '" ' +
+        'onchange="updateCullCap(\'' + sh + '\',' + ki + ',this.value)" oninput="updateCullCap(\'' + sh + '\',' + ki + ',this.value)">' +
+        '</td>';
       html += '<td style="padding:6px 12px;color:#667788;font-size:11px">' + (trimmed ? '&#9660; trimmed' : '&#10003; full') + '</td>';
       html += '</tr>';
     });
 
     if(r.dropped.length > 0){
       r.dropped.forEach(function(s){
-        html += '<tr style="border-top:1px solid #F0F0F0;background:#FFF5F5;opacity:.75">';
+        html += '<tr style="border-top:1px solid #F0F0F0;background:#FFF5F5">';
         html += '<td style="padding:6px 12px;color:#CC0000;text-decoration:line-through">' + s.name + '</td>';
-        html += '<td style="padding:6px 12px;text-align:center;color:#CC0000">' + s.originalCap + '</td>';
-        html += '<td style="padding:6px 12px;text-align:center;color:#CC0000">0</td>';
+        html += '<td style="padding:6px 10px;text-align:center;color:#CC0000">' + s.originalCap + '</td>';
+        html += '<td style="padding:6px 10px;text-align:center;color:#CC0000;font-weight:700">0</td>';
         html += '<td style="padding:6px 12px;color:#CC0000;font-size:11px">&#10007; ' + s.reason + '</td>';
         html += '</tr>';
       });
     }
 
+    // Totals row
+    html += '<tr style="border-top:2px solid var(--navy);background:#F0F4F8;font-weight:700">';
+    html += '<td style="padding:7px 12px;font-size:12px">TOTAL</td>';
+    html += '<td style="padding:7px 10px;text-align:center;font-size:12px">' + totalRequested + '</td>';
+    html += '<td style="padding:7px 10px;text-align:center;font-size:12px" id="cull-total-' + sh + '">' + totalCulled + '</td>';
+    html += '<td style="padding:7px 12px;font-size:11px;color:#667788">' + (totalRequested - totalCulled) + ' spots reduced</td>';
+    html += '</tr>';
+
     html += '</tbody></table>';
 
-    // Apply button for this shift
+    // Apply button
     html += '<div style="padding:10px 14px;background:#F8F9FA;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end">';
-    window._cullResults = window._cullResults || {};
-    window._cullResults[sh] = r.kept;
     html += '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy)" data-shift="' + sh + '" onclick="applyCullByShift(this)">&#9654; Apply ' + shiftNames[sh] + ' to Dashboard</button>';
     html += '</div>';
     html += '</div>';
@@ -2603,6 +2637,17 @@ function renderCullPreview(results, date){
 
   el.innerHTML = html || '<div style="color:var(--gray-400);text-align:center;padding:20px">No shifts to preview.</div>';
   el.style.display = 'block';
+}
+
+// Called when user edits a culled-to number in the preview table
+function updateCullCap(sh, ki, val){
+  if(!window._cullResults || !window._cullResults[sh]) return;
+  var n = Math.max(0, parseInt(val)||0);
+  window._cullResults[sh][ki].cap = n;
+  // Update the total display
+  var total = window._cullResults[sh].reduce(function(a,s){return a+s.cap;},0);
+  var el = document.getElementById('cull-total-' + sh);
+  if(el) el.textContent = total;
 }
 
 function applyCullByShift(btn){
@@ -2638,6 +2683,33 @@ function applyCull(keptSlots, shift){
   showAlert('Applied ' + keptSlots.length + ' slots for ' + shift + ' (' + keptSlots.reduce(function(a,s){return a+s.cap;},0) + ' spots).', 'success');
 }
 
+function toggleSetupRequests(){
+  var el = document.getElementById('setup-approved-section');
+  var icon = document.getElementById('setup-req-toggle');
+  if(!el) return;
+  var open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  if(icon) icon.innerHTML = open ? '&#9660; Show' : '&#9650; Hide';
+}
+
+function setRequestPriority(rid, si, val){
+  // Set priority flag on the committeeRequest so runCullPreview picks it up
+  var r = committeeRequests.find(function(x){ return x.id === rid; });
+  if(!r) return;
+  r.highPriority = val;
+  // Also update any matching activeSlot if already applied
+  var date = document.getElementById('setup-date') ? document.getElementById('setup-date').value : '';
+  if(r.shifts && r.shifts[si]){
+    var s = r.shifts[si];
+    var effShift = s.preshow ? psTimeToShift(s.startTime) : s.shift;
+    var slotName = s.preshow ? (r.name + ' (' + (s.startTime||'') + (s.endTime ? '–'+s.endTime : '') + ')') : r.name;
+    var sl = activeSlots.find(function(x){ return x.name === slotName && x.shift === effShift; });
+    if(sl) sl.highPriority = val;
+  }
+  saveState();
+}
+
+
 function renderSetup(){
   // Initialize sim-date picker to today if not already set
   var sdEl = document.getElementById('sim-date');
@@ -2651,50 +2723,60 @@ function renderSetup(){
     return '<option value="' + c.id + '">' + c.name + ' &mdash; ' + SL[s.shift] + ' (cap: ' + s.cap + ')' + (c.hat ? ' [hat]' : '') + '</option>';
   }).join('');
 
-  // Show approved requests panel
+  // Show approved requests panel — read-only with priority checkbox
   var approvedEl = document.getElementById('setup-approved-section');
   if(approvedEl){
+    var date = document.getElementById('setup-date') ? document.getElementById('setup-date').value : '';
     var approved = committeeRequests.filter(function(r){ return r.status === 'approved'; });
-    if(approved.length > 0){
-      var apHtml = '<div style="background:#D4EDDA;border:1px solid #97C459;border-radius:8px;padding:12px 14px;margin-bottom:12px">' +
-        '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#155724;margin-bottom:8px">Approved committee requests (' + approved.length + ')</div>' +
-        '<div style="display:flex;flex-wrap:wrap;gap:6px">';
-      approved.forEach(function(r){
-        r.shifts.forEach(function(s, si){
-          var date = document.getElementById('setup-date') ? document.getElementById('setup-date').value : '';
-          if(!s.all20 && s.date !== date) return;
-
-          // Determine the effective shift key and display label
-          var effShift = s.shift;
-          var effLabel = SL[s.shift] || '';
-          if(s.preshow){
-            effShift = psTimeToShift(s.startTime);
-            effLabel = (s.startTime || '') + (s.endTime ? '–' + s.endTime : '');
-          }
-
-          var slotName = s.preshow ? (r.name + ' (' + effLabel + ')') : r.name;
-          var alreadyAdded = activeSlots.some(function(sl){ return sl.name === slotName && sl.shift === effShift; });
-          apHtml += '<button class="btn btn-sm" style="font-size:11px;' + (alreadyAdded ? 'opacity:.5;cursor:default' : 'border-color:#27AE60;color:#155724') + '" ' +
-            (alreadyAdded ? 'disabled' : 'onclick="addApprovedSlotByIdx(' + r.id + ',' + si + ')"') + '>' +
-            (alreadyAdded ? '&#10003; ' : '+ ') + r.name +
-            (effLabel ? ' &mdash; ' + effLabel : '') + ' (' + s.cap + ')' +
-            (s.all20 ? ' <span style="font-size:9px;opacity:.7">(all days)</span>' : '') +
-          '</button>';
-        });
+    // Filter to slots relevant to selected date
+    var relevant = [];
+    approved.forEach(function(r){
+      r.shifts.forEach(function(s, si){
+        if(!s.all20 && s.date !== date) return;
+        var effShift = s.preshow ? psTimeToShift(s.startTime) : s.shift;
+        var effLabel = s.preshow ? ((s.startTime||'') + (s.endTime ? '–'+s.endTime : '')) : (SL[s.shift]||'');
+        var slotName = s.preshow ? (r.name + ' (' + effLabel + ')') : r.name;
+        // Read priority from activeSlots if already applied, else from committeeRequests flag
+        var existingSlot = activeSlots.find(function(sl){ return sl.name === slotName && sl.shift === effShift; });
+        var isPriority = existingSlot ? !!existingSlot.highPriority : !!(r.highPriority);
+        relevant.push({name:slotName, shift:effShift, shiftLabel:effLabel, cap:s.cap, rid:r.id, si:si, isPriority:isPriority, slotName:slotName});
       });
-      apHtml += '</div></div>';
-      approvedEl.innerHTML = apHtml;
+    });
+
+    if(relevant.length === 0){
+      approvedEl.innerHTML = '<div style="font-size:12px;color:#667788;font-style:italic">No approved requests for this date.</div>';
     } else {
-      approvedEl.innerHTML = '';
+      // Group by shift
+      var byShift = {'8am':[],'12pm':[],'4pm':[]};
+      relevant.forEach(function(r){ if(byShift[r.shift]) byShift[r.shift].push(r); });
+      var shiftColors = {'8am':'#4499CC','12pm':'#D4860A','4pm':'#27AE60'};
+      var shiftNames  = {'8am':'8:00 AM','12pm':'12:00 PM','4pm':'4:00 PM'};
+      var apHtml = '';
+      ['8am','12pm','4pm'].forEach(function(sh){
+        var rows = byShift[sh];
+        if(!rows.length) return;
+        apHtml += '<div style="margin-bottom:12px">';
+        apHtml += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:' + shiftColors[sh] + ';margin-bottom:6px">' + shiftNames[sh] + ' Shift (' + rows.length + ' committees, ' + rows.reduce(function(a,r){return a+r.cap;},0) + ' spots requested)</div>';
+        apHtml += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+        apHtml += '<thead><tr style="background:#F5F6F8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667788"><th style="padding:5px 10px;text-align:left;font-weight:600">Committee</th><th style="padding:5px 10px;text-align:center;font-weight:600">Spots</th><th style="padding:5px 10px;text-align:center;font-weight:600">Priority</th></tr></thead>';
+        apHtml += '<tbody>';
+        rows.forEach(function(r){
+          apHtml += '<tr style="border-top:1px solid #F0F0F0' + (r.isPriority ? ';background:#FFF8F8' : '') + '">';
+          apHtml += '<td style="padding:6px 10px;font-weight:500">' + r.name + '</td>';
+          apHtml += '<td style="padding:6px 10px;text-align:center;color:#667788">' + r.cap + '</td>';
+          apHtml += '<td style="padding:6px 10px;text-align:center">' +
+            '<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;color:#CC0000;font-weight:600">' +
+            '<input type="checkbox"' + (r.isPriority ? ' checked' : '') + ' onchange="setRequestPriority(' + r.rid + ',' + r.si + ',this.checked)" style="accent-color:#CC0000;width:15px;height:15px"> Priority</label>';
+          apHtml += '</td></tr>';
+        });
+        apHtml += '</tbody></table></div>';
+      });
+      approvedEl.innerHTML = apHtml;
     }
   }
 
   var sl = document.getElementById('setup-list');
-  if(!sl) return;
-  if(activeSlots.length === 0){
-    sl.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:.5rem 0">No custom slots added yet.</div>';
-    return;
-  }
+  if(!sl) return; // setup-list removed from panel
   sl.innerHTML = activeSlots.map(function(s, i){
     var sid = s.id;
     var contactSection = '';
