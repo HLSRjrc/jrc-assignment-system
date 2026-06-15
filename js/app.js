@@ -2637,17 +2637,32 @@ function updateCullCap(sh, ki, val){
   if(!window._cullResults || !window._cullResults[sh]) return;
   var n = Math.max(0, parseInt(val)||0);
   window._cullResults[sh][ki].cap = n;
+  var originalCap = window._cullResults[sh][ki].originalCap || n;
+
+  // Color the input: blue if at or below original request, red if above
+  var inputEl = document.getElementById('cull-cap-' + sh + '-' + ki);
+  if(inputEl){
+    var over = n > originalCap;
+    inputEl.style.borderColor = over ? '#CC0000' : (n < originalCap ? '#D4860A' : 'var(--gray-200)');
+    inputEl.style.color       = over ? '#CC0000' : (n < originalCap ? '#D4860A' : 'var(--navy)');
+    inputEl.style.background  = over ? '#FFF5F5' : '';
+  }
+
   // Update culled total
   var total = window._cullResults[sh].reduce(function(a,s){return a+s.cap;},0);
   var totalEl = document.getElementById('cull-total-' + sh);
   if(totalEl) totalEl.textContent = total;
-  // Update "spots reduced" cell — find requested total from originalCap
+
+  // Update "spots reduced/added" cell
   var requested = window._cullResults[sh].reduce(function(a,s){return a+(s.originalCap||s.cap);},0);
-  // Add back dropped slots if stored
   var droppedEl = document.getElementById('cull-dropped-total-' + sh);
   if(droppedEl) requested += parseInt(droppedEl.getAttribute('data-requested')||0);
+  var diff = requested - total;
   var reducedEl = document.getElementById('cull-reduced-' + sh);
-  if(reducedEl) reducedEl.textContent = Math.max(0, requested - total) + ' spots reduced';
+  if(reducedEl){
+    reducedEl.textContent = diff > 0 ? diff + ' spots reduced' : diff < 0 ? Math.abs(diff) + ' spots added above request' : 'matches requested';
+    reducedEl.style.color = diff < 0 ? '#CC0000' : '#667788';
+  }
 }
 
 function applyCullByShift(btn){
