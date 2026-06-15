@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2596,13 +2596,20 @@ function renderCullPreview(results, date){
     html += '<div style="padding:10px 14px;background:#F8F9FA;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end">';
     window._cullResults = window._cullResults || {};
     window._cullResults[sh] = r.kept;
-    html += '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy)" onclick="applyCull(window._cullResults[\\'' + sh + '\\'],\\'' + sh + '\\')" >&#9654; Apply ' + shiftNames[sh] + ' to Dashboard</button>';
+    html += '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy)" data-shift="' + sh + '" onclick="applyCullByShift(this)">&#9654; Apply ' + shiftNames[sh] + ' to Dashboard</button>';
     html += '</div>';
     html += '</div>';
   });
 
   el.innerHTML = html || '<div style="color:var(--gray-400);text-align:center;padding:20px">No shifts to preview.</div>';
   el.style.display = 'block';
+}
+
+function applyCullByShift(btn){
+  var sh = btn.getAttribute('data-shift');
+  var slots = (window._cullResults || {})[sh];
+  if(!slots){ showAlert('Preview data not found — run Preview first.', 'warn'); return; }
+  applyCull(slots, sh);
 }
 
 function applyCull(keptSlots, shift){
