@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -156,6 +156,7 @@ var onShiftJuniors = new Set(); // jids marked as out on shift
 var onShiftSlots = new Set(); // slot ids marked as sent
 var notesCollapsed = false;
 var committeeRequests = [];
+var prioritySlots = {}; // {"CommitteeName|shift": true} — for SCHEDULE_2026 slots without a request record
 var requestIdCounter = 1;
 
 var SCHEDULE_2026 = {
@@ -2515,9 +2516,9 @@ function runCullPreview(){
   // Count only the 20 main show days (March dates)
   var totalShowDays = Object.keys(SCHEDULE_2026).filter(function(d){ return d.indexOf('2026-03') === 0; }).length;
 
-  // Get priority flag — check committeeRequests first (source of truth from setup panel),
-  // then fall back to activeSlots if already applied
+  // Get priority flag — check prioritySlots (schedule slots), committeeRequests, then activeSlots
   function isPriority(name, shift){
+    if(prioritySlots[name + '|' + shift]) return true;
     var fromReq = committeeRequests.find(function(r){
       return r.status === 'approved' && !!r.highPriority &&
         r.shifts && r.shifts.some(function(s){
@@ -2766,6 +2767,24 @@ function toggleSetupRequests(){
   var open = el.style.display !== 'none';
   el.style.display = open ? 'none' : 'block';
   if(icon) icon.innerHTML = open ? '&#9660; Show' : '&#9650; Hide';
+}
+
+function toggleSchedulePriority(name, shift, val){
+  var key = name + '|' + shift;
+  if(val) prioritySlots[key] = true;
+  else delete prioritySlots[key];
+  // Also sync to any matching activeSlot
+  activeSlots.forEach(function(s){
+    if(s.name === name && s.shift === shift) s.highPriority = val;
+  });
+  saveState();
+  // Re-render the checkbox label styling
+  var lbl = document.getElementById('sched-priority-lbl-' + key.replace(/[^a-z0-9]/gi,'_'));
+  if(lbl){
+    lbl.style.borderColor  = val ? '#CC0000' : '#DDD';
+    lbl.style.background   = val ? '#FFF0F0' : '#FAFAFA';
+    lbl.querySelector('span').style.color = val ? '#CC0000' : '#667788';
+  }
 }
 
 function toggleRequestPriority(rid, val){
@@ -3740,9 +3759,30 @@ function renderReqByDate(){
       var cd = h;
       var hasDetail = h.liaison||h.location||h.duties||h.notes;
       var detailHtml = '';
+      // Determine current priority state for this row
+      var rowIsPriority = h.fromRequest
+        ? !!(committeeRequests.find(function(r){ return r.id === h.rid; }) || {}).highPriority
+        : !!prioritySlots[h.name + '|' + h.shift];
+      var safeKey = (h.name + '|' + h.shift).replace(/[^a-z0-9]/gi,'_');
+
+      // Priority toggle — shown for all rows regardless of detail
+      var priorityToggle =
+        '<div style="padding:8px 14px;background:#F8F9FA;border-top:1px solid #EEE;display:flex;align-items:center;gap:10px">' +
+          '<label id="sched-priority-lbl-' + safeKey + '" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;padding:4px 12px;border-radius:20px;border:1.5px solid ' + (rowIsPriority ? '#CC0000' : '#DDD') + ';background:' + (rowIsPriority ? '#FFF0F0' : '#FAFAFA') + '">' +
+            '<input type="checkbox"' + (rowIsPriority ? ' checked' : '') + ' style="accent-color:#CC0000;width:14px;height:14px" ' +
+            (h.fromRequest
+              ? 'onchange="toggleRequestPriority(' + h.rid + ',this.checked)"'
+              : 'onchange="toggleSchedulePriority(\'' + h.name.replace(/'/g,"\'") + '\',\'' + h.shift + '\',this.checked)"'
+            ) + '>' +
+            '<span style="font-size:11px;font-weight:700;color:' + (rowIsPriority ? '#CC0000' : '#667788') + '">&#9650; Priority — gets full capacity before distribution</span>' +
+          '</label>' +
+        '</div>';
+
+      detailHtml = priorityToggle;
+
       if(hasDetail){
         detailHtml +=
-          '<div style="padding:10px 14px 12px 28px;background:#F8F9FA;border-top:1px solid #EEE;font-size:12px;line-height:1.7">' +
+          '<div style="padding:10px 14px 12px 28px;background:#F8F9FA;font-size:12px;line-height:1.7">' +
           (h.chair ? '<div><strong>Chair:</strong> ' + h.chair + (h.chairPhone ? ' &bull; ' + h.chairPhone : '') + '</div>' : '') +
           (h.liaison ? '<div><strong>Liaison:</strong> ' + h.liaison + (h.liaisonPhone ? ' &bull; ' + h.liaisonPhone : '') + (h.liaisonEmail ? ' &bull; <a href="mailto:' + h.liaisonEmail + '" style="color:var(--navy)">' + h.liaisonEmail + '</a>' : '') + '</div>' : '') +
           (h.location ? '<div><strong>Location:</strong> ' + h.location + '</div>' : '') +
@@ -3753,18 +3793,15 @@ function renderReqByDate(){
 
       html += '<div style="border-top:1px solid #F0F0F0">';
       // Clickable summary row
-      html += '<div style="display:flex;align-items:center;padding:7px 14px;cursor:' + (hasDetail?'pointer':'default') + ';gap:10px" ' +
-        (hasDetail ? 'onclick="toggleReqRow(\'' + rowKey + '\')"' : '') + '>';
-      html += (hasDetail ? '<span id="req-row-icon-' + rowKey + '" style="font-size:10px;color:#99AABB;flex-shrink:0">&#9654;</span>' : '<span style="width:12px;flex-shrink:0"></span>');
+      html += '<div style="display:flex;align-items:center;padding:7px 14px;cursor:pointer;gap:10px" onclick="toggleReqRow(\'' + rowKey + '\')">'; 
+      html += '<span id="req-row-icon-' + rowKey + '" style="font-size:10px;color:#99AABB;flex-shrink:0">&#9654;</span>';
       html += '<div style="flex:1;font-weight:500;font-size:13px">' + h.name + (h.all20 ? ' <span style="font-size:9px;color:#667788;font-weight:400">(all 20)</span>' : '') + '</div>';
       html += '<div style="font-size:12px;color:#667788;flex-shrink:0">' + h.cap + ' spots</div>';
       html += (h.hat ? '<img src="assets/hat.png" style="height:16px;vertical-align:middle;flex-shrink:0">' : '');
       html += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;background:' + (statusBg[h.status]||'#eee') + ';color:' + (statusColors[h.status]||'#333') + '">' + h.status + '</span>';
       html += '</div>';
-      // Collapsible detail panel
-      if(hasDetail){
-        html += '<div id="req-row-detail-' + rowKey + '" style="display:none">' + detailHtml + '</div>';
-      }
+      // Collapsible detail panel — always shown (priority toggle always present)
+      html += '<div id="req-row-detail-' + rowKey + '" style="display:none">' + detailHtml + '</div>';
       html += '</div>';
     });
 
@@ -4626,6 +4663,7 @@ function _doSave(){
       simTimeOffset: simTimeOffset,
       simTargetEpoch: simTargetEpoch,
       simDateSet: simDateSet,
+      prioritySlots: prioritySlots,
     userRoles: userRoles,
     loginLog: loginLog,
     },
@@ -4816,6 +4854,7 @@ function _applyState(data){
   if(state.simTimeEnabled !== undefined) simTimeEnabled = state.simTimeEnabled;
   if(state.simDateSet     !== undefined) simDateSet      = state.simDateSet;
   // Recompute simTimeOffset from absolute target epoch so TV/other devices show correct sim time
+  if(state.prioritySlots) prioritySlots = state.prioritySlots;
   if(state.simTargetEpoch){
     simTargetEpoch = state.simTargetEpoch;
     simTimeOffset  = state.simTargetEpoch - Date.now();
