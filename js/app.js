@@ -16,8 +16,8 @@ var activePickShift = null;
 var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
-var APP_VERSION = 19;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_VERSION = 20;  // Major version — milestone releases
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1655,7 +1655,7 @@ function renderCheckins(){
 
   // ── Active check-ins section ──────────────────────────────
   var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">' +
-    '<div style="font-size:13px;color:#667788">' +
+    '<div id="checkins-summary" style="font-size:13px;color:#667788">' +
       '<strong style="color:var(--navy)">' + active.length + '</strong> currently checked in' +
       (clockedOutList.length > 0 ? ' &bull; <strong>' + clockedOutList.length + '</strong> clocked out this session' : '') +
       (stale.length > 0 ? ' &bull; <strong style="color:#CC0000">' + stale.length + '</strong> stale' : '') +
@@ -1666,6 +1666,7 @@ function renderCheckins(){
     '</div>' +
   '</div>';
 
+  html += '<div id="checkins-table-wrap">';
   if(allCI.length === 0){
     html += '<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;color:var(--gray-400);font-style:italic;margin-bottom:16px">No juniors checked in right now.</div>';
   } else {
@@ -1688,6 +1689,7 @@ function renderCheckins(){
       '</tbody>' +
     '</table></div>';
   }
+  html += '</div>'; // checkins-table-wrap
 
   // ── Quick Check-in Roster ─────────────────────────────────
   // Collapsed by default; toggled via button
@@ -1741,6 +1743,82 @@ function renderCheckins(){
   '</div>';
 
   el.innerHTML = html;
+}
+
+// Refresh only the active check-ins table (called after quickCheckIn to avoid collapsing the drawer)
+function renderCheckinsTable(){
+  var el = document.getElementById('checkins-table-wrap');
+  var summary = document.getElementById('checkins-summary');
+  if(!el) return; // full panel not rendered yet
+
+  var active       = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id]; });
+  var clockedOutList = juniors.filter(function(j){ return j.checkedIn && clockedOut[j.id]; });
+  var allCI        = active.concat(clockedOutList);
+  var stale        = allCI.filter(function(j){ return j.checkInDate && j.checkInDate !== currentDate; });
+
+  if(summary){
+    summary.innerHTML =
+      '<strong style="color:var(--navy)">' + active.length + '</strong> currently checked in' +
+      (clockedOutList.length > 0 ? ' &bull; <strong>' + clockedOutList.length + '</strong> clocked out this session' : '') +
+      (stale.length > 0 ? ' &bull; <strong style="color:#CC0000">' + stale.length + '</strong> stale' : '');
+  }
+
+  function fmtTs(j){
+    if(!j.checkInTimestamp) return j.checkInDate || '—';
+    var d = new Date(j.checkInTimestamp);
+    var h = d.getHours(), m = d.getMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return h + ':' + String(m).padStart(2,'0') + ' ' + ampm + ', ' + (j.checkInDate || '');
+  }
+
+  if(allCI.length === 0){
+    el.innerHTML = '<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;color:var(--gray-400);font-style:italic;margin-bottom:16px">No juniors checked in right now.</div>';
+    return;
+  }
+
+  var rows = allCI.slice().sort(function(a,b){
+    var aStale = a.checkInDate && a.checkInDate !== currentDate ? 1 : 0;
+    var bStale = b.checkInDate && b.checkInDate !== currentDate ? 1 : 0;
+    if(aStale !== bStale) return aStale - bStale;
+    return (a.checkInTimestamp||0) - (b.checkInTimestamp||0);
+  }).map(function(j){
+    var status = getJuniorStatus(j);
+    var isClockedOut = clockedOut[j.id];
+    var isStale = j.checkInDate && j.checkInDate !== currentDate;
+    var statusLabel = {
+      'checked-in':  '<span style="color:#4A90D9">&#9679; Checked In</span>',
+      'assigned':    '<span style="color:#F0C040">&#9632; Assigned</span>',
+      'on-shift':    '<span style="color:#5CDB95;font-weight:700">&#9650; Out on Shift</span>',
+      'checked-out': '<span style="color:#999">&#10003; Clocked Out</span>',
+    }[status] || '<span style="color:#999">' + status + '</span>';
+    var rowStyle = isStale ? 'background:#FFF5F5;' : isClockedOut ? 'opacity:.55;' : '';
+    return '<tr style="' + rowStyle + '">' +
+      '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:10px;color:#CC0000;font-weight:700">STALE</span>' : '') + '</td>' +
+      '<td style="padding:8px 12px;color:#667788">' + (j.checkInShift||'—') + '</td>' +
+      '<td style="padding:8px 12px">' + fmtTs(j) + '</td>' +
+      '<td style="padding:8px 12px">' + statusLabel + '</td>' +
+      '<td style="padding:8px 12px">' + (j.assignment||'—') + '</td>' +
+      '<td style="padding:8px 12px;text-align:right">' +
+        (!isClockedOut ?
+          '<button class="btn btn-sm btn-danger" onclick="adminClockOut(\''+ j.id +'\')">Clock Out</button>' :
+          '<button class="btn btn-sm" style="color:#999;border-color:#ccc" onclick="adminUndoClockOut(\''+ j.id +'\')">Undo</button>'
+        ) +
+      '</td>' +
+    '</tr>';
+  }).join('');
+
+  el.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">' +
+    '<thead><tr style="background:var(--navy);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.07em">' +
+      '<th style="padding:8px 12px;text-align:left;font-weight:600">Name</th>' +
+      '<th style="padding:8px 12px;text-align:left;font-weight:600">Shift</th>' +
+      '<th style="padding:8px 12px;text-align:left;font-weight:600">Checked In At</th>' +
+      '<th style="padding:8px 12px;text-align:left;font-weight:600">Status</th>' +
+      '<th style="padding:8px 12px;text-align:left;font-weight:600">Assignment</th>' +
+      '<th style="padding:8px 12px;text-align:right;font-weight:600">Action</th>' +
+    '</tr></thead>' +
+    '<tbody>' + rows + '</tbody>' +
+  '</table></div>';
 }
 
 // Toggle the quick check-in roster drawer
@@ -1799,7 +1877,9 @@ function quickCheckIn(jid){
   delete clockedOut[jr.id];
   saveState();
   showAlert(jr.name + ' checked in for ' + jr.checkInShift + '.', 'success');
-  renderCheckins();
+  // Refresh the check-in table and roster rows without collapsing the drawer
+  renderCheckinsTable();
+  renderCIRosterRows();
   renderOfficer();
   renderBoard();
 }
@@ -1816,7 +1896,7 @@ function adminClockOut(jid){
   });
   onShiftJuniors.delete(jr.id);
   saveState();
-  renderCheckins();
+  renderCheckinsTable();
   renderOfficer();
   renderBoard();
 }
@@ -1827,7 +1907,7 @@ function adminUndoClockOut(jid){
   clockedOut[jr.id] = false;
   delete clockedOut[jr.id];
   saveState();
-  renderCheckins();
+  renderCheckinsTable();
   renderOfficer();
   renderBoard();
 }
@@ -2294,6 +2374,262 @@ function addSinglePreviewSlotEl(btn){
   addSinglePreviewSlot(name, shift, cap, hat);
 }
 
+
+// ============================================================
+// SHIFT CULLING ENGINE
+// ============================================================
+
+// Compute how many show dates each committee appears on per shift
+// Returns {committeeName: {shiftKey: count}} across all SCHEDULE_2026 dates
+function getCommitteeDateCounts(){
+  var counts = {}; // {name: {shift: Set of dates}}
+  var allDates = Object.keys(SCHEDULE_2026);
+  var showDates = allDates.filter(function(d){ return d.indexOf('2026-03') === 0 || d.indexOf('2026-07') === 0; });
+  showDates.forEach(function(date){
+    (SCHEDULE_2026[date]||[]).forEach(function(slot){
+      if(!counts[slot.name]) counts[slot.name] = {};
+      if(!counts[slot.name][slot.shift]) counts[slot.name][slot.shift] = 0;
+      counts[slot.name][slot.shift]++;
+    });
+  });
+  return counts;
+}
+
+// The culling algorithm — pure function, no side effects
+// slots: array of {name, shift, cap, hat, highPriority}
+// target: integer — how many juniors we have for this shift
+// dateCounts: output of getCommitteeDateCounts()
+// totalShowDays: number of show days for threshold
+// Returns: {kept: [{name, cap, hat, shift, originalCap, reason}], dropped: [{name, reason}], total: number}
+function cullShift(slots, target, dateCounts, totalShowDays){
+  if(!slots || slots.length === 0) return {kept:[], dropped:[], total:0};
+
+  var DAILY_THRESHOLD = Math.ceil(totalShowDays * 0.75); // 75%+ of days = daily requester
+
+  // Step 1: Separate high-priority (full requested capacity) from regular
+  var priority = slots.filter(function(s){ return s.highPriority; });
+  var regular  = slots.filter(function(s){ return !s.highPriority; });
+
+  var priorityTotal = priority.reduce(function(a,s){ return a + s.cap; }, 0);
+  var remaining = target - priorityTotal;
+
+  // If we don't even have enough for priority slots, scale them down proportionally
+  if(remaining < 0){
+    // Scale priority slots down proportionally
+    var scale = target / priorityTotal;
+    priority = priority.map(function(s){
+      return Object.assign({}, s, {cap: Math.max(1, Math.round(s.cap * scale)), originalCap: s.cap, reason: 'scaled — priority overage (not enough juniors for minimum 2 per committee)'});
+    });
+    // Recalculate
+    var newTotal = priority.reduce(function(a,s){ return a + s.cap; }, 0);
+    // Trim any remainder
+    var diff = newTotal - target;
+    for(var i = priority.length-1; i >= 0 && diff > 0; i--){
+      var trim = Math.min(diff, priority[i].cap - 1);
+      priority[i].cap -= trim;
+      diff -= trim;
+    }
+    return {
+      kept: priority.map(function(s){ return Object.assign({}, s, {originalCap: s.originalCap||s.cap}); }),
+      dropped: regular.map(function(s){ return {name:s.name, originalCap:s.cap, reason:'insufficient juniors (priority slots consumed all spots)'}; }),
+      total: priority.reduce(function(a,s){ return a+s.cap; }, 0)
+    };
+  }
+
+  // Step 2: Distribute remaining juniors across regular slots using round-robin
+  // If not enough for everyone to get 1, eliminate daily requesters first, then smallest-cap committees
+  var working = regular.map(function(s){
+    var daysActive = (dateCounts[s.name] && dateCounts[s.name][s.shift]) ? dateCounts[s.name][s.shift] : 1;
+    var isDaily = daysActive >= DAILY_THRESHOLD;
+    return {name:s.name, originalCap:s.cap, cap:s.cap, hat:s.hat, shift:s.shift,
+            highPriority:false, isDaily:isDaily, daysActive:daysActive, allocated:0, dropped:false};
+  });
+
+  // Minimum allocation is 2 — we never send 1 junior alone.
+  // If we can't give everyone 2 — start dropping daily requesters first, then smallest-cap.
+  var MIN_ALLOC = 2;
+  if(remaining < working.length * MIN_ALLOC){
+    // Sort: drop daily requesters first (they'll be back tomorrow), then smallest-cap, then alphabetical
+    working.sort(function(a,b){
+      if(a.isDaily !== b.isDaily) return b.isDaily - a.isDaily; // daily = drop first
+      if(a.originalCap !== b.originalCap) return a.originalCap - b.originalCap; // smallest cap = drop first
+      return a.name.localeCompare(b.name);
+    });
+    // Drop committees until remaining budget can give everyone left at least 2
+    for(var d = 0; d < working.length; d++){
+      var active = working.filter(function(s){ return !s.dropped; });
+      if(remaining >= active.length * MIN_ALLOC) break;
+      working[d].dropped = true;
+    }
+  }
+
+  // Step 3: Round-robin distribution — give 2 to each kept committee first, then 1 more each round
+  var kept = working.filter(function(s){ return !s.dropped; });
+  var budgetLeft = remaining;
+
+  // Round 1: give everyone their minimum of 2
+  kept.forEach(function(s){
+    var give = Math.min(MIN_ALLOC, s.originalCap, budgetLeft);
+    s.allocated = give;
+    budgetLeft -= give;
+  });
+
+  // Subsequent rounds: give 1 more to each until we hit their original cap or run out
+  var maxRounds = kept.reduce(function(a,s){ return Math.max(a, s.originalCap); }, 0);
+  for(var round = MIN_ALLOC + 1; round <= maxRounds && budgetLeft > 0; round++){
+    for(var k = 0; k < kept.length && budgetLeft > 0; k++){
+      if(kept[k].allocated < kept[k].originalCap){
+        kept[k].allocated++;
+        budgetLeft--;
+      }
+    }
+  }
+
+  // Build results
+  var keptResult = priority.map(function(s){
+    return {name:s.name, shift:s.shift, cap:s.cap, originalCap:s.originalCap||s.cap, hat:s.hat, highPriority:true, reason:'priority — full capacity'};
+  });
+
+  kept.forEach(function(s){
+    keptResult.push({name:s.name, shift:s.shift, cap:s.allocated, originalCap:s.originalCap,
+      hat:s.hat, highPriority:false,
+      reason: s.allocated === s.originalCap ? 'full' : 'trimmed to ' + s.allocated + ' (from ' + s.originalCap + ')'
+    });
+  });
+
+  var dropped = working.filter(function(s){ return s.dropped; }).map(function(s){
+    return {name:s.name, originalCap:s.originalCap,
+      reason: s.isDaily ? 'dropped — daily requester (' + s.daysActive + '/' + totalShowDays + ' days), will be back tomorrow' : 'dropped — insufficient juniors to give minimum of 2'
+    };
+  });
+
+  var total = keptResult.reduce(function(a,s){ return a + s.cap; }, 0);
+  return {kept:keptResult, dropped:dropped, total:total};
+}
+
+// Run the cull preview — called from UI
+function runCullPreview(){
+  var date = document.getElementById('setup-date') ? document.getElementById('setup-date').value : currentDate;
+  if(!date || !SCHEDULE_2026[date]){
+    showAlert('Please select a valid show date first.', 'warn'); return;
+  }
+
+  var t8   = parseInt(document.getElementById('cull-target-8am').value)||0;
+  var t12  = parseInt(document.getElementById('cull-target-12pm').value)||0;
+  var t4   = parseInt(document.getElementById('cull-target-4pm').value)||0;
+
+  if(t8 + t12 + t4 === 0){ showAlert('Enter at least one junior count.', 'warn'); return; }
+
+  var allSlots = SCHEDULE_2026[date];
+  var dateCounts = getCommitteeDateCounts();
+  // Count only the 20 main show days (March dates)
+  var totalShowDays = Object.keys(SCHEDULE_2026).filter(function(d){ return d.indexOf('2026-03') === 0; }).length;
+
+  // Get current highPriority flags from activeSlots if loaded for this date
+  function isPriority(name, shift){
+    var as = activeSlots.find(function(s){ return s.name === name && s.shift === shift; });
+    return as ? !!as.highPriority : false;
+  }
+
+  var results = {};
+  ['8am','12pm','4pm'].forEach(function(sh){
+    var target = sh === '8am' ? t8 : sh === '12pm' ? t12 : t4;
+    if(target === 0){ results[sh] = null; return; }
+    var shSlots = allSlots.filter(function(s){ return s.shift === sh; }).map(function(s){
+      return {name:s.name, shift:s.shift, cap:s.cap, hat:s.hat, highPriority:isPriority(s.name, s.shift)};
+    });
+    results[sh] = cullShift(shSlots, target, dateCounts, totalShowDays);
+  });
+
+  renderCullPreview(results, date);
+}
+
+function renderCullPreview(results, date){
+  var el = document.getElementById('cull-preview');
+  if(!el) return;
+
+  var shiftNames = {'8am':'8:00 AM Shift','12pm':'12:00 PM Shift','4pm':'4:00 PM Shift'};
+  var html = '';
+
+  ['8am','12pm','4pm'].forEach(function(sh){
+    var r = results[sh];
+    if(!r) return;
+    html += '<div style="margin-bottom:16px;border:1px solid var(--gray-200);border-radius:8px;overflow:hidden">';
+    html += '<div style="background:var(--navy);color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center">';
+    html += '<span style="font-weight:700;font-size:13px">' + shiftNames[sh] + '</span>';
+    html += '<span style="font-size:11px;opacity:.8">' + r.kept.length + ' committees &bull; ' + r.total + ' juniors</span>';
+    html += '</div>';
+
+    // Kept table
+    html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+    html += '<thead><tr style="background:#F8F9FA;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667788">';
+    html += '<th style="padding:6px 12px;text-align:left">Committee</th>';
+    html += '<th style="padding:6px 12px;text-align:center">Requested</th>';
+    html += '<th style="padding:6px 12px;text-align:center">Culled To</th>';
+    html += '<th style="padding:6px 12px;text-align:left">Note</th>';
+    html += '</tr></thead><tbody>';
+
+    r.kept.forEach(function(s){
+      var trimmed = s.cap < s.originalCap;
+      html += '<tr style="border-top:1px solid #F0F0F0' + (trimmed ? ';background:#FFFDF0' : '') + '">';
+      html += '<td style="padding:6px 12px;font-weight:500">' + s.name + (s.highPriority ? ' <span style="font-size:9px;background:#CC0000;color:#fff;padding:1px 4px;border-radius:3px">PRIORITY</span>' : '') + '</td>';
+      html += '<td style="padding:6px 12px;text-align:center;color:#667788">' + s.originalCap + '</td>';
+      html += '<td style="padding:6px 12px;text-align:center;font-weight:700;color:' + (trimmed ? '#D4860A' : 'var(--green)') + '">' + s.cap + '</td>';
+      html += '<td style="padding:6px 12px;color:#667788;font-size:11px">' + (trimmed ? '&#9660; trimmed' : '&#10003; full') + '</td>';
+      html += '</tr>';
+    });
+
+    if(r.dropped.length > 0){
+      r.dropped.forEach(function(s){
+        html += '<tr style="border-top:1px solid #F0F0F0;background:#FFF5F5;opacity:.75">';
+        html += '<td style="padding:6px 12px;color:#CC0000;text-decoration:line-through">' + s.name + '</td>';
+        html += '<td style="padding:6px 12px;text-align:center;color:#CC0000">' + s.originalCap + '</td>';
+        html += '<td style="padding:6px 12px;text-align:center;color:#CC0000">0</td>';
+        html += '<td style="padding:6px 12px;color:#CC0000;font-size:11px">&#10007; ' + s.reason + '</td>';
+        html += '</tr>';
+      });
+    }
+
+    html += '</tbody></table>';
+
+    // Apply button for this shift
+    html += '<div style="padding:10px 14px;background:#F8F9FA;border-top:1px solid var(--gray-200);display:flex;justify-content:flex-end">';
+    window._cullResults = window._cullResults || {};
+    window._cullResults[sh] = r.kept;
+    html += '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy)" onclick="applyCull(window._cullResults[\\'' + sh + '\\'],\\'' + sh + '\\')" >&#9654; Apply ' + shiftNames[sh] + ' to Dashboard</button>';
+    html += '</div>';
+    html += '</div>';
+  });
+
+  el.innerHTML = html || '<div style="color:var(--gray-400);text-align:center;padding:20px">No shifts to preview.</div>';
+  el.style.display = 'block';
+}
+
+function applyCull(keptSlots, shift){
+  if(!confirm('Apply culled ' + shift + ' slots to the dashboard? This will replace existing ' + shift + ' slots.')) return;
+
+  // Remove existing slots for this shift
+  activeSlots = activeSlots.filter(function(s){ return s.shift !== shift; });
+
+  // Add culled slots
+  var nextId = Date.now();
+  keptSlots.forEach(function(s){
+    activeSlots.push({
+      id: nextId++,
+      name: s.name,
+      shift: s.shift,
+      capacity: s.cap,
+      hat: s.hat||false,
+      highPriority: s.highPriority||false,
+      assigned: []
+    });
+  });
+
+  saveState();
+  renderOfficer();
+  renderSetup();
+  showAlert('Applied ' + keptSlots.length + ' slots for ' + shift + ' (' + keptSlots.reduce(function(a,s){return a+s.cap;},0) + ' spots).', 'success');
+}
 
 function renderSetup(){
   // Initialize sim-date picker to today if not already set
