@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1532,15 +1532,18 @@ function clearStrandedCheckins(){
     j.assignment   = null;
     j.checkInShift = '';
     j.checkInDate  = '';
+    j.checkInTimestamp = 0;
     j.order        = 0;
     clockedOut[j.id] = false;
     delete clockedOut[j.id];
+    dirtyJuniors.add(j.id); // force these juniors into the next save
     activeSlots.forEach(function(s){
       var idx = s.assigned.indexOf(j.id);
       if(idx >= 0) s.assigned.splice(idx, 1);
     });
   });
-  saveState();
+  _lastSavedHash = ''; // invalidate hash so saveStateNow always fires
+  saveStateNow();
   showAlert(stranded.length + ' stranded check-in' + (stranded.length !== 1 ? 's' : '') + ' cleared.', 'success');
   renderStrandedPanel();
   renderBoard();
@@ -1875,7 +1878,9 @@ function quickCheckIn(jid){
   jr.assignment       = null;
   clockedOut[jr.id]   = false;
   delete clockedOut[jr.id];
-  saveState();
+  dirtyJuniors.add(jr.id);
+  _lastSavedHash = '';
+  saveStateNow();
   showAlert(jr.name + ' checked in for ' + jr.checkInShift + '.', 'success');
   // Refresh the check-in table and roster rows without collapsing the drawer
   renderCheckinsTable();
@@ -1895,7 +1900,9 @@ function adminClockOut(jid){
     if(idx >= 0) s.assigned.splice(idx, 1);
   });
   onShiftJuniors.delete(jr.id);
-  saveState();
+  dirtyJuniors.add(jr.id);
+  _lastSavedHash = '';
+  saveStateNow();
   renderCheckinsTable();
   renderOfficer();
   renderBoard();
@@ -4739,8 +4746,8 @@ function _stateHash(){
     var sig = [
       activeSlots.length,
       activeSlots.map(function(s){ return s.id + ':' + s.assigned.length + ':' + (s.sent?1:0); }).join('|'),
-      juniors.filter(function(j){ return j.checkedIn || j.assignment || (j.noteLog && j.noteLog.length); }).map(function(j){
-        return j.id + ':' + (j.checkedIn?1:0) + ':' + (j.assignment||'') + ':' + j.order + ':' + (j.noteLog ? j.noteLog.length : 0);
+      juniors.filter(function(j){ return j.checkedIn || j.assignment || (j.noteLog && j.noteLog.length) || dirtyJuniors.has(j.id); }).map(function(j){
+        return j.id + ':' + (j.checkedIn?1:0) + ':' + (j.assignment||'') + ':' + j.order + ':' + (j.noteLog ? j.noteLog.length : 0) + ':' + (j.checkInDate||'');
       }).join('|'),
       committeeRequests.map(function(r){ return r.id + ':' + r.status; }).join('|'),
       currentDate, currentShift
