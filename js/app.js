@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 50;  // Minor build — increments every small change
+var APP_BUILD   = 49;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3097,7 +3097,7 @@ function addSlotFromLib(){
 }
 
 function addBlankSlot(){
-  activeSlots.push({id: Date.now(), name:'New Committee', capacity:4, shift: document.getElementById('setup-shift').value, hat:false, assigned:[],
+  activeSlots.push({id: Date.now(), name:'New Committee', capacity:4, shift: currentShift, hat:false, assigned:[],
     custom:true, saved:false, location:'', duties:'', notes:'', liaison:'', liaisonPhone:'', liaisonEmail:'', chair:'', chairPhone:''});
   renderSetup();
 }
@@ -3185,20 +3185,15 @@ function activateShift(){
   var dateEl = document.getElementById('setup-date');
   currentDate = (dateEl ? dateEl.value : '') || currentDate;
 
-  // Auto-detect shift: use the shift that has the most loaded slots,
-  // falling back to the dropdown selection, then real time
+  // Auto-detect active shift: use whichever shift has the most loaded slots
   var shiftCounts = {'8am':0, '12pm':0, '4pm':0};
   activeSlots.forEach(function(s){ if(shiftCounts[s.shift] !== undefined) shiftCounts[s.shift]++; });
-  var dominantShift = document.getElementById('setup-shift').value;
+  var dominantShift = currentShift; // fallback to whatever is already active
   var maxCount = 0;
   Object.keys(shiftCounts).forEach(function(sh){
     if(shiftCounts[sh] > maxCount){ maxCount = shiftCounts[sh]; dominantShift = sh; }
   });
   currentShift = dominantShift;
-
-  // Also update the setup-shift dropdown to reflect what we picked
-  var ss = document.getElementById('setup-shift');
-  if(ss) ss.value = currentShift;
 
   updateHeaderDate();
   saveStateNow();
