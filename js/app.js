@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3276,37 +3276,22 @@ function enterPartnerMode(){
     .catch(function(){});
 }
 
-var _committeeInfoClearTimer = null;
-
 function partnerSubmitAnother(){
   var m = document.getElementById('rf-submit-msg');
   if(m) m.innerHTML = '';
-  // Keep committee info pre-filled for 2 minutes so they don't retype it
-  renderReqForm(true);
-  // Show a subtle note that info is pre-filled
-  var nameEl = document.getElementById('rf-name');
-  if(nameEl && nameEl.value){
-    var banner = document.getElementById('rf-prefill-banner');
-    if(banner){
-      banner.style.display = 'block';
-      // Start 2-min countdown to clear
-      var secsLeft = 120;
-      if(_committeeInfoClearTimer) clearInterval(_committeeInfoClearTimer);
-      _committeeInfoClearTimer = setInterval(function(){
-        secsLeft--;
-        var cd = document.getElementById('rf-prefill-countdown');
-        if(cd) cd.textContent = secsLeft + 's';
-        if(secsLeft <= 0){
-          clearInterval(_committeeInfoClearTimer);
-          _committeeInfoClearTimer = null;
-          if(banner) banner.style.display = 'none';
-          // Full clear now
-          ['rf-name','rf-chair','rf-chair-phone','rf-chair-email','rf-liaison','rf-liaison-phone','rf-liaison-email'].forEach(function(id){
-            var el = document.getElementById(id); if(el) el.value = '';
-          });
-        }
-      }, 1000);
-    }
+  renderReqForm(); // full reset first
+  // Restore saved committee info
+  if(_lastCommitteeInfo){
+    var fi = _lastCommitteeInfo;
+    var map = {
+      'rf-name': fi.name, 'rf-chair': fi.chair, 'rf-chair-phone': fi.chairPhone,
+      'rf-chair-email': fi.chairEmail, 'rf-liaison': fi.liaison,
+      'rf-liaison-phone': fi.liaisonPhone, 'rf-liaison-email': fi.liaisonEmail
+    };
+    Object.keys(map).forEach(function(id){
+      var el = document.getElementById(id);
+      if(el && map[id]) el.value = map[id];
+    });
   }
 }
 
@@ -3804,23 +3789,26 @@ function submitRequest(){
   _lastSavedHash = ''; // force save even if hash looks unchanged
   saveStateNow();      // persist to Neon immediately
 
+  // Save committee info now before anything clears it — used by partnerSubmitAnother
+  _lastCommitteeInfo = {
+    name: name, chair: chair, chairPhone: chairPhone, chairEmail: chairEmail,
+    liaison: liaison, liaisonPhone: liaisonPhone, liaisonEmail: liaisonEmail
+  };
+
   msg.innerHTML = '<div class="alert alert-success">Request submitted! The JRC scheduling team will review it shortly.</div>';
 
-  // If in partner mode, show a done screen
-  var partnerHeader = document.getElementById('partner-header');
-  if(partnerHeader && partnerHeader.style.display !== 'none'){
-    setTimeout(function(){
-      msg.innerHTML = '<div style="text-align:center;padding:24px">' +
-        '<div style="font-size:40px;margin-bottom:12px">&#10003;</div>' +
-        '<div style="font-size:18px;font-weight:700;color:var(--navy);margin-bottom:8px">Request Submitted!</div>' +
-        '<div style="font-size:14px;color:#667788;margin-bottom:20px">The JRC scheduling team will be in touch if they have questions.</div>' +
-        '<button class="btn btn-primary" onclick="partnerSubmitAnother()">&#43; Submit Another Request</button>' +
-        '</div>';
-    }, 1500);
-  } else {
-    setTimeout(function(){ renderReqForm(); }, 2000);
-  }
+  // Show done screen then offer to submit another
+  setTimeout(function(){
+    msg.innerHTML = '<div style="text-align:center;padding:24px">' +
+      '<div style="font-size:40px;margin-bottom:12px">&#10003;</div>' +
+      '<div style="font-size:18px;font-weight:700;color:var(--navy);margin-bottom:8px">Request Submitted!</div>' +
+      '<div style="font-size:14px;color:#667788;margin-bottom:20px">The JRC scheduling team will be in touch if they have questions.</div>' +
+      '<button class="btn btn-primary" onclick="partnerSubmitAnother()">&#43; Submit Another Request</button>' +
+      '</div>';
+  }, 1500);
 }
+
+var _lastCommitteeInfo = null;
 
 // ============================================================
 // REQUEST APPROVALS
