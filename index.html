@@ -544,20 +544,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
       <div style="grid-column:1/-1"><div class="form-lbl">Liaison Email *</div><input class="finput" id="rf-liaison-email" type="email"></div>
     </div>
 
-    <div class="section-lbl" style="margin-bottom:10px">Event Details</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div style="grid-column:1/-1"><div class="form-lbl">Exact Location / Where juniors should report *</div><input class="finput" id="rf-location" placeholder="Building, room, gate number, etc."></div>
-      <div style="grid-column:1/-1"><div class="form-lbl">What will juniors be doing? *</div><textarea class="finput" id="rf-duties" rows="3" style="resize:none" placeholder="Please be as detailed as possible"></textarea></div>
-      <div style="grid-column:1/-1"><div class="form-lbl">Anything else we need to know? (attire, heavy lifting, outdoor, where to meet, etc.)</div><textarea class="finput" id="rf-notes" rows="3" style="resize:none"></textarea></div>
-      <div style="grid-column:1/-1">
-        <div class="form-lbl">Are cowboy hats required for this assignment?</div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:4px">
-          <input type="checkbox" id="rf-hat" style="width:18px;height:18px;accent-color:var(--navy)"> Yes, hats are required
-        </label>
-      </div>
-    </div>
-
-    <!-- Pre-show / Showtime Toggle -->
+    <!-- Pre-show / Showtime / Virtual Toggle -->
     <div class="section-lbl" style="margin-bottom:10px">When is this?</div>
     <div style="display:flex;gap:10px;margin-bottom:20px" id="rf-when-toggle">
       <button type="button" id="rf-btn-showtime" onclick="setReqType('showtime')"
@@ -576,6 +563,18 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
     <!-- SHOWTIME SECTION -->
     <div id="rf-showtime-section">
+    <div class="section-lbl" style="margin-bottom:10px">Event Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="grid-column:1/-1"><div class="form-lbl">Exact Location / Where juniors should report *</div><input class="finput" id="rf-location" placeholder="Building, room, gate number, etc."></div>
+      <div style="grid-column:1/-1"><div class="form-lbl">What will juniors be doing? *</div><textarea class="finput" id="rf-duties" rows="3" style="resize:none" placeholder="Please be as detailed as possible"></textarea></div>
+      <div style="grid-column:1/-1"><div class="form-lbl">Anything else we need to know? (attire, heavy lifting, outdoor, where to meet, etc.)</div><textarea class="finput" id="rf-notes" rows="3" style="resize:none"></textarea></div>
+      <div style="grid-column:1/-1">
+        <div class="form-lbl">Are cowboy hats required for this assignment?</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:4px">
+          <input type="checkbox" id="rf-hat" style="width:18px;height:18px;accent-color:var(--navy)"> Yes, hats are required
+        </label>
+      </div>
+    </div>
     <div class="section-lbl" style="margin-bottom:10px">Shift Requests</div>
     <div style="font-size:12px;color:#667788;margin-bottom:10px">Check all shifts you need juniors for and enter how many juniors per shift. You may request for all 19 show days or specific dates.</div>
 
@@ -615,6 +614,18 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
     <!-- PRE-SHOW SECTION -->
     <div id="rf-preshow-section" style="display:none">
+      <div class="section-lbl" style="margin-bottom:10px">Event Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+        <div style="grid-column:1/-1"><div class="form-lbl">Exact Location / Where juniors should report *</div><input class="finput" id="rf-location-ps" placeholder="Building, room, gate number, etc."></div>
+        <div style="grid-column:1/-1"><div class="form-lbl">What will juniors be doing? *</div><textarea class="finput" id="rf-duties-ps" rows="3" style="resize:none" placeholder="Please be as detailed as possible"></textarea></div>
+        <div style="grid-column:1/-1"><div class="form-lbl">Anything else we need to know? (attire, heavy lifting, outdoor, where to meet, etc.)</div><textarea class="finput" id="rf-notes-ps" rows="3" style="resize:none"></textarea></div>
+        <div style="grid-column:1/-1">
+          <div class="form-lbl">Are cowboy hats required for this assignment?</div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:4px">
+            <input type="checkbox" id="rf-hat-ps" style="width:18px;height:18px;accent-color:var(--navy)"> Yes, hats are required
+          </label>
+        </div>
+      </div>
       <div class="section-lbl" style="margin-bottom:10px">Pre-Show Details</div>
       <div style="font-size:12px;color:#667788;margin-bottom:14px">Select any date and time for your pre-show request. Shifts are typically 4-hour increments (e.g. 8:00 AM – 12:00 PM). Start times up to 6:00 PM; end times up to 10:00 PM.</div>
       <div id="rf-ps-rows">
