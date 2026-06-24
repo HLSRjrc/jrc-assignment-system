@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3501,6 +3501,13 @@ function setReqType(type){
     b.style.background='#fff'; b.style.color='var(--navy)'; b.style.borderColor='var(--gray-200)';
   });
 
+  // If switching to virtual, clear shift rows so they don't bleed into the submission
+  if(type === 'virtual'){
+    var sl = document.getElementById('rf-specific-list'); if(sl) sl.innerHTML = '';
+    var a20 = document.getElementById('rf-all20'); if(a20) a20.checked = false;
+    var a20s = document.getElementById('rf-all20-section'); if(a20s) a20s.style.display = 'none';
+    ['rf-s1-check','rf-s2-check','rf-s3-check'].forEach(function(id){ var el=document.getElementById(id); if(el) el.checked=false; });
+  }
   // Activate selected
   var activeEl  = type==='showtime' ? showEl  : type==='preshow' ? preEl  : virtEl;
   var activeBtn = type==='showtime' ? btnShow : type==='preshow' ? btnPre : btnVirt;
@@ -3716,7 +3723,7 @@ function submitRequest(){
   var preshow = currentReqType === 'preshow';
   var virtual = currentReqType === 'virtual';
 
-  if(preshow){
+  if(!virtual && preshow){
     // Collect pre-show rows
     var psRowEls = document.getElementById('rf-ps-rows').querySelectorAll('.rf-ps-row');
     psRowEls.forEach(function(row){
@@ -3733,7 +3740,7 @@ function submitRequest(){
       msg.innerHTML = '<div class="alert alert-danger">Please fill in at least one date and time for the pre-show request.</div>';
       return;
     }
-  } else {
+  } else if(!virtual){
 
   if(all20){
     var s1 = document.getElementById('rf-s1-check').checked;
@@ -3759,7 +3766,7 @@ function submitRequest(){
       msg.innerHTML = '<div class="alert alert-danger">Please add at least one shift.</div>';
       return;
     }
-  } } // end showtime; end preshow block
+  } } // end showtime; end preshow block (only runs when !virtual)
 
   if(virtual){
     var vStart = (document.getElementById('rf-virt-start')||{}).value||'';
