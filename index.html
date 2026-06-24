@@ -497,6 +497,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
 <div id="panel-requests" class="panel">
   <div class="action-row">
     <div style="font-size:13px;color:#667788;flex:1">Review and approve committee shift requests. Approved requests appear in the officer&apos;s approved list for shift setup.</div>
+    <button id="req-refresh-btn" class="btn btn-sm" style="border-color:var(--navy);color:var(--navy)" onclick="refreshRequests()">⟳ Refresh</button>
     <select class="finput" style="max-width:160px" id="req-filter" onchange="renderRequests()">
       <option value="all" selected>All requests</option>
       <option value="pending">Pending only</option>
@@ -536,11 +537,6 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </div>
     <div style="font-size:13px;color:#667788;margin-bottom:20px">Houston Livestock Show and Rodeo&trade; 2027 &bull; Show dates: March 2&ndash;20</div>
 
-    <!-- Pre-fill banner — shown after re-submit -->
-    <div id="rf-prefill-banner" style="display:none;margin-bottom:14px;padding:10px 14px;background:#E8F4FD;border:1px solid #B8D4E8;border-radius:8px;font-size:12px;color:#1A5276;display:flex;align-items:center;justify-content:space-between">
-      <span>&#9432; Committee info pre-filled from your last submission. It will clear in <strong id="rf-prefill-countdown">120s</strong>.</span>
-      <button type="button" onclick="document.getElementById('rf-prefill-banner').style.display='none'" style="background:none;border:none;cursor:pointer;color:#1A5276;font-size:16px;line-height:1">&times;</button>
-    </div>
     <div class="section-lbl" style="margin-bottom:10px">Committee Information</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div style="grid-column:1/-1"><div class="form-lbl">Committee Name *</div><input class="finput" id="rf-name" placeholder="e.g. Mutton Bustin'"></div>
