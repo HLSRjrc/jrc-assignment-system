@@ -325,9 +325,7 @@ exports.handler = async (event) => {
         }
       }
 
-      // Validate and upsert committee requests
-      // body.batchMode = true  → upsert only, no delete (used for large migrations)
-      // body.batchMode = false → delete all then upsert (normal full-replace save)
+      // Validate and replace committee requests
       if (body.committeeRequests !== undefined) {
         if (!isArray(body.committeeRequests)) {
           return { statusCode: 400, headers, body: JSON.stringify({ error: 'committeeRequests must be an array' }) };
@@ -339,11 +337,11 @@ exports.handler = async (event) => {
           const err = validateRequest(r);
           if (err) return { statusCode: 400, headers, body: JSON.stringify({ error: err }) };
         }
-        // In normal mode, delete all existing records first (full replace)
+        // batchMode: true = upsert only (no delete) — used for chunked saves and migrations
+        // batchMode: false/undefined = full replace (delete all then insert)
         if (!body.batchMode) {
           await sql`DELETE FROM committee_requests`;
         }
-        // Upsert all provided records
         if (body.committeeRequests.length > 0) {
           await Promise.all(body.committeeRequests.map(r =>
             sql`INSERT INTO committee_requests (id, status, name, data, updated_at)
