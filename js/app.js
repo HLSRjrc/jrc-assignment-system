@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4931,7 +4931,7 @@ function _doSave(){
 
   // Save committeeRequests separately in batch mode (upsert only) to avoid size limits
   // Only when something changed — check against a hash
-  var reqHash = committeeRequests.length + ':' + (committeeRequests[0] ? committeeRequests[0].id : '');
+  var reqHash = committeeRequests.length + ':' + (committeeRequests[0] ? committeeRequests[0].id : '') + ':' + (committeeRequests[committeeRequests.length-1] ? committeeRequests[committeeRequests.length-1].id : '');
   if(reqHash !== (_lastReqHash || '')){
     _lastReqHash = reqHash;
     var CREQ_CHUNK = 200;
@@ -4941,7 +4941,7 @@ function _doSave(){
       fetch('/.netlify/functions/state', {
         method: 'POST',
         headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
-        body: JSON.stringify({committeeRequests: chunk, batchMode: start > 0})
+        body: JSON.stringify({committeeRequests: chunk, batchMode: true}) // always upsert — never delete
       }).then(function(r){
         if(r.ok && start + CREQ_CHUNK < committeeRequests.length){
           _saveReqChunk(start + CREQ_CHUNK);
