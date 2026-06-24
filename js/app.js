@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4114,7 +4114,7 @@ function renderReqNameOptions(names, q){
     var safeId = 'rno-' + name.replace(/[^a-z0-9]/gi,'_');
     return '<label class="req-name-option">' +
       '<input type="checkbox" id="' + safeId + '"' + (checked?' checked':'') + ' onchange="reqNameToggle(\'' + name.replace(/'/g,"\'") + '\',this.checked)">' +
-      '<span>' + (q ? name.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\]/g,'\$&') + ')','gi'),'<strong>$1</strong>') : name) + '</span>' +
+      (function(){ if(!q) return '<span>' + name + '</span>'; var lo=name.toLowerCase(),qi=lo.indexOf(q.toLowerCase()); if(qi<0) return '<span>'+name+'</span>'; return '<span>'+name.slice(0,qi)+'<strong>'+name.slice(qi,qi+q.length)+'</strong>'+name.slice(qi+q.length)+'</span>'; })() +
     '</label>';
   }).join('');
 }
