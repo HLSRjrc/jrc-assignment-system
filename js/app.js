@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4084,6 +4084,9 @@ function renderRequests(){
     var dt = new Date(r.submittedAt);
     var dateStr = 'Submitted ' + (dt.getMonth()+1) + '/' + dt.getDate() + ' at ' +
       dt.getHours() + ':' + String(dt.getMinutes()).padStart(2,'0');
+    var shifts = r.shifts || [];
+    var isPreshow = r.preshow || (shifts.length && shifts[0].preshow);
+    var isVirtual = r.virtual || (shifts.length && shifts[0].virtual);
 
     var shiftPills = r.shifts.map(function(s){
       if(s.virtual) return '<span class="shift-pill" style="background:#E0F2F1;color:#00695C">' + fmtDate(s.date) + (s.endDate && s.endDate!==s.date ? ' – ' + fmtDate(s.endDate) : '') + ' &bull; Virtual &bull; ' + s.cap + ' juniors' + (s.estimatedHours ? ' &bull; ~' + s.estimatedHours + 'h' : '') + '</span>';
