@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4266,7 +4266,7 @@ function renderRequests(){
         '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
           '<button class="btn" style="font-size:12px;padding:5px 12px" onclick="editRequest(' + r.id + ')"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"> Edit</button>' +
           '<button class="btn btn-danger" style="font-size:12px;padding:5px 12px" onclick="revokeRequest(' + r.id + ')">&#x21A9; Revoke Approval</button>' +
-          '<button class="btn" style="font-size:12px;padding:5px 12px;border-color:#CC0000;color:#CC0000" onclick="rejectRequest(' + r.id + ')">&#x2715; Deny &amp; Archive</button>' +
+          '<button class="btn" style="font-size:12px;padding:5px 12px;border-color:#CC0000;color:#CC0000" onclick="rejectRequest(' + r.id + ')">&#x2715; Reject</button>' +
           '<button class="btn" style="font-size:12px;padding:5px 10px;border-color:#CC0000;color:#CC0000" onclick="deleteRequest(' + r.id + ')" title="Delete">&#x1F5D1;</button>' +
         '</div>';
     }
