@@ -2543,7 +2543,7 @@ function runCullPreview(){
   ['8am','12pm','4pm'].forEach(function(sh){
     var target = sh === '8am' ? t8 : sh === '12pm' ? t12 : t4;
     if(target === 0){ results[sh] = null; return; }
-    var shSlots = allSlots.filter(function(s){ return s.shift === sh; }).map(function(s){
+    var shSlots = allSlots.filter(function(s){ return s.shift === sh && !s.virtual; }).map(function(s){
       return {name:s.name, shift:s.shift, cap:s.cap, hat:s.hat, highPriority:isPriority(s.name, s.shift)};
     });
     results[sh] = cullShift(shSlots, target, dateCounts, totalShowDays);
@@ -3474,30 +3474,25 @@ var psRowCount = 1;
 
 function setReqType(type){
   currentReqType = type;
-  var showEl = document.getElementById('rf-showtime-section');
-  var preEl  = document.getElementById('rf-preshow-section');
+  var showEl  = document.getElementById('rf-showtime-section');
+  var preEl   = document.getElementById('rf-preshow-section');
+  var virtEl  = document.getElementById('rf-virtual-section');
   var btnShow = document.getElementById('rf-btn-showtime');
   var btnPre  = document.getElementById('rf-btn-preshow');
+  var btnVirt = document.getElementById('rf-btn-virtual');
 
-  if(type === 'showtime'){
-    showEl.style.display = 'block';
-    preEl.style.display  = 'none';
-    btnShow.style.background   = 'var(--navy)';
-    btnShow.style.color        = '#fff';
-    btnShow.style.borderColor  = 'var(--navy)';
-    btnPre.style.background    = '#fff';
-    btnPre.style.color         = 'var(--navy)';
-    btnPre.style.borderColor   = 'var(--gray-200)';
-  } else {
-    showEl.style.display = 'none';
-    preEl.style.display  = 'block';
-    btnPre.style.background    = 'var(--navy)';
-    btnPre.style.color         = '#fff';
-    btnPre.style.borderColor   = 'var(--navy)';
-    btnShow.style.background   = '#fff';
-    btnShow.style.color        = 'var(--navy)';
-    btnShow.style.borderColor  = 'var(--gray-200)';
-  }
+  // Reset all
+  [showEl,preEl,virtEl].forEach(function(el){ if(el) el.style.display='none'; });
+  [btnShow,btnPre,btnVirt].forEach(function(b){
+    if(!b) return;
+    b.style.background='#fff'; b.style.color='var(--navy)'; b.style.borderColor='var(--gray-200)';
+  });
+
+  // Activate selected
+  var activeEl  = type==='showtime' ? showEl  : type==='preshow' ? preEl  : virtEl;
+  var activeBtn = type==='showtime' ? btnShow : type==='preshow' ? btnPre : btnVirt;
+  if(activeEl)  activeEl.style.display='block';
+  if(activeBtn){ activeBtn.style.background='var(--navy)'; activeBtn.style.color='#fff'; activeBtn.style.borderColor='var(--navy)'; }
 }
 
 function removePsRow(id){
@@ -3614,6 +3609,10 @@ function renderReqForm(){
   currentReqType = 'showtime';
   psRowCount = 1;
   try { setReqType('showtime'); } catch(e){}
+  // Reset virtual fields
+  ['rf-virt-start','rf-virt-end','rf-virt-desc'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  var vc=document.getElementById('rf-virt-cap'); if(vc) vc.value='2';
+  var vh=document.getElementById('rf-virt-hours'); if(vh) vh.value='2';
   // Reset pre-show rows
   var psRows = document.getElementById('rf-ps-rows');
   if(psRows) psRows.innerHTML = '<div class="rf-ps-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px" id="rf-ps-row-1">' +
@@ -3679,9 +3678,10 @@ function submitRequest(){
     return;
   }
 
-  var all20 = currentReqType === 'showtime' ? document.getElementById('rf-all20').checked : false;
-  var shifts = [];
+  var all20   = currentReqType === 'showtime' ? document.getElementById('rf-all20').checked : false;
+  var shifts  = [];
   var preshow = currentReqType === 'preshow';
+  var virtual = currentReqType === 'virtual';
 
   if(preshow){
     // Collect pre-show rows
@@ -3728,6 +3728,19 @@ function submitRequest(){
     }
   } } // end showtime; end preshow block
 
+  if(virtual){
+    var vStart = (document.getElementById('rf-virt-start')||{}).value||'';
+    var vEnd   = (document.getElementById('rf-virt-end')||{}).value||'';
+    var vCap   = parseInt((document.getElementById('rf-virt-cap')||{}).value)||2;
+    var vDesc  = ((document.getElementById('rf-virt-desc')||{}).value||'').trim();
+    var vHours = parseFloat((document.getElementById('rf-virt-hours')||{}).value)||0;
+    if(!vStart||!vEnd||!vDesc){
+      msg.innerHTML='<div class="alert alert-danger">Please fill in start date, end date, and a description for the virtual assignment.</div>';
+      return;
+    }
+    shifts.push({virtual:true, date:vStart, endDate:vEnd, cap:vCap, desc:vDesc, estimatedHours:vHours});
+  }
+
   var req = {
     id: requestIdCounter++,
     submittedAt: new Date().toISOString(),
@@ -3735,8 +3748,9 @@ function submitRequest(){
     name:name, chair:chair, chairPhone:chairPhone, chairEmail:chairEmail,
     liaison:liaison, liaisonPhone:liaisonPhone, liaisonEmail:liaisonEmail,
     location:location, duties:duties, notes:notes, hat:hat,
-    all20:all20, preshow:preshow, shifts:shifts,
-    schedulingNotes: ''
+    all20:all20, preshow:preshow, virtual:virtual, shifts:shifts,
+    schedulingNotes: '',
+    virtualHoursLogged: {}
   };
   committeeRequests.unshift(req);
 
@@ -3807,6 +3821,21 @@ function renderReqByDate(){
   var hits = [];
   committeeRequests.forEach(function(r){
     r.shifts.forEach(function(s){
+      if(s.virtual){
+        // Virtual: show if selected date falls within start–end range
+        if(date >= (s.date||'') && date <= (s.endDate||s.date||'')){
+          hits.push({
+            name:r.name, status:r.status, shift:'virtual', virtual:true,
+            cap:s.cap, hat:false, all20:false,
+            liaison:r.liaison, liaisonPhone:r.liaisonPhone, liaisonEmail:r.liaisonEmail||'',
+            chair:r.chair, chairPhone:r.chairPhone||'',
+            location:'Remote', duties:s.desc||'', notes:r.notes||'',
+            estimatedHours:s.estimatedHours||0,
+            rid:r.id, fromRequest:true
+          });
+        }
+        return;
+      }
       if(s.all20 || s.date === date){
         var effShift = s.preshow ? psTimeToShift(s.startTime) : s.shift;
         hits.push({
@@ -3847,8 +3876,11 @@ function renderReqByDate(){
     return;
   }
 
-  var byShift = {'8am':[],'12pm':[],'4pm':[]};
-  merged.forEach(function(h){ if(byShift[h.shift]) byShift[h.shift].push(h); });
+  var byShift = {'8am':[],'12pm':[],'4pm':[],'virtual':[]};
+  merged.forEach(function(h){
+    if(h.virtual) byShift.virtual.push(h);
+    else if(byShift[h.shift]) byShift[h.shift].push(h);
+  });
 
   var shiftColors = {'8am':'#4499CC','12pm':'#D4860A','4pm':'#27AE60'};
   var shiftNames  = {'8am':'8:00 AM Shift','12pm':'12:00 PM Shift','4pm':'4:00 PM Shift'};
@@ -3929,6 +3961,35 @@ function renderReqByDate(){
     html += '</div>';
   });
 
+  // Virtual section — separate from in-person shifts
+  if(byShift.virtual.length){
+    html += '<div style="margin-bottom:16px;border:1px solid #B2DFDB;border-radius:8px;overflow:hidden">';
+    html += '<div style="background:#00897B;color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center">';
+    html += '<span style="font-weight:700;font-size:13px">Virtual Assignments</span>';
+    html += '<span style="font-size:11px;opacity:.85">' + byShift.virtual.length + ' committee' + (byShift.virtual.length!==1?'s':'') + '</span>';
+    html += '</div>';
+    byShift.virtual.sort(function(a,b){ return a.name.localeCompare(b.name); }).forEach(function(h,ri){
+      var rowKey = 'virt-' + ri;
+      var detailHtml =
+        '<div style="padding:10px 14px 12px 28px;background:#F0FAF8;font-size:12px;line-height:1.8">' +
+        (h.duties ? '<div><strong>Description:</strong> ' + h.duties + '</div>' : '') +
+        (h.estimatedHours ? '<div><strong>Est. Hours:</strong> ' + h.estimatedHours + ' hrs per junior</div>' : '') +
+        (h.chair ? '<div><strong>Chair:</strong> ' + h.chair + (h.chairPhone ? ' &bull; ' + h.chairPhone : '') + '</div>' : '') +
+        (h.liaison ? '<div><strong>Liaison:</strong> ' + h.liaison + (h.liaisonPhone ? ' &bull; ' + h.liaisonPhone : '') + (h.liaisonEmail ? ' &bull; <a href="mailto:' + h.liaisonEmail + '" style="color:var(--navy)">' + h.liaisonEmail + '</a>' : '') + '</div>' : '') +
+        '</div>';
+      html += '<div style="border-top:1px solid #E0F2F1">';
+      html += '<div style="display:flex;align-items:center;padding:7px 14px;cursor:pointer;gap:10px" onclick="toggleReqRow(\'' + rowKey + '\')">';
+      html += '<span id="req-row-icon-' + rowKey + '" style="font-size:10px;color:#99AABB;flex-shrink:0">&#9654;</span>';
+      html += '<div style="flex:1;font-weight:500;font-size:13px">' + h.name + '</div>';
+      html += '<div style="font-size:12px;color:#667788;flex-shrink:0">' + h.cap + ' juniors</div>';
+      html += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;background:' + (statusBg[h.status]||'#eee') + ';color:' + (statusColors[h.status]||'#333') + '">' + h.status + '</span>';
+      html += '</div>';
+      html += '<div id="req-row-detail-' + rowKey + '" style="display:none">' + detailHtml + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
   listEl.innerHTML = html;
 }
 
@@ -3964,6 +4025,7 @@ function renderRequests(){
       dt.getHours() + ':' + String(dt.getMinutes()).padStart(2,'0');
 
     var shiftPills = r.shifts.map(function(s){
+      if(s.virtual) return '<span class="shift-pill" style="background:#E0F2F1;color:#00695C">' + fmtDate(s.date) + (s.endDate && s.endDate!==s.date ? ' – ' + fmtDate(s.endDate) : '') + ' &bull; Virtual &bull; ' + s.cap + ' juniors' + (s.estimatedHours ? ' &bull; ~' + s.estimatedHours + 'h' : '') + '</span>';
       return '<span class="shift-pill">' + (s.all20 ? 'All 20 &bull; ' : fmtDate(s.date) + ' &bull; ') +
         SL[s.shift] + ' &bull; ' + s.cap + ' juniors</span>';
     }).join('');
@@ -3990,7 +4052,7 @@ function renderRequests(){
     return '<div class="req-card ' + r.status + '">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">' +
         '<div>' +
-          '<div style="font-size:15px;font-weight:700;color:var(--navy)">' + r.name + (r.hat ? ' <span class="badge b-hat"><img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> Hat req.</span>' : '') + '</div>' +
+          '<div style="font-size:15px;font-weight:700;color:var(--navy)">' + r.name + (r.hat ? ' <span class="badge b-hat"><img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> Hat req.</span>' : '') + (isVirtual ? ' <span class="badge" style="background:#00897B;color:#fff;font-size:10px">Virtual</span>' : '') + '</div>' +
           '<div style="font-size:12px;color:#667788;margin-top:2px">' + dateStr + ' &bull; ' + r.chair + ' &bull; ' + r.chairPhone + '</div>' +
         '</div>' +
         '<span class="req-badge ' + r.status + '">' + r.status + '</span>' +
@@ -4080,6 +4142,7 @@ function editRequest(id){
   });
 
   var isPreshow = r.preshow || (shifts.length && shifts[0].preshow);
+  var isVirtual = r.virtual || (shifts.length && shifts[0].virtual);
   var body =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
       '<div style="grid-column:1/-1"><div class="form-lbl">Committee Name *</div><input class="finput" id="edit-name" value="'+escHtml(r.name||'')+'"></div>' +
