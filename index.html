@@ -531,6 +531,11 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </div>
     <div style="font-size:13px;color:#667788;margin-bottom:20px">Houston Livestock Show and Rodeo&trade; 2027 &bull; Show dates: March 2&ndash;20</div>
 
+    <!-- Pre-fill banner — shown after re-submit -->
+    <div id="rf-prefill-banner" style="display:none;margin-bottom:14px;padding:10px 14px;background:#E8F4FD;border:1px solid #B8D4E8;border-radius:8px;font-size:12px;color:#1A5276;display:flex;align-items:center;justify-content:space-between">
+      <span>&#9432; Committee info pre-filled from your last submission. It will clear in <strong id="rf-prefill-countdown">120s</strong>.</span>
+      <button type="button" onclick="document.getElementById('rf-prefill-banner').style.display='none'" style="background:none;border:none;cursor:pointer;color:#1A5276;font-size:16px;line-height:1">&times;</button>
+    </div>
     <div class="section-lbl" style="margin-bottom:10px">Committee Information</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
       <div style="grid-column:1/-1"><div class="form-lbl">Committee Name *</div><input class="finput" id="rf-name" placeholder="e.g. Mutton Bustin'"></div>
@@ -672,7 +677,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
       </div>
       <div style="margin-bottom:12px">
         <div class="form-lbl">Description of Remote Work *</div>
-        <textarea class="finput" id="rf-virt-desc" rows="3" placeholder="Describe what the juniors will be doing remotely..." style="width:100%;resize:vertical;font-family:var(--font)"></textarea>
+        <textarea class="finput" id="rf-virt-desc" rows="3" placeholder="Describe in as much detail as possible, what juniors will be doing on this remote assignment. A member of JRC will contact you for further clarification and coordination." style="width:100%;resize:vertical;font-family:var(--font)"></textarea>
       </div>
     </div><!-- /rf-virtual-section -->
 
