@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3279,6 +3279,8 @@ function enterPartnerMode(){
 function partnerSubmitAnother(){
   var m = document.getElementById('rf-submit-msg');
   if(m) m.innerHTML = '';
+  var sb = document.getElementById('rf-submit-btn');
+  if(sb){ sb.style.display = ''; sb.disabled = false; }
   renderReqForm(); // full reset first
   // Restore saved committee info
   if(_lastCommitteeInfo){
@@ -3656,11 +3658,12 @@ function renderReqForm(keepCommitteeInfo){
     '</select></div><div><div class="form-lbl">Juniors</div><input class="finput" type="number" id="rf-ps-cap-1" min="1" max="40" value="4" style="width:70px"></div></div>';
   // Add one blank shift row by default
   addSpecificShift();
+  var sb = document.getElementById('rf-submit-btn'); if(sb){ sb.style.display=''; sb.disabled=false; }
 }
 
 function submitRequest(){
   // Prevent double-submit
-  var submitBtn = document.querySelector('#panel-reqform .btn-orange');
+  var submitBtn = document.getElementById('rf-submit-btn');
   if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
   var name = (document.getElementById('rf-name').value || '').trim();
   var chair = (document.getElementById('rf-chair').value || '').trim();
@@ -3706,7 +3709,7 @@ function submitRequest(){
   if(missing){
     msg.innerHTML = '<div class="alert alert-danger">Please fill in all required fields highlighted in red.</div>';
     msg.scrollIntoView({behavior:'smooth',block:'nearest'});
-    if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Submit Request'; }
+    if(submitBtn){ submitBtn.disabled = false; }
     return;
   }
   var cpDigits = chairPhone.replace(/\D/g,'');
@@ -3799,7 +3802,7 @@ function submitRequest(){
   committeeRequests.unshift(req);
   _lastSavedHash = ''; // force save even if hash looks unchanged
   saveStateNow();      // persist to Neon immediately
-  if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Submit Request'; }
+  if(submitBtn) submitBtn.style.display = 'none'; // hide until Submit Another is clicked
 
   // Save committee info now before anything clears it — used by partnerSubmitAnother
   _lastCommitteeInfo = {
