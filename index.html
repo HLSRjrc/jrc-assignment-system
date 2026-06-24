@@ -232,21 +232,6 @@ if(window.location.search.indexOf('partner=1') >= 0){
       <button class="kiosk-btn" onclick="kReset()">Next Person</button>
     </div>
 
-    <!-- OUTSIDE CHECK-IN WINDOW SCREEN -->
-    <div id="k-outside" style="display:none;padding:1rem 0;text-align:center">
-      <div style="font-size:56px;margin-bottom:12px">&#9201;</div>
-      <div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:10px">Outside Check-in Hours</div>
-      <div style="font-size:15px;color:#556677;line-height:1.6;margin-bottom:8px" id="k-outside-msg">
-        It is outside the window of time for clock-in.<br>Please wait until <strong>1 hour prior to your shift start time</strong>.
-      </div>
-      <div style="font-size:13px;color:#8899AA;margin-bottom:24px">
-        <strong>8:00 AM shift</strong> &mdash; check in opens at <strong>7:00 AM</strong><br>
-        <strong>12:00 PM shift</strong> &mdash; check in opens at <strong>11:00 AM</strong><br>
-        <strong>4:00 PM shift</strong> &mdash; check in opens at <strong>2:30 PM</strong>
-      </div>
-      <button class="kiosk-btn" onclick="kReset()">OK</button>
-    </div>
-
     <!-- AGE-OUT SHIFT SELECTION SCREEN -->
     <div id="k-ao-shifts" style="display:none">
       <div class="confirm-box" style="background:linear-gradient(135deg,#002E5D,#003d7a);color:#fff;border:none">
@@ -339,11 +324,6 @@ if(window.location.search.indexOf('partner=1') >= 0){
 </div>
 
 <!-- ROSTER -->
-<div id="panel-checkins" class="panel">
-  <div class="section-lbl" style="margin-bottom:12px">Active Check-ins</div>
-  <div id="checkins-content"></div>
-</div>
-
 <div id="panel-roster" class="panel">
   <div class="action-row">
     <input class="finput" style="max-width:210px" id="r-search" placeholder="Search name or ID..." oninput="renderRoster()">
@@ -373,64 +353,43 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- SHIFT SETUP -->
 <div id="panel-setup" class="panel">
-
-  <!-- STEP 1: Date + Shift selector -->
   <div class="setup-section">
-    <div class="section-lbl">1. Select Show Date</div>
-    <div style="margin-bottom:10px">
-      <div style="font-size:12px;color:#667788;margin-bottom:4px">Show date</div>
-      <select class="finput" style="max-width:260px" id="setup-date" onchange="onSetupDateChange()">
-        <option value="">-- Select a date --</option>
-      </select>
+    <div class="section-lbl">Select show date</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div>
+        <div style="font-size:12px;color:#667788;margin-bottom:4px">Show date</div>
+        <select class="finput" id="setup-date" onchange="onSetupDateChange()">
+          <option value="">-- Select a date --</option>
+        </select>
+      </div>
+      <div>
+        <div style="font-size:12px;color:#667788;margin-bottom:4px">Active shift for dashboard</div>
+        <select class="finput" id="setup-shift">
+          <option value="8am" selected>8:00am &ndash; 12:00pm</option>
+          <option value="12pm">12:00pm &ndash; 4:00pm</option>
+          <option value="4pm">4:00pm &ndash; 8:00pm</option>
+        </select>
+      </div>
     </div>
     <div id="setup-date-slots-preview" style="display:none;margin-top:8px;padding:10px 12px;background:var(--navy-lt);border-radius:8px;font-size:12px;color:var(--navy)"></div>
   </div>
-
-
-  <!-- STEP 2: Junior Count Planner + Cull Preview -->
   <div class="setup-section">
-    <div class="section-lbl">2. Junior Count Planner</div>
-    <div style="font-size:12px;color:#667788;margin-bottom:10px">Enter how many juniors are scheduled per shift. Priority committees (marked above) get their full requested count first. Everyone else is filled round-robin, minimum 2 per committee. Daily requesters are cut first if needed.</div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px">
-      <div>
-        <div style="font-size:11px;color:#667788;margin-bottom:4px;font-weight:600">8:00 AM Shift</div>
-        <input type="number" id="cull-target-8am" class="finput" placeholder="# juniors" min="0" style="font-size:13px">
-      </div>
-      <div>
-        <div style="font-size:11px;color:#667788;margin-bottom:4px;font-weight:600">12:00 PM Shift</div>
-        <input type="number" id="cull-target-12pm" class="finput" placeholder="# juniors" min="0" style="font-size:13px">
-      </div>
-      <div>
-        <div style="font-size:11px;color:#667788;margin-bottom:4px;font-weight:600">4:00 PM Shift</div>
-        <input type="number" id="cull-target-4pm" class="finput" placeholder="# juniors" min="0" style="font-size:13px">
-      </div>
-    </div>
-    <button class="btn btn-primary" style="width:100%;padding:10px;font-size:13px" onclick="runCullPreview()">&#9654; Preview Culled Assignments</button>
-    <div id="cull-preview" style="display:none;margin-top:14px"></div>
+    <div id="setup-approved-section"></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <div id="bulk-result" style="font-size:12px;color:var(--navy)"></div>
+    <button class="btn btn-sm btn-danger" onclick="clearAllSlots()">Clear All Slots</button>
   </div>
-
-  <!-- Bottom: Activate -->
+    <div id="setup-list"></div>
+    <button class="btn" style="width:100%;margin-top:8px" onclick="addBlankSlot()">+ Add Custom Slot</button>
+  </div>
   <div style="display:flex;gap:10px;margin-top:0">
-    <div id="bulk-result" style="display:none"></div>
+    <button class="btn btn-danger" style="padding:12px 16px;font-size:13px;white-space:nowrap" onclick="clearAllSlots()">&#128465; Clear All Slots</button>
     <button class="btn btn-orange" style="flex:1;padding:12px;font-size:14px;letter-spacing:.06em" onclick="activateShift()">&#9654; Activate This Shift &amp; Go to Dashboard</button>
   </div>
-
 </div>
 
 <!-- SETTINGS / DATE SIMULATOR -->
 <div id="panel-simulate" class="panel">
-  <!-- ONE-TIME MIGRATION -->
-  <div class="card" style="margin-bottom:16px">
-    <div class="section-lbl" style="margin-bottom:4px">&#128257; 2026 Schedule Migration</div>
-    <div style="font-size:12px;color:#667788;margin-bottom:10px">One-time operation: converts all hardcoded 2026 schedule slots into proper request records so they show up in the Requests tab with full contact info, priority toggles, and editing. Run this once only.</div>
-    <div id="migration-status"><div style="font-size:12px;color:var(--gray-400);font-style:italic">Loading...</div></div>
-  </div>
-  <div class="card" style="border:2px solid #FF6B6B;background:#FFF5F5">
-    <div class="section-lbl" style="margin-bottom:4px;color:var(--red)">&#9888; Stranded Check-ins</div>
-    <div style="font-size:12px;color:#667788;margin-bottom:12px">Juniors still marked as checked-in from a previous test date. These appear on the status board but won't show in the dashboard. Check below and clear any that don't match today's date.</div>
-    <div id="stranded-list" style="margin-bottom:12px"><div style="font-size:12px;color:var(--gray-400);font-style:italic">Loading...</div></div>
-    <button class="btn btn-danger" style="font-size:13px" onclick="clearStrandedCheckins()">&#128465; Clear Stranded Check-ins</button>
-  </div>
   <div class="card">
     <div class="section-lbl" style="margin-bottom:8px">Set Date &amp; Time</div>
     <div style="font-size:13px;color:#667788;margin-bottom:16px">Set the current date and time for the app. The clock advances normally from whatever you set.</div>
@@ -531,9 +490,8 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- REQUESTS APPROVAL PANEL -->
 <div id="panel-requests" class="panel">
-  <!-- Tray: pending/approved/rejected requests -->
   <div class="action-row">
-    <div style="font-size:13px;color:#667788;flex:1">Review and approve committee shift requests. Approved requests appear in Shift Setup.</div>
+    <div style="font-size:13px;color:#667788;flex:1">Review and approve committee shift requests. Approved requests appear in the officer&apos;s approved list for shift setup.</div>
     <select class="finput" style="max-width:160px" id="req-filter" onchange="renderRequests()">
       <option value="all" selected>All requests</option>
       <option value="pending">Pending only</option>
@@ -542,23 +500,6 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </select>
   </div>
   <div id="req-list"></div>
-
-  <!-- Date lookup: see all approved requests for a specific date -->
-  <div style="margin-top:24px;border-top:2px solid var(--gray-100);padding-top:18px">
-    <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none" onclick="toggleReqDateLookup()">
-      <div class="section-lbl" style="margin-bottom:0">&#128197; View Requests by Date</div>
-      <span id="req-date-lookup-toggle" style="font-size:11px;color:#667788;background:var(--gray-100);padding:3px 10px;border-radius:12px">&#9660; Show</span>
-    </div>
-    <div id="req-date-lookup-body" style="display:none;margin-top:12px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-        <select class="finput" id="req-date-lookup-sel" style="max-width:220px" onchange="renderReqByDate()">
-          <option value="">-- Select a date --</option>
-        </select>
-        <span id="req-date-lookup-summary" style="font-size:12px;color:#667788"></span>
-      </div>
-      <div id="req-date-lookup-list"></div>
-    </div>
-  </div>
 </div>
 
 <!-- COMMITTEE REQUEST FORM PANEL -->
@@ -621,11 +562,15 @@ if(window.location.search.indexOf('partner=1') >= 0){
     <div style="display:flex;gap:10px;margin-bottom:20px" id="rf-when-toggle">
       <button type="button" id="rf-btn-showtime" onclick="setReqType('showtime')"
         style="flex:1;padding:12px;border-radius:8px;border:2px solid var(--navy);background:var(--navy);color:#fff;font-size:13px;font-weight:700;cursor:pointer">
-        🎡 Showtime<br><span style="font-size:11px;font-weight:400;opacity:.8">March 2–20, 2027</span>
+        Showtime<br><span style="font-size:11px;font-weight:400;opacity:.8">March 2–20, 2027</span>
       </button>
       <button type="button" id="rf-btn-preshow" onclick="setReqType('preshow')"
         style="flex:1;padding:12px;border-radius:8px;border:2px solid var(--gray-200);background:#fff;color:var(--navy);font-size:13px;font-weight:700;cursor:pointer">
-        📅 Pre-Show<br><span style="font-size:11px;font-weight:400;color:#667788">Any date &amp; time before the show</span>
+        Pre-Show<br><span style="font-size:11px;font-weight:400;color:#667788">Any date &amp; time before the show</span>
+      </button>
+      <button type="button" id="rf-btn-virtual" onclick="setReqType('virtual')"
+        style="flex:1;padding:12px;border-radius:8px;border:2px solid var(--gray-200);background:#fff;color:var(--navy);font-size:13px;font-weight:700;cursor:pointer">
+        Virtual<br><span style="font-size:11px;font-weight:400;color:#667788">Remote work opportunity</span>
       </button>
     </div>
 
@@ -691,6 +636,31 @@ if(window.location.search.indexOf('partner=1') >= 0){
       <button type="button" class="btn" style="font-size:12px;margin-bottom:16px" onclick="addPsRow()">&#43; Add another date</button>
     </div><!-- /rf-preshow-section -->
 
+    <!-- VIRTUAL SECTION -->
+    <div id="rf-virtual-section" style="display:none">
+      <div class="section-lbl" style="margin-bottom:10px">Virtual Assignment Details</div>
+      <div style="font-size:12px;color:#667788;margin-bottom:14px">Virtual assignments are remote opportunities. Approved requests are tracked here but juniors will <strong>not</strong> check in through the kiosk — this tracks the request only.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div><div class="form-lbl">Start Date *</div><input class="finput" type="date" id="rf-virt-start"></div>
+        <div><div class="form-lbl">End Date *</div><input class="finput" type="date" id="rf-virt-end"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div>
+          <div class="form-lbl">Number of Juniors Needed *</div>
+          <input class="finput" type="number" id="rf-virt-cap" min="1" max="40" value="2" style="max-width:100px">
+        </div>
+        <div>
+          <div class="form-lbl">Estimated Hours per Junior</div>
+          <input class="finput" type="number" id="rf-virt-hours" min="0.5" max="40" step="0.5" value="2" style="max-width:100px">
+          <div style="font-size:11px;color:#667788;margin-top:3px">For hours tracking</div>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div class="form-lbl">Description of Remote Work *</div>
+        <textarea class="finput" id="rf-virt-desc" rows="3" placeholder="Describe what the juniors will be doing remotely..." style="width:100%;resize:vertical;font-family:var(--font)"></textarea>
+      </div>
+    </div><!-- /rf-virtual-section -->
+
     <div id="rf-submit-msg" style="min-height:20px;margin-bottom:10px"></div>
     <button class="btn btn-orange"  style="width:100%;padding:12px;font-size:14px" onclick="submitRequest()">Submit Request</button>
   </div>
@@ -755,10 +725,16 @@ if(window.location.search.indexOf('partner=1') >= 0){
     <div id="pill-modal-slot" style="font-size:13px;color:#667788;margin-bottom:20px"></div>
     <div id="pill-modal-btns" style="display:flex;flex-direction:column;gap:10px">
       <button class="btn btn-primary" id="pill-modal-queue" onclick="pillModalQueue()" style="width:100%;padding:11px">&#8617; Return to Queue</button>
-      <div id="pill-modal-signout-note" style="font-size:12px;color:#667788;text-align:center;padding:6px 0">To clock a junior out, use the <a href="#" onclick="pillModalClose();switchTab('checkins',null);return false;" style="color:var(--navy);font-weight:600">Check-ins tab</a>.</div>
+      <button class="btn" id="pill-modal-signout" onclick="pillModalSignOut()" style="width:100%;padding:11px;border-color:#CC0000;color:#CC0000">&#x2715; Sign Out</button>
       <button class="btn" onclick="pillModalClose()" style="width:100%;padding:9px;font-size:13px">Cancel</button>
     </div>
-    <div id="pill-modal-confirm" style="display:none"></div>
+    <div id="pill-modal-confirm" style="display:none;margin-top:16px;padding:14px;background:#FFF5F5;border-radius:8px;border:1px solid #ffcccc">
+      <div style="font-size:13px;color:#7B1F1F;margin-bottom:12px">&#9888; Are you sure you want to sign out <strong id="pill-modal-confirm-name"></strong>? This will remove them from the shift entirely.</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn" onclick="pillModalConfirmSignOut()" style="flex:1;background:#CC0000;color:#fff;border-color:#CC0000;padding:9px">Yes, Sign Out</button>
+        <button class="btn" onclick="document.getElementById('pill-modal-confirm').style.display='none'" style="flex:1;padding:9px">Cancel</button>
+      </div>
+    </div>
   </div>
 </div>
 
