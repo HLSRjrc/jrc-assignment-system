@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -381,7 +381,7 @@ function switchTab(t, el){
   if(t === 'officer') renderOfficer();
   if(t === 'roster') renderRoster();
   if(t === 'setup') renderSetup();
-  if(t === 'requests') renderRequests();
+  if(t === 'requests') refreshRequests();
   if(t === 'reqform') renderReqForm();
   if(t === 'board') renderBoard();
   if(t === 'checkins') renderCheckins();
@@ -4041,6 +4041,25 @@ function toggleReqRow(key){
 }
 
 
+function refreshRequests(){
+  // Force-fetch latest committeeRequests from Neon regardless of poll timing
+  if(!DB_AVAILABLE){ renderRequests(); return; }
+  var btn = document.getElementById('req-refresh-btn');
+  if(btn){ btn.disabled = true; btn.textContent = '⟳ Loading...'; }
+  fetch('/.netlify/functions/state', {headers:{'x-api-token': API_TOKEN}})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data && data.committeeRequests && data.committeeRequests.length){
+        committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
+      }
+      renderRequests();
+      if(btn){ btn.disabled = false; btn.textContent = '⟳ Refresh'; }
+    })
+    .catch(function(){
+      if(btn){ btn.disabled = false; btn.textContent = '⟳ Refresh'; }
+    });
+}
+
 function renderRequests(){
   var filter = (document.getElementById('req-filter') ? document.getElementById('req-filter').value : 'all');
   var list = committeeRequests.filter(function(r){
@@ -5244,6 +5263,8 @@ function pollForUpdates(){
         if(id === 'panel-roster') renderRoster();
         if(id === 'panel-board') renderBoard();
         if(id === 'panel-kiosk') renderKiosk();
+        if(id === 'panel-requests') renderRequests();
+        if(id === 'panel-checkins') renderCheckins();
       }
       updateHeaderDate();
     })
