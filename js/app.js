@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3276,10 +3276,38 @@ function enterPartnerMode(){
     .catch(function(){});
 }
 
+var _committeeInfoClearTimer = null;
+
 function partnerSubmitAnother(){
   var m = document.getElementById('rf-submit-msg');
   if(m) m.innerHTML = '';
-  renderReqForm();
+  // Keep committee info pre-filled for 2 minutes so they don't retype it
+  renderReqForm(true);
+  // Show a subtle note that info is pre-filled
+  var nameEl = document.getElementById('rf-name');
+  if(nameEl && nameEl.value){
+    var banner = document.getElementById('rf-prefill-banner');
+    if(banner){
+      banner.style.display = 'block';
+      // Start 2-min countdown to clear
+      var secsLeft = 120;
+      if(_committeeInfoClearTimer) clearInterval(_committeeInfoClearTimer);
+      _committeeInfoClearTimer = setInterval(function(){
+        secsLeft--;
+        var cd = document.getElementById('rf-prefill-countdown');
+        if(cd) cd.textContent = secsLeft + 's';
+        if(secsLeft <= 0){
+          clearInterval(_committeeInfoClearTimer);
+          _committeeInfoClearTimer = null;
+          if(banner) banner.style.display = 'none';
+          // Full clear now
+          ['rf-name','rf-chair','rf-chair-phone','rf-chair-email','rf-liaison','rf-liaison-phone','rf-liaison-email'].forEach(function(id){
+            var el = document.getElementById(id); if(el) el.value = '';
+          });
+        }
+      }, 1000);
+    }
+  }
 }
 
 
@@ -3588,14 +3616,23 @@ function checkMar20(id){
   }
 }
 
-function renderReqForm(){
-  // Reset form
-  ['rf-name','rf-chair','rf-chair-phone','rf-chair-email','rf-liaison','rf-liaison-phone',
-   'rf-liaison-email','rf-location','rf-duties','rf-notes'].forEach(function(id){
-    var el = document.getElementById(id);
-    if(el) el.value = '';
-  });
-  var hat = document.getElementById('rf-hat'); if(hat) hat.checked = false;
+function renderReqForm(keepCommitteeInfo){
+  // Reset form — optionally keep committee info for quick re-submit
+  if(!keepCommitteeInfo){
+    ['rf-name','rf-chair','rf-chair-phone','rf-chair-email','rf-liaison','rf-liaison-phone',
+     'rf-liaison-email','rf-location','rf-duties','rf-notes'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+    var hat = document.getElementById('rf-hat'); if(hat) hat.checked = false;
+  } else {
+    // Only clear event details for the showtime section; committee info stays
+    ['rf-location','rf-duties','rf-notes'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el) el.value = '';
+    });
+    var hat = document.getElementById('rf-hat'); if(hat) hat.checked = false;
+  }
   var all20 = document.getElementById('rf-all20'); if(all20) all20.checked = false;
   ['rf-s1-check','rf-s2-check','rf-s3-check'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.checked = false;
