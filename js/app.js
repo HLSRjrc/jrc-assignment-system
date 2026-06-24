@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3659,6 +3659,9 @@ function renderReqForm(keepCommitteeInfo){
 }
 
 function submitRequest(){
+  // Prevent double-submit
+  var submitBtn = document.querySelector('#panel-reqform .btn-orange');
+  if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
   var name = (document.getElementById('rf-name').value || '').trim();
   var chair = (document.getElementById('rf-chair').value || '').trim();
   var chairPhone = (document.getElementById('rf-chair-phone').value || '').trim();
@@ -3703,6 +3706,7 @@ function submitRequest(){
   if(missing){
     msg.innerHTML = '<div class="alert alert-danger">Please fill in all required fields highlighted in red.</div>';
     msg.scrollIntoView({behavior:'smooth',block:'nearest'});
+    if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Submit Request'; }
     return;
   }
   var cpDigits = chairPhone.replace(/\D/g,'');
@@ -3782,7 +3786,7 @@ function submitRequest(){
   }
 
   var req = {
-    id: requestIdCounter++,
+    id: Date.now() + Math.floor(Math.random() * 1000), // epoch ms + jitter — unique across devices
     submittedAt: new Date().toISOString(),
     status: 'pending',
     name:name, chair:chair, chairPhone:chairPhone, chairEmail:chairEmail,
@@ -3795,6 +3799,7 @@ function submitRequest(){
   committeeRequests.unshift(req);
   _lastSavedHash = ''; // force save even if hash looks unchanged
   saveStateNow();      // persist to Neon immediately
+  if(submitBtn){ submitBtn.disabled = false; submitBtn.textContent = 'Submit Request'; }
 
   // Save committee info now before anything clears it — used by partnerSubmitAnother
   _lastCommitteeInfo = {
