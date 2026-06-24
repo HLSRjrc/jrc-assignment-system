@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4048,6 +4048,139 @@ function toggleReqRow(key){
 }
 
 
+// ============================================================
+// REQUESTS FILTER SYSTEM
+// ============================================================
+var _reqFilterStatus   = 'all';      // current status chip selection
+var _reqFilterNames    = [];         // array of selected committee names
+var _reqFilterDate     = '';         // ISO date string or ''
+
+function reqChipClick(btn){
+  // Toggle status — clicking active chip deactivates (goes to 'all')
+  var status = btn.getAttribute('data-status');
+  _reqFilterStatus = (btn.classList.contains('active') && status !== 'all') ? 'all' : status;
+  // Update chip visuals
+  document.querySelectorAll('.req-chip[data-status]').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-status') === _reqFilterStatus);
+  });
+  renderRequests();
+}
+
+function toggleReqNameDropdown(){
+  var dd = document.getElementById('req-name-dropdown');
+  if(!dd) return;
+  var isOpen = dd.style.display !== 'none';
+  if(isOpen){ dd.style.display = 'none'; return; }
+  // Build option list from all unique committee names in committeeRequests
+  var names = {};
+  committeeRequests.forEach(function(r){ if(r.name) names[r.name] = true; });
+  var sorted = Object.keys(names).sort();
+  renderReqNameOptions(sorted, '');
+  dd.style.display = 'block';
+  var inp = document.getElementById('req-name-search');
+  if(inp){ inp.value = ''; inp.focus(); }
+  // Close on outside click
+  setTimeout(function(){
+    document.addEventListener('click', _closeReqNameDropdown, {once:true, capture:true});
+  }, 0);
+}
+
+function _closeReqNameDropdown(e){
+  var wrap = document.getElementById('req-name-wrap');
+  if(wrap && wrap.contains(e.target)) return;
+  var dd = document.getElementById('req-name-dropdown');
+  if(dd) dd.style.display = 'none';
+}
+
+function reqNameSearchFilter(){
+  var q = (document.getElementById('req-name-search').value || '').toLowerCase();
+  var names = {};
+  committeeRequests.forEach(function(r){ if(r.name) names[r.name] = true; });
+  var sorted = Object.keys(names).sort().filter(function(n){
+    return !q || n.toLowerCase().indexOf(q) >= 0;
+  });
+  renderReqNameOptions(sorted, q);
+}
+
+function renderReqNameOptions(names, q){
+  var el = document.getElementById('req-name-options');
+  if(!el) return;
+  if(!names.length){
+    el.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:#999;font-style:italic">No matches for "' + q + '"</div>';
+    return;
+  }
+  el.innerHTML = names.map(function(name){
+    var checked = _reqFilterNames.indexOf(name) >= 0;
+    var safeId = 'rno-' + name.replace(/[^a-z0-9]/gi,'_');
+    return '<label class="req-name-option">' +
+      '<input type="checkbox" id="' + safeId + '"' + (checked?' checked':'') + ' onchange="reqNameToggle(\'' + name.replace(/'/g,"\'") + '\',this.checked)">' +
+      '<span>' + (q ? name.replace(new RegExp('(' + q.replace(/[.*+?^${}()|[\]\]/g,'\$&') + ')','gi'),'<strong>$1</strong>') : name) + '</span>' +
+    '</label>';
+  }).join('');
+}
+
+function reqNameToggle(name, checked){
+  if(checked){
+    if(_reqFilterNames.indexOf(name) < 0) _reqFilterNames.push(name);
+  } else {
+    _reqFilterNames = _reqFilterNames.filter(function(n){ return n !== name; });
+  }
+  updateReqNameDisplay();
+  renderRequests();
+}
+
+function updateReqNameDisplay(){
+  var display = document.getElementById('req-name-display');
+  var placeholder = document.getElementById('req-name-placeholder');
+  if(!display) return;
+  // Remove old tags (keep placeholder)
+  Array.from(display.querySelectorAll('.req-name-tag')).forEach(function(t){ t.remove(); });
+  if(_reqFilterNames.length === 0){
+    if(placeholder) placeholder.style.display = 'inline';
+  } else {
+    if(placeholder) placeholder.style.display = 'none';
+    _reqFilterNames.forEach(function(name){
+      var tag = document.createElement('span');
+      tag.className = 'req-name-tag';
+      tag.innerHTML = name + '<button onclick="event.stopPropagation();reqNameToggle(\'' + name.replace(/'/g,"\'") + '\',false)" title="Remove">&#x2715;</button>';
+      display.insertBefore(tag, placeholder);
+    });
+  }
+}
+
+function reqFilterUpdate(){
+  _reqFilterDate = (document.getElementById('req-search-date')||{}).value || '';
+  renderRequests();
+  updateReqFilterSummary();
+}
+
+function updateReqFilterSummary(){
+  var el = document.getElementById('req-filter-summary');
+  var txt = document.getElementById('req-filter-summary-text');
+  if(!el || !txt) return;
+  var parts = [];
+  if(_reqFilterStatus !== 'all') parts.push('Status: ' + _reqFilterStatus);
+  if(_reqFilterNames.length) parts.push(_reqFilterNames.length + ' committee' + (_reqFilterNames.length>1?'s':'') + ' selected');
+  if(_reqFilterDate) parts.push('Date: ' + _reqFilterDate);
+  if(parts.length){ el.style.display='flex'; txt.textContent = parts.join(' · '); }
+  else { el.style.display='none'; }
+}
+
+function reqClearFilters(){
+  _reqFilterStatus = 'all';
+  _reqFilterNames  = [];
+  _reqFilterDate   = '';
+  document.querySelectorAll('.req-chip[data-status]').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-status') === 'all');
+  });
+  var sd = document.getElementById('req-search-date'); if(sd) sd.value = '';
+  var si = document.getElementById('req-name-search'); if(si) si.value = '';
+  updateReqNameDisplay();
+  updateReqFilterSummary();
+  renderRequests();
+}
+
+
 function refreshRequests(){
   // Force-fetch latest committeeRequests from Neon regardless of poll timing
   if(!DB_AVAILABLE){ renderRequests(); return; }
@@ -4063,6 +4196,7 @@ function refreshRequests(){
         console.log('[JRC] first request:', committeeRequests[0] ? committeeRequests[0].name + ' / ' + committeeRequests[0].status : 'none');
       }
       renderRequests();
+      updateReqFilterSummary();
       if(btn){ btn.disabled = false; btn.textContent = '⟳ Refresh'; }
     })
     .catch(function(e){
@@ -4072,10 +4206,26 @@ function refreshRequests(){
 }
 
 function renderRequests(){
-  var filter = (document.getElementById('req-filter') ? document.getElementById('req-filter').value : 'all');
+  // Apply all active filters
   var list = committeeRequests.filter(function(r){
-    if(filter === 'virtual') return r.virtual || (r.shifts && r.shifts.length && r.shifts[0].virtual);
-    return filter === 'all' || r.status === filter;
+    // Status / type filter
+    if(_reqFilterStatus === 'virtual'){
+      if(!(r.virtual || (r.shifts && r.shifts.length && r.shifts[0].virtual))) return false;
+    } else if(_reqFilterStatus !== 'all'){
+      if(r.status !== _reqFilterStatus) return false;
+    }
+    // Committee name multiselect
+    if(_reqFilterNames.length && _reqFilterNames.indexOf(r.name) < 0) return false;
+    // Date filter — match any shift that touches this date
+    if(_reqFilterDate){
+      var dateMatch = r.shifts && r.shifts.some(function(s){
+        if(s.all20) return true;
+        if(s.virtual) return _reqFilterDate >= (s.date||'') && _reqFilterDate <= (s.endDate||s.date||'');
+        return s.date === _reqFilterDate;
+      });
+      if(!dateMatch) return false;
+    }
+    return true;
   });
 
   var el = document.getElementById('req-list');
