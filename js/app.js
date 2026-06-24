@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3764,6 +3764,8 @@ function submitRequest(){
     virtualHoursLogged: {}
   };
   committeeRequests.unshift(req);
+  _lastSavedHash = ''; // force save even if hash looks unchanged
+  saveStateNow();      // persist to Neon immediately
 
   msg.innerHTML = '<div class="alert alert-success">Request submitted! The JRC scheduling team will review it shortly.</div>';
 
@@ -5141,7 +5143,7 @@ function startPolling(){
   pollTimer = setInterval(function(){
     // Only poll when tab is visible — saves ~70% of idle function calls
     if(!document.hidden) pollForUpdates();
-  }, 180000);
+  }, 900000); // 15 min — reduced to conserve Netlify credits
   if(headerClockTimer) clearInterval(headerClockTimer);
   headerClockTimer = setInterval(function(){ updateHeaderClock(); updateBoardClock(); }, 30000);
 
