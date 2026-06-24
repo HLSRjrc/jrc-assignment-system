@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3613,6 +3613,9 @@ function renderReqForm(){
   ['rf-virt-start','rf-virt-end','rf-virt-desc'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
   var vc=document.getElementById('rf-virt-cap'); if(vc) vc.value='2';
   var vh=document.getElementById('rf-virt-hours'); if(vh) vh.value='2';
+  // Reset preshow event detail fields
+  ['rf-location-ps','rf-duties-ps','rf-notes-ps'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
+  var hps=document.getElementById('rf-hat-ps'); if(hps) hps.checked=false;
   // Reset pre-show rows
   var psRows = document.getElementById('rf-ps-rows');
   if(psRows) psRows.innerHTML = '<div class="rf-ps-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px" id="rf-ps-row-1">' +
@@ -3634,19 +3637,27 @@ function submitRequest(){
   var liaison = (document.getElementById('rf-liaison').value || '').trim();
   var liaisonPhone = (document.getElementById('rf-liaison-phone').value || '').trim();
   var liaisonEmail = (document.getElementById('rf-liaison-email').value || '').trim();
-  var location = (document.getElementById('rf-location').value || '').trim();
-  var duties = (document.getElementById('rf-duties').value || '').trim();
-  var notes = (document.getElementById('rf-notes').value || '').trim();
-  var hat = document.getElementById('rf-hat').checked;
+  // Pick the right event details fields depending on type
+  // Virtual has no location/duties/notes/hat — showtime uses rf-*, preshow uses rf-*-ps
+  var isPs = currentReqType === 'preshow';
+  var isVirt = currentReqType === 'virtual';
+  var locationId = isPs ? 'rf-location-ps' : 'rf-location';
+  var dutiesId   = isPs ? 'rf-duties-ps'   : 'rf-duties';
+  var notesId    = isPs ? 'rf-notes-ps'    : 'rf-notes';
+  var hatId      = isPs ? 'rf-hat-ps'      : 'rf-hat';
+  var location = isVirt ? '' : (document.getElementById(locationId)||{value:''}).value.trim();
+  var duties   = isVirt ? '' : (document.getElementById(dutiesId)||{value:''}).value.trim();
+  var notes    = isVirt ? '' : (document.getElementById(notesId)||{value:''}).value.trim();
+  var hat      = isVirt ? false : (document.getElementById(hatId)||{checked:false}).checked;
   var msg = document.getElementById('rf-submit-msg');
 
-  // Highlight missing required fields
+  // Highlight missing required fields (skip event details for virtual)
   var requiredMap = {
     'rf-name': name, 'rf-chair': chair, 'rf-chair-phone': chairPhone,
     'rf-chair-email': chairEmail, 'rf-liaison': liaison,
-    'rf-liaison-phone': liaisonPhone, 'rf-liaison-email': liaisonEmail,
-    'rf-location': location, 'rf-duties': duties
+    'rf-liaison-phone': liaisonPhone, 'rf-liaison-email': liaisonEmail
   };
+  if(!isVirt){ requiredMap[locationId] = location; requiredMap[dutiesId] = duties; }
   var missing = false;
   Object.keys(requiredMap).forEach(function(id){
     var el = document.getElementById(id);
