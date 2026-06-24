@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4049,13 +4049,17 @@ function refreshRequests(){
   fetch('/.netlify/functions/state', {headers:{'x-api-token': API_TOKEN}})
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if(data && data.committeeRequests && data.committeeRequests.length){
+      console.log('[JRC] refreshRequests: Neon returned', data && data.committeeRequests ? data.committeeRequests.length : 0, 'requests');
+      if(data && data.committeeRequests !== undefined){
+        // Always update — even if empty, so deletions are reflected
         committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
+        console.log('[JRC] first request:', committeeRequests[0] ? committeeRequests[0].name + ' / ' + committeeRequests[0].status : 'none');
       }
       renderRequests();
       if(btn){ btn.disabled = false; btn.textContent = '⟳ Refresh'; }
     })
-    .catch(function(){
+    .catch(function(e){
+      console.error('[JRC] refreshRequests error:', e);
       if(btn){ btn.disabled = false; btn.textContent = '⟳ Refresh'; }
     });
 }
