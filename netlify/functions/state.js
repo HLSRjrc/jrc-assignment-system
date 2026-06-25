@@ -326,6 +326,16 @@ exports.handler = async (event) => {
       }
 
       // Validate and replace committee requests
+      // Handle delete-by-id (runs regardless of whether committeeRequests is present)
+      if (body.deleteIds && Array.isArray(body.deleteIds) && body.deleteIds.length) {
+        await Promise.all(body.deleteIds.map(did =>
+          sql`DELETE FROM committee_requests WHERE id = ${did}`
+        ));
+        if (!body.committeeRequests || !body.committeeRequests.length) {
+          return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+        }
+      }
+
       if (body.committeeRequests !== undefined) {
         if (!isArray(body.committeeRequests)) {
           return { statusCode: 400, headers, body: JSON.stringify({ error: 'committeeRequests must be an array' }) };
