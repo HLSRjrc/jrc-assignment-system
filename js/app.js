@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3280,7 +3280,7 @@ function partnerSubmitAnother(){
   var m = document.getElementById('rf-submit-msg');
   if(m) m.innerHTML = '';
   var sb = document.getElementById('rf-submit-btn');
-  if(sb){ sb.style.display = ''; sb.disabled = false; }
+  if(sb){ sb.style.display = ''; sb.disabled = false; sb.textContent = 'Submit Request'; }
   renderReqForm(); // full reset first
   // Restore saved committee info
   if(_lastCommitteeInfo){
@@ -3658,7 +3658,7 @@ function renderReqForm(keepCommitteeInfo){
     '</select></div><div><div class="form-lbl">Juniors</div><input class="finput" type="number" id="rf-ps-cap-1" min="1" max="40" value="4" style="width:70px"></div></div>';
   // Add one blank shift row by default
   addSpecificShift();
-  var sb = document.getElementById('rf-submit-btn'); if(sb){ sb.style.display=''; sb.disabled=false; }
+  var sb = document.getElementById('rf-submit-btn'); if(sb){ sb.style.display=''; sb.disabled=false; sb.textContent='Submit Request'; }
 }
 
 function submitRequest(){
@@ -4322,7 +4322,14 @@ function deleteRequest(id){
   if(!confirm('Permanently delete the request from "' + r.name + '"? This cannot be undone.')) return;
   committeeRequests = committeeRequests.filter(function(x){ return x.id !== id; });
   renderRequests();
-  saveStateNow();
+  // Delete directly from Neon — saveStateNow only upserts, won't remove the record
+  if(DB_AVAILABLE){
+    fetch('/.netlify/functions/state', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
+      body: JSON.stringify({deleteIds:[id], batchMode:true})
+    }).catch(function(e){ console.warn('deleteRequest Neon error:', e.message); });
+  }
   showAlert('Request deleted.', 'info');
 }
 
