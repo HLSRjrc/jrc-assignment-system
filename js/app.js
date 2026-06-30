@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2347,7 +2347,7 @@ function onSetupDateChange(){
         '<div class="preview-status">' +
           (isAdded
             ? '<span style="color:#155724;font-size:11px;font-weight:600">&#10003; Added</span>'
-            : '<button class="btn btn-sm" style="font-size:11px;padding:3px 10px" onclick="addSinglePreviewSlot(\'' + s.name.replace(/'/g,\"\\'\"") + '\',\'' + sh + '\',' + s.cap + ',' + (s.hat?1:0) + ')">&#43; Add</button>'
+            : (function(){ var k=encodeURIComponent(s.name)+'|'+sh; window._ps=window._ps||{}; window._ps[k]={name:s.name,shift:sh,cap:s.cap,hat:s.hat}; return '<button class="btn btn-sm" style="font-size:11px;padding:3px 10px" data-k="'+k+'" onclick="addSinglePreviewSlotEl(this)">&#43; Add</button>'; })()
           ) +
         '</div>' +
       '</div>';
@@ -6306,7 +6306,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -8636,7 +8636,7 @@ function onSetupDateChange(){
         '<div class="preview-status">' +
           (isAdded
             ? '<span style="color:#155724;font-size:11px;font-weight:600">&#10003; Added</span>'
-            : '<button class="btn btn-sm" style="font-size:11px;padding:3px 10px" onclick="addSinglePreviewSlot(\'' + s.name.replace(/'/g,\"\\'\"") + '\',\'' + sh + '\',' + s.cap + ',' + (s.hat?1:0) + ')">&#43; Add</button>'
+            : (function(){ var k=encodeURIComponent(s.name)+'|'+sh; window._ps=window._ps||{}; window._ps[k]={name:s.name,shift:sh,cap:s.cap,hat:s.hat}; return '<button class="btn btn-sm" style="font-size:11px;padding:3px 10px" data-k="'+k+'" onclick="addSinglePreviewSlotEl(this)">&#43; Add</button>'; })()
           ) +
         '</div>' +
       '</div>';
