@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2317,6 +2317,7 @@ function onSetupDateChange(){
       '<div class="shift-preview-title">' + fmtDateLong(date) + '</div>' +
       '<div class="shift-preview-count">' + totalSlots + ' committee slots &bull; ' + totalJuniors + ' junior spots requested</div>' +
     '</div>' +
+    '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy)" onclick="loadAllSlotsFromPreview()">&#43; Load All to Dashboard</button>' +
   '</div>';
 
   ['8am','12pm','4pm'].forEach(function(sh){
@@ -2343,7 +2344,12 @@ function onSetupDateChange(){
           (s.isNew ? ' <span class="badge" style="background:#E8F4E8;color:#155724;font-size:9px">New</span>' : '') +
         '</div>' +
         '<div class="preview-cap">' + s.cap + '</div>' +
-        '<div class="preview-status"></div>' +
+        '<div class="preview-status">' +
+          (isAdded
+            ? '<span style="color:#155724;font-size:11px;font-weight:600">&#10003; Added</span>'
+            : '<button class="btn btn-sm" style="font-size:11px;padding:3px 10px" onclick="addSinglePreviewSlot(\'' + s.name.replace(/'/g,\"\\'\"") + '\',\'' + sh + '\',' + s.cap + ',' + (s.hat?1:0) + ')">&#43; Add</button>'
+          ) +
+        '</div>' +
       '</div>';
     });
 
@@ -2353,6 +2359,32 @@ function onSetupDateChange(){
   html += '</div>';
   prev.innerHTML = html;
   prev.style.display = 'block';
+}
+
+function loadAllSlotsFromPreview(){
+  var date = document.getElementById('setup-date') ? document.getElementById('setup-date').value : '';
+  if(!date) return;
+  var slots = SCHEDULE_2026[date] ? SCHEDULE_2026[date].slice() : [];
+  committeeRequests.filter(function(r){
+    return r.status==='approved' && r.shifts.some(function(s){ return s.date===date || s.all20; });
+  }).forEach(function(r){
+    r.shifts.filter(function(s){ return s.date===date || s.all20; }).forEach(function(s){
+      if(s.virtual) return; // skip virtual
+      var exists = slots.some(function(x){ return x.name===r.name && x.shift===s.shift; });
+      if(!exists) slots.push({name:r.name, shift:s.shift, cap:s.cap, hat:r.hat});
+    });
+  });
+  var added = 0;
+  slots.forEach(function(s){
+    var already = activeSlots.some(function(a){ return a.name===s.name && a.shift===s.shift; });
+    if(already) return;
+    activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
+    added++;
+  });
+  onSetupDateChange();
+  renderSetup();
+  renderSetupApproved();
+  showAlert('Loaded ' + added + ' slot' + (added!==1?'s':'') + ' to dashboard.', 'success');
 }
 
 function addSinglePreviewSlot(name, shift, cap, hat){
@@ -2996,6 +3028,184 @@ function renderSimulateMigrationStatus(){
       '<button class="btn btn-primary" style="font-size:13px;padding:10px 18px" onclick="migrateSchedule2026()">&#9654; Migrate SCHEDULE_2026 to Request Records</button>';
   }
 }
+
+// ============================================================
+// TEST DATA GENERATOR
+// ============================================================
+var _tgenCheckedInIds = []; // track generated check-ins so we can clear them
+
+function tgenCheckIn(){
+  var shift = (document.getElementById('tgen-shift')||{}).value || '8am';
+  var count = Math.min(100, parseInt((document.getElementById('tgen-count')||{}).value)||10);
+  var result = document.getElementById('tgen-checkin-result');
+
+  // Pick random juniors not already checked in
+  var available = juniors.filter(function(j){ return !j.inactive && !j.checkedIn; });
+  if(!available.length){ if(result) result.textContent = 'No available juniors to check in.'; return; }
+
+  var toCheckIn = [];
+  var shuffled = available.slice().sort(function(){ return Math.random()-.5; });
+  for(var i = 0; i < Math.min(count, shuffled.length); i++) toCheckIn.push(shuffled[i]);
+
+  toCheckIn.forEach(function(j){
+    checkInOrder++;
+    j.checkedIn        = true;
+    j.order            = checkInOrder;
+    j.hasHat           = false;
+    j.notes            = '';
+    j.checkInShift     = shift;
+    j.checkInDate      = currentDate;
+    j.checkInTimestamp = Date.now();
+    j.assignment       = null;
+    clockedOut[j.id]   = false;
+    delete clockedOut[j.id];
+    _tgenCheckedInIds.push(j.id);
+  });
+
+  _lastSavedHash = '';
+  saveStateNow();
+  renderOfficer();
+  renderBoard();
+  if(renderCheckins) renderCheckins();
+  if(result) result.textContent = '&#10003; Checked in ' + toCheckIn.length + ' juniors for ' + shift + '.';
+  showAlert('Test: checked in ' + toCheckIn.length + ' juniors for ' + shift, 'success');
+}
+
+function tgenClearCheckIns(){
+  if(!confirm('Clear all test check-ins? This resets everyone currently checked in.')) return;
+  juniors.forEach(function(j){
+    if(!j.checkedIn) return;
+    j.checkedIn        = false;
+    j.assignment       = null;
+    j.checkInShift     = '';
+    j.checkInDate      = '';
+    j.checkInTimestamp = 0;
+    j.order            = 0;
+    clockedOut[j.id]   = false;
+    delete clockedOut[j.id];
+  });
+  activeSlots.forEach(function(s){ s.assigned = []; });
+  checkInOrder = 0;
+  _tgenCheckedInIds = [];
+  _lastSavedHash = '';
+  saveStateNow();
+  renderOfficer();
+  renderBoard();
+  if(renderCheckins) renderCheckins();
+  var result = document.getElementById('tgen-checkin-result');
+  if(result) result.textContent = 'All check-ins cleared.';
+  showAlert('Test check-ins cleared.', 'info');
+}
+
+var _tgenRequestIds = []; // track generated request IDs so we can clear them
+
+function tgenRequests(){
+  var count  = Math.min(50, parseInt((document.getElementById('tgen-req-count')||{}).value)||5);
+  var status = (document.getElementById('tgen-req-status')||{}).value || 'pending';
+  var result = document.getElementById('tgen-req-result');
+
+  var committeeNames = Object.keys(CD);
+  if(!committeeNames.length) committeeNames = ['Agriculture Education','Horse Show','Mutton Bustin','Rodeo','Transportation'];
+
+  var shifts = ['8am','12pm','4pm'];
+  var locations = ['Gate 1','Gate 3','Main Arena','South Hall','North Barn','Livestock Pavilion','Rodeo Arena','Welcome Center'];
+  var duties = [
+    'Assist guests with directions and seating',
+    'Help with livestock check-in and management',
+    'Support vendors and exhibitors',
+    'Crowd control and safety monitoring',
+    'Registration desk assistance',
+    'Parking lot direction and management',
+    'Junior activities coordination',
+    'Stage and equipment setup assistance'
+  ];
+
+  var showDates = Object.keys(SCHEDULE_2026).sort();
+  if(!showDates.length){
+    // Fallback dates
+    for(var d = 2; d <= 20; d++){
+      showDates.push('2026-03-' + String(d).padStart(2,'0'));
+    }
+  }
+
+  var statuses = ['pending','approved','rejected'];
+  var generated = 0;
+
+  for(var i = 0; i < count; i++){
+    var name = committeeNames[Math.floor(Math.random() * committeeNames.length)];
+    var cd   = CD[name] || {};
+    var sh   = shifts[Math.floor(Math.random() * shifts.length)];
+    var date = showDates[Math.floor(Math.random() * showDates.length)];
+    var cap  = 2 + Math.floor(Math.random() * 8);
+    var stat = status === 'mixed' ? statuses[Math.floor(Math.random() * statuses.length)] : status;
+
+    var req = {
+      id: Date.now() + i + Math.floor(Math.random() * 100),
+      submittedAt: new Date(Date.now() - Math.random() * 7 * 24 * 3600000).toISOString(),
+      status: stat,
+      source: 'test_generated',
+      name: name + ' (TEST)',
+      chair: cd.chair || 'Test Chair',
+      chairPhone: cd.cp || '713-555-' + String(1000 + Math.floor(Math.random()*9000)),
+      chairEmail: 'test@example.com',
+      liaison: cd.liaison || 'Test Liaison',
+      liaisonPhone: cd.lp || '713-555-' + String(1000 + Math.floor(Math.random()*9000)),
+      liaisonEmail: 'liaison@example.com',
+      location: locations[Math.floor(Math.random() * locations.length)],
+      duties: duties[Math.floor(Math.random() * duties.length)],
+      notes: '',
+      hat: Math.random() > 0.7,
+      highPriority: false,
+      virtual: false,
+      all20: false,
+      shifts: [{date: date, shift: sh, cap: cap, all20: false, preshow: false}],
+      schedulingNotes: '',
+      virtualHoursLogged: {}
+    };
+    committeeRequests.unshift(req);
+    _tgenRequestIds.push(req.id);
+    generated++;
+  }
+
+  _lastSavedHash = '';
+  // Save all generated requests to Neon in one batch
+  var chunk = committeeRequests.filter(function(r){ return _tgenRequestIds.indexOf(r.id) >= 0; });
+  if(DB_AVAILABLE){
+    fetch('/.netlify/functions/state', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
+      body: JSON.stringify({committeeRequests: chunk, batchMode: true})
+    }).then(function(){ renderRequests(); updateReqFilterSummary(); })
+    .catch(function(e){ console.warn('tgenRequests save error:', e); });
+  }
+  renderRequests();
+  if(result) result.textContent = '&#10003; Generated ' + generated + ' test requests.';
+  showAlert('Generated ' + generated + ' test requests.', 'success');
+}
+
+function tgenClearRequests(){
+  if(!_tgenRequestIds.length){ 
+    showAlert('No test requests to clear (only clears ones generated this session).', 'info'); 
+    return; 
+  }
+  if(!confirm('Delete ' + _tgenRequestIds.length + ' generated test requests?')) return;
+  var toDelete = _tgenRequestIds.slice();
+  committeeRequests = committeeRequests.filter(function(r){ return toDelete.indexOf(r.id) < 0; });
+  _tgenRequestIds = [];
+  // Delete from Neon
+  if(DB_AVAILABLE){
+    fetch('/.netlify/functions/state', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
+      body: JSON.stringify({deleteIds: toDelete, batchMode: true})
+    }).catch(function(e){ console.warn('tgenClear error:', e); });
+  }
+  renderRequests();
+  var result = document.getElementById('tgen-req-result');
+  if(result) result.textContent = 'Test requests cleared.';
+  showAlert('Test requests cleared.', 'info');
+}
+
 
 function renderSetup(){
   // Initialize sim-date picker to today if not already set
@@ -3789,7 +3999,7 @@ function submitRequest(){
   }
 
   var req = {
-    id: Date.now() + Math.floor(Math.random() * 1000), // epoch ms + jitter — unique across devices
+    id: (++requestIdCounter),
     submittedAt: new Date().toISOString(),
     status: 'pending',
     name:name, chair:chair, chairPhone:chairPhone, chairEmail:chairEmail,
@@ -4201,6 +4411,8 @@ function refreshRequests(){
       if(data && data.committeeRequests !== undefined){
         // Always update — even if empty, so deletions are reflected
         committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
+        var maxId = committeeRequests.reduce(function(m,r){ return Math.max(m, r.id||0); }, 0);
+        if(maxId >= requestIdCounter) requestIdCounter = maxId + 1;
         console.log('[JRC] first request:', committeeRequests[0] ? committeeRequests[0].name + ' / ' + committeeRequests[0].status : 'none');
       }
       renderRequests();
@@ -5289,6 +5501,9 @@ function _applyState(data){
   if(state.loginLog)  loginLog  = state.loginLog;
   if(data.committeeRequests && data.committeeRequests.length){
     committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
+    // Seed counter above highest existing ID so new requests never collide
+    var maxId = committeeRequests.reduce(function(m,r){ return Math.max(m, r.id||0); }, 0);
+    if(maxId >= requestIdCounter) requestIdCounter = maxId + 1;
   }
   if(state.clockedOut)    clockedOut    = state.clockedOut;
   if(state.onShiftJuniors) onShiftJuniors = new Set(state.onShiftJuniors);
