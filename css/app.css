@@ -345,6 +345,7 @@ select.finput{cursor:pointer}
   padding:8px 10px;
   border-bottom:1px solid rgba(255,255,255,.1);
   min-height:0;
+  scroll-behavior:smooth;
 }
 
 /* Assigned section — takes lower portion */
@@ -353,6 +354,7 @@ select.finput{cursor:pointer}
   overflow-y:auto;
   padding:8px 10px;
   min-height:0;
+  scroll-behavior:smooth;
 }
 
 /* Out-on-shift column — takes remaining width */
@@ -385,10 +387,10 @@ select.finput{cursor:pointer}
 
 /* Name rows — compact for density */
 .board-name{
-  font-size:11px;
-  padding:1px 0;
+  font-size:13px;
+  padding:2px 0;
   color:#fff;
-  line-height:1.3;
+  line-height:1.25;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
@@ -415,11 +417,11 @@ select.finput{cursor:pointer}
 .board-out-inner.cols3{column-count:3}
 .board-out-inner.cols4{column-count:4}
 
-.board-committee-group{break-inside:avoid;margin-bottom:6px}
+.board-committee-group{break-inside:avoid;margin-bottom:4px}
 .board-committee-label{
-  font-size:8px;font-weight:700;
-  text-transform:uppercase;letter-spacing:.07em;
-  color:var(--orange);margin-bottom:1px;
+  font-size:9px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.06em;
+  color:var(--orange);margin-bottom:0;
 }
 .board-committee-label.late{color:#FF6B6B}
 .board-shift-divider{
@@ -455,11 +457,11 @@ select.finput{cursor:pointer}
 
 /* TV names — bigger for readability across room */
 .tv-mode .board-name{
-  font-size:clamp(11px,1.1vw,16px);
-  padding:clamp(1px,.18vh,3px) 0;
+  font-size:clamp(13px,1.2vw,18px);
+  padding:clamp(1px,.2vh,3px) 0;
 }
 .tv-mode .board-col-hdr{font-size:clamp(8px,.8vw,11px)}
-.tv-mode .board-committee-label{font-size:clamp(7px,.7vw,10px)}
+.tv-mode .board-committee-label{font-size:clamp(9px,.85vw,12px)}
 .tv-mode .board-out-inner.cols1{column-count:1}
 .tv-mode .board-out-inner.cols2{column-count:2}
 .tv-mode .board-out-inner.cols3{column-count:3}
