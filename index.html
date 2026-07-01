@@ -395,6 +395,88 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- SETTINGS / DATE SIMULATOR -->
 <div id="panel-simulate" class="panel">
+
+  <!-- SHOW DAY SIMULATOR -->
+  <div class="card" style="margin-bottom:16px;border:2px solid #2E7D32">
+    <div class="section-lbl" style="margin-bottom:4px;color:#2E7D32">&#9654; Show Day Simulator</div>
+    <div style="font-size:12px;color:#667788;margin-bottom:12px">Simulates a real show day. Set the app time to 7:30am and click Start — juniors trickle in over 5 minutes. Change sim time to 11:20am and clock-outs begin. You handle assignments manually.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <div style="font-size:11px;color:#667788;margin-bottom:3px">Juniors to check in</div>
+        <input type="number" class="finput" id="sim-junior-count" value="30" min="5" max="80" style="font-size:12px">
+      </div>
+      <div>
+        <div style="font-size:11px;color:#667788;margin-bottom:3px">Shift</div>
+        <select class="finput" id="sim-shift-sel" style="font-size:12px">
+          <option value="8am">8:00 AM</option>
+          <option value="12pm">12:00 PM</option>
+          <option value="4pm">4:00 PM</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <button class="btn btn-sm" style="background:#2E7D32;color:#fff;border-color:#2E7D32;flex:1" onclick="simStartCheckIns()">&#9654; Start Check-ins</button>
+      <button class="btn btn-sm" style="background:#1565C0;color:#fff;border-color:#1565C0;flex:1" onclick="simStartClockOuts()">&#9650; Start Clock-outs</button>
+      <button class="btn btn-sm btn-danger" onclick="simStop()">&#9646;&#9646; Stop</button>
+    </div>
+    <div id="sim-status" style="font-size:12px;color:#667788;min-height:18px"></div>
+    <div id="sim-progress" style="margin-top:6px;height:4px;background:#E0E0E0;border-radius:2px;display:none">
+      <div id="sim-progress-bar" style="height:100%;background:#2E7D32;border-radius:2px;width:0%;transition:width .3s"></div>
+    </div>
+  </div>
+
+  <!-- TEST DATA GENERATOR -->
+  <div class="card" style="margin-bottom:16px;border:2px solid #5C6BC0">
+    <div class="section-lbl" style="margin-bottom:4px;color:#5C6BC0">&#9881; Test Data Generator</div>
+    <div style="font-size:12px;color:#667788;margin-bottom:14px">Quickly generate fake data for testing. All generated data is real and syncs to Neon — use Clear buttons to clean up after.</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <!-- Bulk check-in -->
+      <div style="background:#F8F9FA;border-radius:8px;padding:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">&#10003; Bulk Check-in Juniors</div>
+        <div style="margin-bottom:8px">
+          <div style="font-size:11px;color:#667788;margin-bottom:3px">Shift</div>
+          <select class="finput" id="tgen-shift" style="font-size:12px">
+            <option value="8am">8:00 AM</option>
+            <option value="12pm">12:00 PM</option>
+            <option value="4pm">4:00 PM</option>
+          </select>
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:#667788;margin-bottom:3px">How many juniors</div>
+          <input type="number" class="finput" id="tgen-count" value="10" min="1" max="100" style="font-size:12px;max-width:80px">
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" style="background:#5C6BC0;color:#fff;border-color:#5C6BC0;flex:1" onclick="tgenCheckIn()">&#9654; Check In</button>
+          <button class="btn btn-sm btn-danger" onclick="tgenClearCheckIns()">Clear</button>
+        </div>
+        <div id="tgen-checkin-result" style="font-size:11px;color:#667788;margin-top:6px"></div>
+      </div>
+
+      <!-- Fake requests -->
+      <div style="background:#F8F9FA;border-radius:8px;padding:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">&#128196; Generate Fake Requests</div>
+        <div style="margin-bottom:8px">
+          <div style="font-size:11px;color:#667788;margin-bottom:3px">Number of requests</div>
+          <input type="number" class="finput" id="tgen-req-count" value="5" min="1" max="50" style="font-size:12px;max-width:80px">
+        </div>
+        <div style="margin-bottom:10px">
+          <div style="font-size:11px;color:#667788;margin-bottom:3px">Status</div>
+          <select class="finput" id="tgen-req-status" style="font-size:12px">
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="mixed">Mixed (random)</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" style="background:#5C6BC0;color:#fff;border-color:#5C6BC0;flex:1" onclick="tgenRequests()">&#9654; Generate</button>
+          <button class="btn btn-sm btn-danger" onclick="tgenClearRequests()">Clear</button>
+        </div>
+        <div id="tgen-req-result" style="font-size:11px;color:#667788;margin-top:6px"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="card">
     <div class="section-lbl" style="margin-bottom:8px">Set Date &amp; Time</div>
     <div style="font-size:13px;color:#667788;margin-bottom:16px">Set the current date and time for the app. The clock advances normally from whatever you set.</div>
