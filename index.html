@@ -417,11 +417,21 @@ if(window.location.search.indexOf('partner=1') >= 0){
     <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
       <button class="btn btn-sm" style="background:#2E7D32;color:#fff;border-color:#2E7D32;flex:1" onclick="simStartCheckIns()">&#9654; Start Check-ins</button>
       <button class="btn btn-sm" style="background:#1565C0;color:#fff;border-color:#1565C0;flex:1" onclick="simStartClockOuts()">&#9650; Start Clock-outs</button>
-      <button class="btn btn-sm btn-danger" onclick="simStop()">&#9646;&#9646; Stop</button>
+      <button class="btn btn-sm btn-danger" onclick="simStopAll()">&#9646;&#9646; Stop All</button>
     </div>
-    <div id="sim-status" style="font-size:12px;color:#667788;min-height:18px"></div>
-    <div id="sim-progress" style="margin-top:6px;height:4px;background:#E0E0E0;border-radius:2px;display:none">
-      <div id="sim-progress-bar" style="height:100%;background:#2E7D32;border-radius:2px;width:0%;transition:width .3s"></div>
+    <!-- Check-in progress -->
+    <div style="margin-bottom:6px">
+      <div id="sim-status-ci" style="font-size:11px;color:#2E7D32;min-height:14px"></div>
+      <div id="sim-progress-ci" style="height:3px;background:#E0E0E0;border-radius:2px;display:none;margin-top:2px">
+        <div id="sim-progress-bar-ci" style="height:100%;background:#2E7D32;border-radius:2px;width:0%;transition:width .3s"></div>
+      </div>
+    </div>
+    <!-- Clock-out progress -->
+    <div>
+      <div id="sim-status-co" style="font-size:11px;color:#1565C0;min-height:14px"></div>
+      <div id="sim-progress-co" style="height:3px;background:#E0E0E0;border-radius:2px;display:none;margin-top:2px">
+        <div id="sim-progress-bar-co" style="height:100%;background:#1565C0;border-radius:2px;width:0%;transition:width .3s"></div>
+      </div>
     </div>
   </div>
 
