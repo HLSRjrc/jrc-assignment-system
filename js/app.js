@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3204,6 +3204,159 @@ function tgenClearRequests(){
   var result = document.getElementById('tgen-req-result');
   if(result) result.textContent = 'Test requests cleared.';
   showAlert('Test requests cleared.', 'info');
+}
+
+
+// ============================================================
+// SHOW DAY SIMULATOR
+// ============================================================
+var _simTimers     = [];   // all active setTimeouts so we can cancel
+var _simRunning    = false;
+
+function simStop(){
+  _simTimers.forEach(function(t){ clearTimeout(t); });
+  _simTimers = [];
+  _simRunning = false;
+  var st = document.getElementById('sim-status');
+  var sp = document.getElementById('sim-progress');
+  if(st) st.textContent = 'Stopped.';
+  if(sp) sp.style.display = 'none';
+  showAlert('Simulator stopped.', 'info');
+}
+
+function simStatus(msg){ var el=document.getElementById('sim-status'); if(el) el.textContent=msg; }
+
+function simProgress(pct){
+  var bar = document.getElementById('sim-progress-bar');
+  var wrap = document.getElementById('sim-progress');
+  if(wrap) wrap.style.display = 'block';
+  if(bar) bar.style.width = Math.min(100,pct) + '%';
+}
+
+function simStartCheckIns(){
+  if(_simRunning){ showAlert('Simulator already running — stop it first.', 'warn'); return; }
+  var count  = Math.min(80, Math.max(5, parseInt(document.getElementById('sim-junior-count').value)||30));
+  var shift  = document.getElementById('sim-shift-sel').value || '8am';
+
+  // Pick random available juniors
+  var available = juniors.filter(function(j){ return !j.inactive && !j.checkedIn; });
+  if(available.length < count){
+    showAlert('Only ' + available.length + ' juniors available — using all of them.', 'info');
+    count = available.length;
+  }
+  if(!count){ showAlert('No juniors available to check in.', 'warn'); return; }
+
+  var selected = available.slice().sort(function(){ return Math.random()-.5; }).slice(0, count);
+
+  _simRunning = true;
+  simProgress(0);
+  simStatus('Trickling in ' + count + ' juniors over 5 minutes...');
+
+  // Spread check-ins over 5 minutes (300,000ms) with random jitter
+  // Generate random intervals that sum to ~300s
+  var totalMs = 300000;
+  var delays  = [];
+  var used    = 0;
+  for(var i = 0; i < selected.length; i++){
+    var remaining = selected.length - i;
+    var maxDelay  = (totalMs - used) / remaining * 1.8;
+    var d = i === 0 ? Math.random() * 5000 : Math.random() * maxDelay;
+    used += d;
+    delays.push(Math.round(used));
+  }
+  // Sort delays
+  delays.sort(function(a,b){ return a-b; });
+
+  var done = 0;
+  selected.forEach(function(jr, idx){
+    var t = setTimeout(function(){
+      if(!_simRunning) return;
+      checkInOrder++;
+      jr.checkedIn        = true;
+      jr.order            = checkInOrder;
+      jr.hasHat           = false;
+      jr.notes            = '';
+      jr.checkInShift     = shift;
+      jr.checkInDate      = currentDate;
+      jr.checkInTimestamp = Date.now();
+      jr.assignment       = null;
+      clockedOut[jr.id]   = false;
+      delete clockedOut[jr.id];
+      done++;
+      simProgress(done / selected.length * 100);
+      simStatus(done + ' / ' + selected.length + ' checked in...');
+      renderOfficer();
+      renderBoard();
+      if(renderCheckins) renderCheckins();
+      if(done === selected.length){
+        _lastSavedHash = '';
+        saveStateNow();
+        _simRunning = false;
+        simStatus('&#10003; Done — ' + done + ' juniors checked in for ' + shift + '. Assign them on the dashboard.');
+        showAlert(done + ' juniors checked in!', 'success');
+      }
+    }, delays[idx]);
+    _simTimers.push(t);
+  });
+}
+
+function simStartClockOuts(){
+  if(_simRunning){ showAlert('Simulator already running — stop it first.', 'warn'); return; }
+
+  // Clock out all juniors currently marked as "on-shift" (sent out)
+  var onShift = juniors.filter(function(j){
+    return j.checkedIn && !clockedOut[j.id] && getJuniorStatus(j) === 'on-shift';
+  });
+
+  if(!onShift.length){
+    showAlert('No juniors currently out on shift to clock out.', 'warn');
+    return;
+  }
+
+  _simRunning = true;
+  simProgress(0);
+  simStatus('Clocking out ' + onShift.length + ' juniors over ~5 minutes...');
+
+  // Stagger clock-outs over 5 minutes with realistic clustering
+  var totalMs = 300000;
+  var shuffled = onShift.slice().sort(function(){ return Math.random()-.5; });
+  var delays = [];
+  var used = 0;
+  for(var i = 0; i < shuffled.length; i++){
+    var remaining = shuffled.length - i;
+    var d = i === 0 ? Math.random()*15000 : Math.random() * ((totalMs - used) / remaining * 1.6);
+    used += d;
+    delays.push(Math.round(used));
+  }
+  delays.sort(function(a,b){ return a-b; });
+
+  var done = 0;
+  shuffled.forEach(function(jr, idx){
+    var t = setTimeout(function(){
+      if(!_simRunning) return;
+      // Clock them out — remove from slot, mark clockedOut
+      clockedOut[jr.id] = true;
+      activeSlots.forEach(function(s){
+        var i = s.assigned.indexOf(jr.id);
+        if(i >= 0) s.assigned.splice(i, 1);
+      });
+      onShiftJuniors.delete(jr.id);
+      done++;
+      simProgress(done / shuffled.length * 100);
+      simStatus(done + ' / ' + shuffled.length + ' clocked out...');
+      renderOfficer();
+      renderBoard();
+      if(renderCheckins) renderCheckins();
+      if(done === shuffled.length){
+        _lastSavedHash = '';
+        saveStateNow();
+        _simRunning = false;
+        simStatus('&#10003; Done — all ' + done + ' juniors clocked out.');
+        showAlert(done + ' juniors clocked out!', 'success');
+      }
+    }, delays[idx]);
+    _simTimers.push(t);
+  });
 }
 
 
