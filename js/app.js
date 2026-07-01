@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1427,15 +1427,19 @@ function autoAssign(){
   pool.forEach(function(jr){
     var stillUnassigned = pool.filter(function(j){ return !j.assignment; });
 
-    // Rule 1 (no solo): if last person left, only assign if there's a solo to complete
+    // Rule 1 (no solo): if last person left, only block if every open slot has capacity 2
+    // and none have exactly 1 already (no pair to complete). Slots with capacity > 2 are fine to enter alone.
     if(stillUnassigned.length === 1 && stillUnassigned[0].id === jr.id){
-      var canCompleteSolo = activeSlots.some(function(s){
+      var openForJr = activeSlots.filter(function(s){
         return s.shift === currentShift &&
-               s.assigned.length === 1 &&
                s.assigned.length < s.capacity &&
                (jr.hasHat || !s.hat);
       });
-      if(!canCompleteSolo){ skipped++; return; }
+      // Only skip if ALL open slots have capacity exactly 2 AND assigned.length === 0 (would be alone)
+      var wouldBeTrueSolo = openForJr.length > 0 && openForJr.every(function(s){
+        return s.capacity === 2 && s.assigned.length === 0;
+      });
+      if(wouldBeTrueSolo){ skipped++; return; }
     }
 
     var pick = pickSlot(jr, pool);
