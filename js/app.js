@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2281,13 +2281,16 @@ function onSetupDateChange(){
   // Gather all slots for this date
   var slots = SCHEDULE_2026[date] || [];
   // Also pull from approved 2027 requests for this specific date
-  committeeRequests.filter(function(r){
-    return r.status==='approved' && r.shifts.some(function(s){ return s.date===date || s.all20; });
-  }).forEach(function(r){
-    r.shifts.filter(function(s){ return s.date===date || s.all20; }).forEach(function(s){
-      // avoid duplicates if same committee/shift already in slots
+  var approvedForDate = committeeRequests.filter(function(r){
+    return r.status==='approved' && !r.virtual &&
+      r.shifts && r.shifts.some(function(s){ return !s.virtual && (s.date===date || s.all20); });
+  });
+  console.log('[JRC] Setup date', date, '— approved requests matching:', approvedForDate.length);
+  approvedForDate.forEach(function(r){
+    r.shifts.filter(function(s){ return !s.virtual && (s.date===date || s.all20); }).forEach(function(s){
+      console.log('[JRC]   slot:', r.name, 'shift:', s.shift, 'cap:', s.cap, 'date:', s.date);
       var exists = slots.some(function(x){ return x.name===r.name && x.shift===s.shift; });
-      if(!exists) slots.push({name:r.name, shift:s.shift||s.shiftKey||'8am', cap:s.cap||s.capacity||2, hat:r.hat||false, isNew:true});
+      if(!exists) slots.push({name:r.name, shift:s.shift||'8am', cap:s.cap||s.capacity||2, hat:r.hat||false, isNew:true});
     });
   });
 
