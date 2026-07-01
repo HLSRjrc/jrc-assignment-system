@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2287,7 +2287,7 @@ function onSetupDateChange(){
     r.shifts.filter(function(s){ return s.date===date || s.all20; }).forEach(function(s){
       // avoid duplicates if same committee/shift already in slots
       var exists = slots.some(function(x){ return x.name===r.name && x.shift===s.shift; });
-      if(!exists) slots.push({name:r.name, shift:s.shift, cap:s.cap, hat:r.hat, isNew:true});
+      if(!exists) slots.push({name:r.name, shift:s.shift||s.shiftKey||'8am', cap:s.cap||s.capacity||2, hat:r.hat||false, isNew:true});
     });
   });
 
@@ -3393,7 +3393,24 @@ function activateShift(){
   }
 
   var dateEl = document.getElementById('setup-date');
-  currentDate = (dateEl ? dateEl.value : '') || currentDate;
+  var selectedDate = (dateEl ? dateEl.value : '') || currentDate;
+  currentDate = selectedDate;
+
+  // If no slots loaded yet, auto-load all approved slots for this date
+  if(activeSlots.length === 0 && selectedDate){
+    var autoSlots = SCHEDULE_2026[selectedDate] ? SCHEDULE_2026[selectedDate].slice() : [];
+    committeeRequests.filter(function(r){
+      return r.status==='approved' && r.shifts.some(function(s){ return s.date===selectedDate||s.all20; });
+    }).forEach(function(r){
+      r.shifts.filter(function(s){ return (s.date===selectedDate||s.all20) && !s.virtual; }).forEach(function(s){
+        var exists = autoSlots.some(function(x){ return x.name===r.name && x.shift===s.shift; });
+        if(!exists) autoSlots.push({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false});
+      });
+    });
+    autoSlots.forEach(function(s){
+      activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
+    });
+  }
 
   // Auto-detect active shift: use whichever shift has the most loaded slots
   var shiftCounts = {'8am':0, '12pm':0, '4pm':0};
