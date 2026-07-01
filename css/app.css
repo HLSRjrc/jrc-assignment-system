@@ -305,30 +305,172 @@ select.finput{cursor:pointer}
 
 
 /* STATUS BOARD */
-.board-wrap{padding:0;background:var(--navy);min-height:100vh;color:#fff}
-.board-header{padding:16px 24px 12px;border-bottom:3px solid var(--orange);display:flex;align-items:center;justify-content:space-between}
-.board-title{font-size:20px;font-weight:700;color:#fff;letter-spacing:.04em}
-.board-clock{font-size:14px;color:#99BBDD;font-weight:600}
-.board-body{padding:16px}
-.board-shift{margin-bottom:20px;background:rgba(255,255,255,.07);border-radius:10px;overflow:hidden}
-.board-shift-header{padding:10px 16px;background:rgba(255,255,255,.1);display:flex;align-items:center;gap:10px}
-.board-shift-label{font-size:14px;font-weight:700;color:#fff;text-transform:uppercase;letter-spacing:.08em}
-.board-shift-count{font-size:12px;color:#99BBDD}
-.board-cols{display:grid;grid-template-columns:repeat(3,1fr);gap:0}
-.board-col{padding:10px 12px;border-right:1px solid rgba(255,255,255,.08)}
-.board-col:last-child{border-right:none}
-.board-col-hdr{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.15)}
+/* ═══════════════════════════════════════════════════════
+   STATUS BOARD — TV-optimized for 80+ juniors
+   Layout: [Waiting Panel] | [Out on Shift — wide]
+   ?tv=1 URL param activates full-screen mode
+   ═══════════════════════════════════════════════════════ */
+
+/* Outer shell */
+.board-wrap{padding:0;background:var(--navy);min-height:100vh;color:#fff;display:flex;flex-direction:column}
+
+/* Header */
+.board-header{padding:10px 20px 8px;border-bottom:3px solid var(--orange);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.board-title{font-size:18px;font-weight:700;color:#fff;letter-spacing:.04em}
+.board-clock{font-size:13px;color:#99BBDD;font-weight:600}
+
+/* Body: waiting panel (narrow left) + out-on-shift (wide right) */
+.board-body{
+  display:grid;
+  grid-template-columns:220px 1fr;  /* fixed narrow waiting | flexible out */
+  gap:0;
+  flex:1;
+  min-height:0;
+  overflow:hidden;
+}
+
+/* Waiting panel — stacks CI + Assigned vertically */
+.board-waiting-col{
+  border-right:2px solid rgba(255,255,255,.12);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  min-height:0;
+}
+
+/* CI section — takes upper portion */
+.board-ci-section{
+  flex:1;
+  overflow-y:auto;
+  padding:8px 10px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+  min-height:0;
+}
+
+/* Assigned section — takes lower portion */
+.board-ass-section{
+  flex:1;
+  overflow-y:auto;
+  padding:8px 10px;
+  min-height:0;
+}
+
+/* Out-on-shift column — takes remaining width */
+.board-out-col{
+  overflow-y:auto;
+  padding:8px 12px;
+  min-height:0;
+}
+
+/* Column header labels */
+.board-col-hdr{
+  font-size:9px;
+  font-weight:700;
+  text-transform:uppercase;
+  letter-spacing:.1em;
+  margin-bottom:5px;
+  padding-bottom:4px;
+  border-bottom:1px solid rgba(255,255,255,.15);
+  position:sticky;
+  top:0;
+  background:var(--navy);
+  z-index:1;
+}
 .board-col-hdr.ci{color:#99BBDD}
 .board-col-hdr.assigned{color:#F0C040}
 .board-col-hdr.out{color:#5CDB95}
-.board-col-hdr.done{color:#8899AA}
-.board-name{font-size:13px;padding:3px 0;color:#fff;border-bottom:1px solid rgba(255,255,255,.05)}
-.board-name.out{color:#5CDB95;font-weight:600}
 .board-col-hdr.pending{color:#F5A623}
-.board-name.pending{color:#F5A623;opacity:.85;font-style:italic}
-.board-cols.four{grid-template-columns:repeat(4,1fr)}
+.board-col-hdr.done{color:#8899AA}
+.board-col-gap{height:8px}
+
+/* Name rows — compact for density */
+.board-name{
+  font-size:11px;
+  padding:1px 0;
+  color:#fff;
+  line-height:1.3;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.board-name.out{color:#5CDB95;font-weight:600}
+.board-name.pending{color:#F5A623;font-style:italic}
 .board-name.done{color:#667788;text-decoration:line-through}
-.board-empty{font-size:11px;color:rgba(255,255,255,.3);font-style:italic;padding:4px 0}
+.board-name.late{color:#FF6B6B;font-weight:700}
+.board-empty{font-size:10px;color:rgba(255,255,255,.3);font-style:italic;padding:2px 0}
+
+/* Shift pill tags */
+.board-shift-pill{
+  display:inline-block;
+  font-size:8px;font-weight:700;
+  padding:0 4px;border-radius:6px;
+  color:#001F40;margin-right:3px;flex-shrink:0;
+  vertical-align:middle;
+}
+
+/* Out-on-shift: committee groups in CSS columns */
+.board-out-inner{column-gap:10px}
+.board-out-inner.cols1{column-count:1}
+.board-out-inner.cols2{column-count:2}
+.board-out-inner.cols3{column-count:3}
+.board-out-inner.cols4{column-count:4}
+
+.board-committee-group{break-inside:avoid;margin-bottom:6px}
+.board-committee-label{
+  font-size:8px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.07em;
+  color:var(--orange);margin-bottom:1px;
+}
+.board-committee-label.late{color:#FF6B6B}
+.board-shift-divider{
+  font-size:8px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.1em;color:#99BBDD;
+  margin:6px 0 3px;padding-bottom:2px;
+  border-bottom:1px solid rgba(255,255,255,.12);
+  break-after:avoid;
+}
+.board-shift-divider.late{color:#FF6B6B}
+
+/* ── TV MODE (?tv=1) ─────────────────────────────────── */
+.tv-mode body,.tv-mode html{overflow:hidden;height:100%}
+.tv-mode .board-wrap{height:100vh;overflow:hidden}
+.tv-mode #main-header,.tv-mode #logout-wrap,.tv-mode #logout-wrap-inner,
+.tv-mode .tab-bar,.tv-mode #tab-bar{display:none !important}
+.tv-mode .app{padding:0 !important;max-width:100% !important}
+.tv-mode #main-app{padding:0 !important}
+.tv-mode .panel{padding:0 !important}
+
+/* TV header — large clock */
+.tv-mode .board-header{padding:10px 28px 8px}
+.tv-mode .board-title{font-size:clamp(18px,2vw,28px)}
+.tv-mode #board-date-lbl{font-size:clamp(12px,1.2vw,16px)}
+.tv-mode #board-clock{font-size:clamp(24px,2.8vw,44px) !important;font-weight:700}
+
+/* TV body — exact viewport height */
+.tv-mode .board-body{
+  height:calc(100vh - 58px);
+  grid-template-columns:clamp(160px,16vw,240px) 1fr;
+  overflow:hidden;
+}
+
+/* TV names — bigger for readability across room */
+.tv-mode .board-name{
+  font-size:clamp(11px,1.1vw,16px);
+  padding:clamp(1px,.18vh,3px) 0;
+}
+.tv-mode .board-col-hdr{font-size:clamp(8px,.8vw,11px)}
+.tv-mode .board-committee-label{font-size:clamp(7px,.7vw,10px)}
+.tv-mode .board-out-inner.cols1{column-count:1}
+.tv-mode .board-out-inner.cols2{column-count:2}
+.tv-mode .board-out-inner.cols3{column-count:3}
+.tv-mode .board-out-inner.cols4{column-count:4}
+
+/* Mobile fallback — stack vertically */
+@media(max-width:640px){
+  .board-body{grid-template-columns:1fr;overflow-y:auto;height:auto}
+  .board-waiting-col{border-right:none;border-bottom:2px solid rgba(255,255,255,.12);flex-direction:row}
+  .board-ci-section,.board-ass-section{flex:1;border-bottom:none;border-right:1px solid rgba(255,255,255,.1)}
+}
 
 
 /* ============================================================
