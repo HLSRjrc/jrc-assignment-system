@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3040,7 +3040,7 @@ function tgenCheckIn(){
   var result = document.getElementById('tgen-checkin-result');
 
   // Pick random juniors not already checked in
-  var available = juniors.filter(function(j){ return !j.inactive && !j.checkedIn; });
+  var available = juniors.filter(function(j){ return !j.inactive && !j.checkedIn && !clockedOut[j.id]; });
   if(!available.length){ if(result) result.textContent = 'No available juniors to check in.'; return; }
 
   var toCheckIn = [];
@@ -5581,11 +5581,13 @@ function _restoreSimFromLocalStorage(){
     var sim = JSON.parse(simRaw);
     simTimeEnabled = sim.simTimeEnabled || false;
     simDateSet     = sim.simDateSet     || false;
-    if(sim.simTargetEpoch){
-      simTargetEpoch = sim.simTargetEpoch;
-      simTimeOffset  = sim.simTargetEpoch - Date.now();
-    } else {
-      simTimeOffset  = sim.simTimeOffset || 0;
+    if(!_simRunning){
+      if(sim.simTargetEpoch){
+        simTargetEpoch = sim.simTargetEpoch;
+        simTimeOffset  = sim.simTargetEpoch - Date.now();
+      } else {
+        simTimeOffset  = sim.simTimeOffset || 0;
+      }
     }
     if(sim.currentDate)  currentDate  = sim.currentDate;
     if(sim.currentShift) currentShift = sim.currentShift;
@@ -5686,11 +5688,14 @@ function _applyState(data){
   if(state.simDateSet     !== undefined) simDateSet      = state.simDateSet;
   // Recompute simTimeOffset from absolute target epoch so TV/other devices show correct sim time
   if(state.prioritySlots) prioritySlots = state.prioritySlots;
-  if(state.simTargetEpoch){
-    simTargetEpoch = state.simTargetEpoch;
-    simTimeOffset  = state.simTargetEpoch - Date.now();
-  } else if(state.simTimeOffset !== undefined){
-    simTimeOffset  = state.simTimeOffset;
+  // Don't overwrite sim time if simulator is actively running
+  if(!_simRunning){
+    if(state.simTargetEpoch){
+      simTargetEpoch = state.simTargetEpoch;
+      simTimeOffset  = state.simTargetEpoch - Date.now();
+    } else if(state.simTimeOffset !== undefined){
+      simTimeOffset  = state.simTimeOffset;
+    }
   }
 }
 
