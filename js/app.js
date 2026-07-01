@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -230,8 +230,12 @@ document.addEventListener('DOMContentLoaded', function(){
   // TV mode — add ?tv=1 to URL to activate full-screen board layout
   if(window.location.search.indexOf('tv=1') >= 0){
     document.documentElement.classList.add('tv-mode');
-    // Auto-login to status board role so the TV goes straight to the board
-    setTimeout(function(){ loginAs('board'); }, 150);
+    // Wait for state to load from Neon before auto-logging in
+    // initApp() starts polling — once state loads it will render the board
+    initApp();
+    setTimeout(function(){
+      loginAs('board');
+    }, 800); // give state.js time to respond
     return;
   }
 
@@ -5259,7 +5263,7 @@ function renderBoard(){
 
   // Build Checked-In column HTML
   function buildCI(){
-    var h = '<div class="board-waiting-col">';
+    var h = '';
     // Pending age-outs at top
     var pending = ciAll.filter(function(r){ return r.pending; });
     var normal  = ciAll.filter(function(r){ return !r.pending; });
@@ -5284,13 +5288,12 @@ function renderBoard(){
             fmtNameShort(r.j.name) + '</div>';
         });
     }
-    h += '</div>';
     return h;
   }
 
   // Build Assigned column HTML
   function buildAssigned(){
-    var h = '<div class="board-waiting-col">';
+    var h = '';
     h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')</div>';
     if(assAll.length === 0){
       h += '<div class="board-empty">None yet</div>';
@@ -5302,7 +5305,6 @@ function renderBoard(){
             fmtNameShort(r.j.name) + '</div>';
         });
     }
-    h += '</div>';
     return h;
   }
 
@@ -5321,7 +5323,7 @@ function renderBoard(){
     // Total committee groups across all shifts — drives sub-column count
     var totalGroups = 0;
     shifts.forEach(function(sh){ totalGroups += Object.keys(byShift[sh]).length; });
-    var subCols = totalGroups >= 15 ? 'cols3' : totalGroups >= 6 ? 'cols2' : 'cols1';
+    var subCols = window._boardSubCols || (totalGroups >= 20 ? 'cols4' : totalGroups >= 12 ? 'cols3' : totalGroups >= 6 ? 'cols2' : 'cols1');
 
     var h = '<div class="board-out-col">';
     h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + outAll.length + ')</div>';
@@ -5357,6 +5359,19 @@ function renderBoard(){
   // Total active across all shifts for header
   var totalActive = ciAll.filter(function(r){ return !r.pending; }).length + assAll.length + outAll.length;
 
+  // Sub-column count for out-on-shift — scales with committee count
+  var totalCommittees = outAll.length > 0 ? (function(){
+    var seen = {};
+    outAll.forEach(function(r){
+      var c = r.j.assignment || 'Unassigned';
+      seen[c] = true;
+    });
+    return Object.keys(seen).length;
+  })() : 0;
+  var outSubCols = totalCommittees >= 20 ? 'cols4' : totalCommittees >= 12 ? 'cols3' : totalCommittees >= 6 ? 'cols2' : 'cols1';
+  // Pass to buildOut via closure
+  window._boardSubCols = outSubCols;
+
   var html = '<div class="board-wrap">' +
     '<div class="board-header">' +
       '<div>' +
@@ -5365,12 +5380,16 @@ function renderBoard(){
       '</div>' +
       '<div style="text-align:right">' +
         '<div id="board-clock" style="font-size:22px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums"></div>' +
-        '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' juniors active</div>' +
+        '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' active &bull; ' + ciAll.filter(function(r){return !r.pending;}).length + ' in &bull; ' + assAll.length + ' assigned &bull; ' + outAll.length + ' out</div>' +
       '</div>' +
     '</div>' +
     '<div class="board-body">' +
-      buildCI() +
-      buildAssigned() +
+      // Left: waiting panel (CI + Assigned stacked)
+      '<div class="board-waiting-col">' +
+        '<div class="board-ci-section">' + buildCI() + '</div>' +
+        '<div class="board-ass-section">' + buildAssigned() + '</div>' +
+      '</div>' +
+      // Right: out on shift (wide, multi-column)
       buildOut() +
     '</div>' +
   '</div>';
