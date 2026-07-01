@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1389,24 +1389,41 @@ function autoAssign(){
     var eligible = jr.hasHat ? allOpen : allOpen.filter(function(s){ return !s.hat; });
     if(!eligible.length) return null;
 
-    // Rule 2 (history): hard block on most recent committee, soft variety preference
     var last = lastCommittee(jr);
-    var noRepeat = last ? eligible.filter(function(s){ return s.name !== last; }) : eligible;
-    if(noRepeat.length > 0) eligible = noRepeat; // fallback to all if no other options
-
     var visited = visitMap(jr);
 
-    // Rule 4 (high priority): fill HP slots to capacity first
+    // Hat priority: if this junior has a hat AND hat slots need filling, direct them there first
+    // before even considering non-hat slots (ensures hat slots fill before giving hat juniors to non-hat)
+    if(jr.hasHat){
+      var hatOpen = eligible.filter(function(s){ return s.hat; });
+      var nonHatOpen = eligible.filter(function(s){ return !s.hat; });
+      // Count hat juniors not yet assigned
+      var hatJrsLeft = pool.filter(function(j){ return !j.assignment && j.hasHat; }).length;
+      // Hat slots still needing hat juniors
+      var hatSlotsNeed = hatOpen.reduce(function(a,s){ return a + (s.capacity - s.assigned.length); }, 0);
+      // If hat slots need filling and we have enough hat juniors, prioritize hat slots
+      if(hatOpen.length && hatSlotsNeed > 0){
+        // Only route to hat slot if doing so won't leave hat slots short
+        // i.e. hat juniors remaining >= hat spots remaining (with some room to spare)
+        var mustFillHat = hatJrsLeft <= hatSlotsNeed + 2;
+        if(mustFillHat) eligible = hatOpen;
+      }
+    }
+
+    // History: avoid most recent committee
+    var noRepeat = last ? eligible.filter(function(s){ return s.name !== last; }) : eligible;
+    if(noRepeat.length > 0) eligible = noRepeat;
+
+    // High priority slots: fill to capacity first
     var hpOpen = eligible.filter(function(s){ return s.highPriority; });
     if(hpOpen.length){
       var hpAtOne = hpOpen.filter(function(s){ return s.assigned.length === 1; });
       var hpCands = hpAtOne.length ? hpAtOne : hpOpen;
-      hpCands = hatPool(jr, hpCands, pool);
       hpCands.sort(function(a,b){ return (visited[a.name]||0)-(visited[b.name]||0); });
       if(hpCands.length) return hpCands[0];
     }
 
-    // Rules 1+3 (no-solo + even fill): slots at 1 first, then min fill
+    // Even fill: slots at 1 first (give everyone their first person), then min fill
     var regular = eligible.filter(function(s){ return !s.highPriority; });
     if(!regular.length) regular = eligible;
 
@@ -1414,10 +1431,7 @@ function autoAssign(){
     var minFill = regular.reduce(function(m,s){ return Math.min(m, s.assigned.length); }, Infinity);
     var cands = atOne.length ? atOne : regular.filter(function(s){ return s.assigned.length === minFill; });
 
-    // Rule 5 (hat)
-    cands = hatPool(jr, cands, pool);
-
-    // Rule 6 (variety): least visited
+    // Variety: least visited committee
     cands.sort(function(a,b){ return (visited[a.name]||0)-(visited[b.name]||0); });
     var minV = cands.length ? (visited[cands[0].name]||0) : 0;
     var freshest = cands.filter(function(s){ return (visited[s.name]||0) === minV; });
@@ -3214,31 +3228,35 @@ function tgenClearRequests(){
 // ============================================================
 // SHOW DAY SIMULATOR
 // ============================================================
-var _simTimers     = [];   // all active setTimeouts so we can cancel
-var _simRunning    = false;
+var _simCITimers   = [];   // check-in timers
+var _simCOTimers   = [];   // clock-out timers
+var _simCIRunning  = false;
+var _simCORunning  = false;
 
-function simStop(){
-  _simTimers.forEach(function(t){ clearTimeout(t); });
-  _simTimers = [];
-  _simRunning = false;
-  var st = document.getElementById('sim-status');
-  var sp = document.getElementById('sim-progress');
-  if(st) st.textContent = 'Stopped.';
-  if(sp) sp.style.display = 'none';
+function simStopAll(){
+  _simCITimers.forEach(function(t){ clearTimeout(t); }); _simCITimers = []; _simCIRunning = false;
+  _simCOTimers.forEach(function(t){ clearTimeout(t); }); _simCOTimers = []; _simCORunning = false;
+  var ci = document.getElementById('sim-status-ci'); if(ci) ci.textContent = 'Stopped.';
+  var co = document.getElementById('sim-status-co'); if(co) co.textContent = 'Stopped.';
   showAlert('Simulator stopped.', 'info');
 }
+// Keep old simStop as alias
+function simStop(){ simStopAll(); }
 
-function simStatus(msg){ var el=document.getElementById('sim-status'); if(el) el.textContent=msg; }
+function simStatusCI(msg){ var el=document.getElementById('sim-status-ci'); if(el) el.textContent=msg; }
+function simStatusCO(msg){ var el=document.getElementById('sim-status-co'); if(el) el.textContent=msg; }
 
-function simProgress(pct){
-  var bar = document.getElementById('sim-progress-bar');
-  var wrap = document.getElementById('sim-progress');
-  if(wrap) wrap.style.display = 'block';
-  if(bar) bar.style.width = Math.min(100,pct) + '%';
+function simProgressCI(pct){
+  var bar=document.getElementById('sim-progress-bar-ci'),wrap=document.getElementById('sim-progress-ci');
+  if(wrap) wrap.style.display='block'; if(bar) bar.style.width=Math.min(100,pct)+'%';
+}
+function simProgressCO(pct){
+  var bar=document.getElementById('sim-progress-bar-co'),wrap=document.getElementById('sim-progress-co');
+  if(wrap) wrap.style.display='block'; if(bar) bar.style.width=Math.min(100,pct)+'%';
 }
 
 function simStartCheckIns(){
-  if(_simRunning){ showAlert('Simulator already running — stop it first.', 'warn'); return; }
+  if(_simCIRunning){ showAlert('Check-in sim already running.', 'warn'); return; }
   var count  = Math.min(80, Math.max(5, parseInt(document.getElementById('sim-junior-count').value)||30));
   var shift  = document.getElementById('sim-shift-sel').value || '8am';
 
@@ -3252,9 +3270,9 @@ function simStartCheckIns(){
 
   var selected = available.slice().sort(function(){ return Math.random()-.5; }).slice(0, count);
 
-  _simRunning = true;
-  simProgress(0);
-  simStatus('Trickling in ' + count + ' juniors over 5 minutes...');
+  _simCIRunning = true;
+  simProgressCI(0);
+  simStatusCI('&#9654; Trickling in ' + count + ' juniors over 5 min...');
 
   // Spread check-ins over 5 minutes (300,000ms) with random jitter
   // Generate random intervals that sum to ~300s
@@ -3274,7 +3292,7 @@ function simStartCheckIns(){
   var done = 0;
   selected.forEach(function(jr, idx){
     var t = setTimeout(function(){
-      if(!_simRunning) return;
+      if(!_simCIRunning) return;
       checkInOrder++;
       jr.checkedIn        = true;
       jr.order            = checkInOrder;
@@ -3287,25 +3305,33 @@ function simStartCheckIns(){
       clockedOut[jr.id]   = false;
       delete clockedOut[jr.id];
       done++;
-      simProgress(done / selected.length * 100);
-      simStatus(done + ' / ' + selected.length + ' checked in...');
+      simProgressCI(done / selected.length * 100);
+      simStatusCI(done + ' / ' + selected.length + ' checked in...');
       renderOfficer();
       renderBoard();
       if(renderCheckins) renderCheckins();
       if(done === selected.length){
         _lastSavedHash = '';
         saveStateNow();
-        _simRunning = false;
-        simStatus('&#10003; Done — ' + done + ' juniors checked in for ' + shift + '. Assign them on the dashboard.');
+        _simCIRunning = false;
+        // Diagnostic: count by shift
+        var byShift = {};
+        juniors.filter(function(j){return j.checkedIn;}).forEach(function(j){
+          byShift[j.checkInShift||'unknown'] = (byShift[j.checkInShift||'unknown']||0)+1;
+        });
+        var breakdown = Object.keys(byShift).map(function(s){return s+':'+byShift[s];}).join(', ');
+        simStatusCI('&#10003; ' + done + ' checked in for ' + shift + '. (' + breakdown + ')');
         showAlert(done + ' juniors checked in!', 'success');
+        renderOfficer();
+        renderBoard();
       }
     }, delays[idx]);
-    _simTimers.push(t);
+    _simCITimers.push(t);
   });
 }
 
 function simStartClockOuts(){
-  if(_simRunning){ showAlert('Simulator already running — stop it first.', 'warn'); return; }
+  if(_simCORunning){ showAlert('Clock-out sim already running.', 'warn'); return; }
 
   // Clock out all juniors currently marked as "on-shift" (sent out)
   var onShift = juniors.filter(function(j){
@@ -3317,9 +3343,9 @@ function simStartClockOuts(){
     return;
   }
 
-  _simRunning = true;
-  simProgress(0);
-  simStatus('Clocking out ' + onShift.length + ' juniors over ~5 minutes...');
+  _simCORunning = true;
+  simProgressCO(0);
+  simStatusCO('&#9650; Clocking out ' + onShift.length + ' juniors over ~5 min...');
 
   // Stagger clock-outs over 5 minutes with realistic clustering
   var totalMs = 300000;
@@ -3337,7 +3363,7 @@ function simStartClockOuts(){
   var done = 0;
   shuffled.forEach(function(jr, idx){
     var t = setTimeout(function(){
-      if(!_simRunning) return;
+      if(!_simCORunning) return;
       // Clock them out — remove from slot, mark clockedOut
       clockedOut[jr.id] = true;
       activeSlots.forEach(function(s){
@@ -3346,20 +3372,20 @@ function simStartClockOuts(){
       });
       onShiftJuniors.delete(jr.id);
       done++;
-      simProgress(done / shuffled.length * 100);
-      simStatus(done + ' / ' + shuffled.length + ' clocked out...');
+      simProgressCO(done / shuffled.length * 100);
+      simStatusCO(done + ' / ' + shuffled.length + ' clocked out...');
       renderOfficer();
       renderBoard();
       if(renderCheckins) renderCheckins();
       if(done === shuffled.length){
         _lastSavedHash = '';
         saveStateNow();
-        _simRunning = false;
-        simStatus('&#10003; Done — all ' + done + ' juniors clocked out.');
+        _simCORunning = false;
+        simStatusCO('&#10003; ' + done + ' clocked out.');
         showAlert(done + ' juniors clocked out!', 'success');
       }
     }, delays[idx]);
-    _simTimers.push(t);
+    _simCOTimers.push(t);
   });
 }
 
@@ -5251,9 +5277,10 @@ function renderBoard(){
     list.forEach(function(r){ seen[r.sh] = true; });
     return Object.keys(seen).length > 1;
   }
-  var showTagCI  = multiShift(ciAll);
-  var showTagAss = multiShift(assAll);
-  var showTagOut = multiShift(outAll);
+  // Always show shift tags so it's always clear which shift each person is on
+  var showTagCI  = true;
+  var showTagAss = true;
+  var showTagOut = multiShift(outAll);  // out-on-shift uses dividers instead
 
   // Shift label pill for a name row (only rendered when tags are shown)
   function shiftPill(sh){
@@ -5277,14 +5304,21 @@ function renderBoard(){
         });
       h += '<div class="board-col-gap"></div>';
     }
-    h += '<div class="board-col-hdr ci">&#9679; Checked In (' + normal.length + ')</div>';
+    // Group by shift for header counts
+    var ciByShift = {};
+    normal.forEach(function(r){ ciByShift[r.sh] = (ciByShift[r.sh]||0)+1; });
+    var ciHdrExtra = Object.keys(ciByShift).sort().map(function(sh){
+      var colors={'8am':'#4499CC','12pm':'#F0C040','4pm':'#5CDB95'};
+      return '<span style="font-size:8px;padding:0 4px;border-radius:4px;background:'+( colors[sh]||'#99BBDD')+';color:#001F40;margin-left:3px">'+sh+':'+ ciByShift[sh]+'</span>';
+    }).join('');
+    h += '<div class="board-col-hdr ci">&#9679; In (' + normal.length + ')'+ ciHdrExtra +'</div>';
     if(normal.length === 0){
       h += '<div class="board-empty">None waiting</div>';
     } else {
       normal.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
         .forEach(function(r){
           h += '<div class="board-name">' +
-            (showTagCI ? shiftPill(r.sh) : '') +
+            shiftPill(r.sh) +
             fmtNameShort(r.j.name) + '</div>';
         });
     }
@@ -5294,14 +5328,20 @@ function renderBoard(){
   // Build Assigned column HTML
   function buildAssigned(){
     var h = '';
-    h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')</div>';
+    var assByShift = {};
+    assAll.forEach(function(r){ assByShift[r.sh] = (assByShift[r.sh]||0)+1; });
+    var assHdrExtra = Object.keys(assByShift).sort().map(function(sh){
+      var colors={'8am':'#4499CC','12pm':'#F0C040','4pm':'#5CDB95'};
+      return '<span style="font-size:8px;padding:0 4px;border-radius:4px;background:'+( colors[sh]||'#99BBDD')+';color:#001F40;margin-left:3px">'+sh+':'+ assByShift[sh]+'</span>';
+    }).join('');
+    h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')' + assHdrExtra + '</div>';
     if(assAll.length === 0){
       h += '<div class="board-empty">None yet</div>';
     } else {
       assAll.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
         .forEach(function(r){
           h += '<div class="board-name">' +
-            (showTagAss ? shiftPill(r.sh) : '') +
+            shiftPill(r.sh) +
             fmtNameShort(r.j.name) + '</div>';
         });
     }
