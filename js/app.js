@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -230,12 +230,23 @@ document.addEventListener('DOMContentLoaded', function(){
   // TV mode — add ?tv=1 to URL to activate full-screen board layout
   if(window.location.search.indexOf('tv=1') >= 0){
     document.documentElement.classList.add('tv-mode');
-    // Wait for state to load from Neon before auto-logging in
-    // initApp() starts polling — once state loads it will render the board
-    initApp();
-    setTimeout(function(){
+    // Hide login screen immediately — TV never needs it
+    var ls = document.getElementById('login-screen');
+    if(ls) ls.style.display = 'none';
+    var ma = document.getElementById('main-app');
+    if(ma) ma.style.display = 'block';
+    // Load state first, then log in as board once state arrives
+    loadState();
+    startPolling();
+    // Try loginAs at 600ms; retry at 2s in case Neon was slow
+    var _tvLoggedIn = false;
+    function _tvLogin(){
+      if(_tvLoggedIn) return;
+      _tvLoggedIn = true;
       loginAs('board');
-    }, 800); // give state.js time to respond
+    }
+    setTimeout(_tvLogin, 600);
+    setTimeout(_tvLogin, 2500); // safety retry
     return;
   }
 
@@ -3810,9 +3821,10 @@ function loginAs(role){
     localStorage.setItem('jrc_saved_role', role);
     localStorage.setItem('jrc_session_expiry', String(sessionExpiry));
   } catch(e){{}}
-  // Set initial history entry so back button stays within app
+  // Set initial history entry so back button stays within app (preserve ?tv=1 if present)
   var firstTab = ROLE_TABS[role] ? ROLE_TABS[role][0] : 'officer';
-  history.replaceState({tab: firstTab}, '', '#' + firstTab);
+  var tvParam = window.location.search.indexOf('tv=1') >= 0 ? window.location.search : '';
+  history.replaceState({tab: firstTab}, '', tvParam + '#' + firstTab);
 
   // Hide login, show app
   document.getElementById('login-screen').style.display = 'none';
@@ -5675,6 +5687,7 @@ function loadState(){
       _restoreSimFromLocalStorage();
       console.log('State loaded from Neon');
       renderOfficer(); renderRoster(); renderSetup(); updateHeaderDate();
+      if(document.documentElement.classList.contains('tv-mode')) renderBoard();
     })
     .catch(function(e){
       console.warn('Neon load failed, using localStorage:', e.message);
