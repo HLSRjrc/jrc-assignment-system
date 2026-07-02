@@ -337,25 +337,32 @@ select.finput{cursor:pointer}
   min-height:0;
 }
 
-/* CI section */
+/* CI section — full height of left panel */
 .board-ci-section{
   flex:1;
   overflow:hidden;
-  padding:8px 10px 4px;
-  border-bottom:1px solid rgba(255,255,255,.12);
+  padding:8px 10px;
   min-height:0;
 }
 
-/* Assigned section */
+/* Assigned section — lives in right panel above out-on-shift */
 .board-ass-section{
   flex:0 0 auto;
-  padding:6px 10px 8px;
-  max-height:35%;
-  overflow:hidden;
+  padding:6px 14px 4px;
+  border-bottom:1px solid rgba(255,255,255,.12);
 }
 
-/* Out-on-shift column */
+/* Right panel — Assigned + Out on Shift stacked vertically */
+.board-right-col{
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+  min-height:0;
+}
+
+/* Out-on-shift section — fills remaining right space */
 .board-out-col{
+  flex:1;
   overflow-y:auto;
   padding:8px 14px;
   min-height:0;
