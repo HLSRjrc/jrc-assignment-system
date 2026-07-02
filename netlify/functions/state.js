@@ -143,6 +143,14 @@ exports.handler = async (event) => {
   const sql = getDb();
 
   try {
+    // One-time migration: alter committee_requests.id from INTEGER to BIGINT
+    // Needed because request IDs are now epoch ms timestamps (13 digits, > INT max)
+    try {
+      await sql`ALTER TABLE committee_requests ALTER COLUMN id TYPE BIGINT USING id::BIGINT`;
+    } catch(e) {
+      // Ignore — already BIGINT or table doesn't exist
+    }
+
     // GET — load full state
     if (event.httpMethod === 'GET') {
       const [stateRows, juniorRows, adultRows, slotRows, reqRows] = await Promise.all([
