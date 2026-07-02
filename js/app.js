@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2162,11 +2162,16 @@ function clearAllSlots(){
     if(!confirm('Some slots already have juniors assigned. Clear everything?')) return;
   }
   activeSlots = [];
+  onShiftSlots = new Set();
+  onShiftJuniors = new Set();
   // Also clear assignments on juniors
-  juniors.forEach(function(j){ j.assignment = null; j.prevLast = null; });
-  document.getElementById('bulk-result').textContent = 'All slots cleared.';
-  saveState();
+  juniors.forEach(function(j){ j.assignment = null; j.prevLast = null; dirtyJuniors.add(j.id); });
+  var br = document.getElementById('bulk-result'); if(br) br.textContent = 'All slots cleared.';
+  _lastSavedHash = '';
+  saveStateNow();
   renderSetup();
+  renderOfficer();
+  renderBoard();
 }
 
 function initSetupDatePicker(){
