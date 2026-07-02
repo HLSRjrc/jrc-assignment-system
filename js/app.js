@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -5420,7 +5420,7 @@ function renderBoard(){
     // Total committee groups across all shifts — drives sub-column count
     var totalGroups = 0;
     shifts.forEach(function(sh){ totalGroups += Object.keys(byShift[sh]).length; });
-    var subCols = window._boardSubCols || (totalGroups >= 30 ? 'cols5' : totalGroups >= 20 ? 'cols4' : totalGroups >= 12 ? 'cols3' : totalGroups >= 6 ? 'cols2' : 'cols1');
+    var subCols = window._boardSubCols || (totalGroups >= 35 ? 'cols5' : totalGroups >= 15 ? 'cols4' : totalGroups >= 8 ? 'cols3' : totalGroups >= 4 ? 'cols2' : 'cols1');
 
     var h = '<div class="board-out-col">';
     h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + outAll.length + ')</div>';
@@ -5467,18 +5467,18 @@ function renderBoard(){
   var outCount = outAll.length;
   var total = waitingCount + outCount;
   var leftPct;
-  if(total === 0){
-    leftPct = 30;
-  } else {
-    // Waiting ratio drives the left width: 0 waiting = 14%, all waiting = 65%
-    var waitRatio = waitingCount / total;
-    leftPct = Math.round(14 + waitRatio * 51); // 14% → 65%
-    leftPct = Math.max(14, Math.min(65, leftPct));
-  }
-  // Apply to the board body element — use ID so TV and in-app both get it
   var boardBody = document.getElementById('board-body-el') || document.querySelector('.board-body');
   if(boardBody){
-    boardBody.style.gridTemplateColumns = leftPct + 'vw 1fr';
+    if(waitingCount === 0){
+      // Nothing waiting — shrink left to just the header label width
+      boardBody.style.gridTemplateColumns = 'minmax(120px,10vw) 1fr';
+    } else {
+      // Waiting ratio drives width: 0 waiting → 10vw, all waiting → 65vw
+      var waitRatio = waitingCount / total;
+      leftPct = Math.round(10 + waitRatio * 55);
+      leftPct = Math.max(10, Math.min(65, leftPct));
+      boardBody.style.gridTemplateColumns = leftPct + 'vw 1fr';
+    }
   }
 
   // Sub-column count for out-on-shift — scales with committee count
