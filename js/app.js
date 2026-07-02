@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3323,7 +3323,7 @@ function simStartCheckIns(){
       checkInOrder++;
       jr.checkedIn        = true;
       jr.order            = checkInOrder;
-      jr.hasHat           = false;
+      jr.hasHat           = Math.random() < 0.75; // 75% wear hats
       jr.notes            = '';
       jr.checkInShift     = shift;
       jr.checkInDate      = currentDate;
@@ -5475,9 +5475,11 @@ function renderBoard(){
     leftPct = Math.round(14 + waitRatio * 51); // 14% → 65%
     leftPct = Math.max(14, Math.min(65, leftPct));
   }
-  // Apply to the board body element
-  var boardBody = document.querySelector('.board-body');
-  if(boardBody) boardBody.style.setProperty('--board-left-width', leftPct + 'vw');
+  // Apply to the board body element — use ID so TV and in-app both get it
+  var boardBody = document.getElementById('board-body-el') || document.querySelector('.board-body');
+  if(boardBody){
+    boardBody.style.gridTemplateColumns = leftPct + 'vw 1fr';
+  }
 
   // Sub-column count for out-on-shift — scales with committee count
   var totalCommittees = outAll.length > 0 ? (function(){
@@ -5505,14 +5507,16 @@ function renderBoard(){
         '</div>' +
       '</div>' +
     '</div>' +
-    '<div class="board-body">' +
-      // Left: waiting panel (CI + Assigned stacked)
+    '<div class="board-body" id="board-body-el">' +
+      // Left: Checked In only (full height)
       '<div class="board-waiting-col">' +
         '<div class="board-ci-section">' + buildCI() + '</div>' +
-        '<div class="board-ass-section">' + buildAssigned() + '</div>' +
       '</div>' +
-      // Right: out on shift (wide, multi-column)
-      buildOut() +
+      // Right: Assigned (top, hidden when empty) + Out on Shift (fills rest)
+      '<div class="board-right-col">' +
+        (assAll.length > 0 ? '<div class="board-ass-section">' + buildAssigned() + '</div>' : '') +
+        buildOut() +
+      '</div>' +
     '</div>' +
   '</div>';
 
