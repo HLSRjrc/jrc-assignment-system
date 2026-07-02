@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -5463,7 +5463,9 @@ function renderBoard(){
       '</div>' +
       '<div style="text-align:right">' +
         '<div id="board-clock" style="font-size:22px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums"></div>' +
-        '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' active &bull; ' + ciAll.filter(function(r){return !r.pending;}).length + ' in &bull; ' + assAll.length + ' assigned &bull; ' + outAll.length + ' out</div>' +
+        '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' active &bull; ' + ciAll.filter(function(r){return !r.pending;}).length + ' in &bull; ' + assAll.length + ' assigned &bull; ' + outAll.length + ' out' +
+        ' <span onclick="pollForUpdates();renderBoard();" style="cursor:pointer;opacity:.5;font-size:10px;margin-left:6px" title="Refresh">&#8635;</span>' +
+        '</div>' +
       '</div>' +
     '</div>' +
     '<div class="board-body">' +
@@ -5880,10 +5882,13 @@ var headerClockTimer = null;
 
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
+  // TV mode polls every 15 seconds — it needs live updates
+  // Normal mode polls every 15 minutes to conserve Netlify credits
+  var pollInterval = document.documentElement.classList.contains('tv-mode') ? 15000 : 900000;
   pollTimer = setInterval(function(){
     // Only poll when tab is visible — saves ~70% of idle function calls
     if(!document.hidden) pollForUpdates();
-  }, 900000); // 15 min — reduced to conserve Netlify credits
+  }, pollInterval); // tv: 15s | normal: 15 min
   if(headerClockTimer) clearInterval(headerClockTimer);
   headerClockTimer = setInterval(function(){ updateHeaderClock(); updateBoardClock(); }, 30000);
 
@@ -5907,7 +5912,9 @@ function pollForUpdates(){
   // Never apply remote state mid-simulation — the sim is mutating juniors locally
   if(typeof _simCIRunning !== 'undefined' && (_simCIRunning || _simCORunning)) return;
   // Don't poll if we saved very recently — our local state is newer than Neon
-  if(Date.now() - lastSaveTime < 60000) return; // 60s grace after any save — prevents poll from overwriting recent changes
+  // Exception: TV mode always polls (it never saves, so grace period doesn't apply)
+  var isTV = document.documentElement.classList.contains('tv-mode');
+  if(!isTV && Date.now() - lastSaveTime < 60000) return; // 60s grace after any save
   fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
     .then(function(r){ return r.json(); })
     .then(function(data){
