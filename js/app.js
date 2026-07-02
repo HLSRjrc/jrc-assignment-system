@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3327,11 +3327,14 @@ function simStartCheckIns(){
       clockedOut[jr.id]   = false;
       delete clockedOut[jr.id];
       done++;
+      dirtyJuniors.add(jr.id);
       simProgressCI(done / selected.length * 100);
       simStatusCI(done + ' / ' + selected.length + ' checked in...');
       renderOfficer();
       renderBoard();
       if(renderCheckins) renderCheckins();
+      // Save to Neon every 5 check-ins so TV board updates during trickle
+      if(done % 5 === 0){ _lastSavedHash = ''; saveStateNow(); }
       if(done === selected.length){
         _lastSavedHash = '';
         saveStateNow();
@@ -5711,7 +5714,7 @@ function _restoreSimFromLocalStorage(){
     var sim = JSON.parse(simRaw);
     simTimeEnabled = sim.simTimeEnabled || false;
     simDateSet     = sim.simDateSet     || false;
-    if(!_simRunning){
+    if(!_simCIRunning && !_simCORunning){
       if(sim.simTargetEpoch){
         simTargetEpoch = sim.simTargetEpoch;
         simTimeOffset  = sim.simTargetEpoch - Date.now();
@@ -5819,7 +5822,7 @@ function _applyState(data){
   // Recompute simTimeOffset from absolute target epoch so TV/other devices show correct sim time
   if(state.prioritySlots) prioritySlots = state.prioritySlots;
   // Don't overwrite sim time if simulator is actively running
-  if(!_simRunning){
+  if(!_simCIRunning && !_simCORunning){
     if(state.simTargetEpoch){
       simTargetEpoch = state.simTargetEpoch;
       simTimeOffset  = state.simTargetEpoch - Date.now();
@@ -5911,8 +5914,10 @@ function stopPolling(){
 function pollForUpdates(){
   if(!DB_AVAILABLE) return;
   if(isSaving) return;
-  // Never apply remote state mid-simulation — the sim is mutating juniors locally
-  if(typeof _simCIRunning !== 'undefined' && (_simCIRunning || _simCORunning)) return;
+  // Never apply remote state mid-simulation on the ADMIN device — the sim is mutating juniors locally
+  // TV mode is never running the sim so it always polls
+  var isTVMode = document.documentElement.classList.contains('tv-mode');
+  if(!isTVMode && typeof _simCIRunning !== 'undefined' && (_simCIRunning || _simCORunning)) return;
   // Don't poll if we saved very recently — our local state is newer than Neon
   // Exception: TV mode always polls (it never saves, so grace period doesn't apply)
   var isTV = document.documentElement.classList.contains('tv-mode');
