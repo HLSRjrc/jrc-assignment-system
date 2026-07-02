@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -5689,8 +5689,10 @@ function loadState(){
     .then(function(r){ return r.json(); })
     .then(function(data){
       _applyState(data);
-      // Re-apply sim state from localStorage — always wins over Neon
-      _restoreSimFromLocalStorage();
+      // Re-apply sim state from localStorage — only on non-TV (TV trusts Neon completely)
+      if(!document.documentElement.classList.contains('tv-mode')){
+        _restoreSimFromLocalStorage();
+      }
       console.log('State loaded from Neon');
       renderOfficer(); renderRoster(); renderSetup(); updateHeaderDate();
       if(document.documentElement.classList.contains('tv-mode')) renderBoard();
@@ -5937,17 +5939,21 @@ function pollForUpdates(){
         }
       });
       _applyState(data);
-      // Restore sim time — localStorage always wins
-      _restoreSimFromLocalStorage();
-      if(!simDateSet && (localSimDateSet || localSimEnabled)){
-        simTimeEnabled = localSimEnabled;
-        simTimeOffset  = localSimOffset;
-        simDateSet     = localSimDateSet;
-        if(localCurrentDate)  currentDate  = localCurrentDate;
-        if(localCurrentShift) currentShift = localCurrentShift;
+      // TV mode: trust Neon completely — never override with local state
+      var isTV = document.documentElement.classList.contains('tv-mode');
+      if(!isTV){
+        // Non-TV: restore sim time from localStorage (local always wins)
+        _restoreSimFromLocalStorage();
+        if(!simDateSet && (localSimDateSet || localSimEnabled)){
+          simTimeEnabled = localSimEnabled;
+          simTimeOffset  = localSimOffset;
+          simDateSet     = localSimDateSet;
+          if(localCurrentDate)  currentDate  = localCurrentDate;
+          if(localCurrentShift) currentShift = localCurrentShift;
+        }
+        // Always restore date/shift if user explicitly set them locally
+        if(simDateSet){ currentDate = localCurrentDate; currentShift = localCurrentShift; }
       }
-      // Always restore date/shift if user explicitly set them
-      if(simDateSet){ currentDate = localCurrentDate; currentShift = localCurrentShift; }
       // Restore junior active state — local state wins for checked-in juniors
       juniors.forEach(function(j){
         var local = localJuniorState[j.id];
