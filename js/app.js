@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -874,8 +874,8 @@ function unlockNote(jid){
 
 
 function renderOfficer(search){
-  var ci = juniors.filter(function(j){ return j.checkedIn; });
-  var asgn = juniors.filter(function(j){ return j.assignment; });
+  var ci = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id]; });
+  var asgn = juniors.filter(function(j){ return j.assignment && !clockedOut[j.id]; });
   var un = ci.filter(function(j){ return !j.assignment; });
   var totalOpen = activeSlots.reduce(function(a, s){ return a + Math.max(0, s.capacity - s.assigned.length); }, 0);
   document.getElementById('s-ci').textContent = ci.length;
@@ -1310,7 +1310,7 @@ function toggleHighPriority(slotId){
 }
 
 function placeStragglers(){
-  var ci = juniors.filter(function(j){ return j.checkedIn && !j.assignment && !j.ageout; });
+  var ci = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id] && !j.assignment && !j.ageout; });
   if(ci.length === 0){ showAlert('No unassigned juniors to place.', 'info'); return; }
   var open = activeSlots.filter(function(s){ return s.shift === currentShift && s.assigned.length < s.capacity; });
   if(open.length === 0){ showAlert('No open slots in this shift.', 'warn'); return; }
@@ -1340,7 +1340,7 @@ function placeStragglers(){
 }
 
 function autoAssign(){
-  var ci = juniors.filter(function(j){ return j.checkedIn && !j.assignment; });
+  var ci = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id] && !j.assignment; });
   var reg = ci.filter(function(j){ return !j.ageout; });
   if(reg.length === 0){
     var aoWaiting = ci.filter(function(j){ return j.ageout; }).length;
@@ -1712,7 +1712,7 @@ function renderCheckins(){
   // ── Quick Check-in Roster ─────────────────────────────────
   // Collapsed by default; toggled via button
   var notCI = juniors.filter(function(j){
-    return !j.inactive && !j.checkedIn;
+    return !j.inactive && (!j.checkedIn || clockedOut[j.id]);
   }).slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
 
   var outsideWindow = !getShiftFromTime(getSimTime());
@@ -1856,7 +1856,7 @@ function renderCIRosterRows(){
   if(!searchEl || !rowsEl) return;
   var q = searchEl.value.toLowerCase();
   var notCI = juniors.filter(function(j){
-    return !j.inactive && !j.checkedIn;
+    return !j.inactive && (!j.checkedIn || clockedOut[j.id]);
   }).slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
   var filtered = q ? notCI.filter(function(j){ return j.name.toLowerCase().indexOf(q) >= 0; }) : notCI;
   if(filtered.length === 0){
@@ -1880,7 +1880,7 @@ function renderCIRosterRows(){
 function quickCheckIn(jid){
   var jr = juniors.find(function(j){ return j.id === jid; });
   if(!jr) return;
-  if(jr.checkedIn){ showAlert(jr.name + ' is already checked in.', 'info'); return; }
+  if(jr.checkedIn && !clockedOut[jr.id]){ showAlert(jr.name + ' is already checked in.', 'info'); return; }
   checkInOrder++;
   jr.checkedIn        = true;
   jr.order            = checkInOrder;
@@ -1928,7 +1928,10 @@ function adminUndoClockOut(jid){
   if(!jr) return;
   clockedOut[jr.id] = false;
   delete clockedOut[jr.id];
-  saveState();
+  delete clockedOut[String(jr.id)];
+  dirtyJuniors.add(jr.id);
+  _lastSavedHash = '';
+  saveStateNow();
   renderCheckinsTable();
   renderOfficer();
   renderBoard();
@@ -3058,7 +3061,7 @@ function tgenCheckIn(){
   var result = document.getElementById('tgen-checkin-result');
 
   // Pick random juniors not already checked in
-  var available = juniors.filter(function(j){ return !j.inactive && !j.checkedIn && !clockedOut[j.id]; });
+  var available = juniors.filter(function(j){ return !j.inactive && (!j.checkedIn || clockedOut[j.id]); });
   if(!available.length){ if(result) result.textContent = 'No available juniors to check in.'; return; }
 
   var toCheckIn = [];
@@ -3261,7 +3264,7 @@ function simStartCheckIns(){
   var shift  = document.getElementById('sim-shift-sel').value || '8am';
 
   // Pick random available juniors
-  var available = juniors.filter(function(j){ return !j.inactive && !j.checkedIn; });
+  var available = juniors.filter(function(j){ return !j.inactive && (!j.checkedIn || clockedOut[j.id]); });
   if(available.length < count){
     showAlert('Only ' + available.length + ' juniors available — using all of them.', 'info');
     count = available.length;
@@ -3364,13 +3367,17 @@ function simStartClockOuts(){
   shuffled.forEach(function(jr, idx){
     var t = setTimeout(function(){
       if(!_simCORunning) return;
-      // Clock them out — remove from slot, mark clockedOut
+      // Clock them out — remove from slot, clear assignment, mark clockedOut
       clockedOut[jr.id] = true;
+      jr.assignment = null;
       activeSlots.forEach(function(s){
         var i = s.assigned.indexOf(jr.id);
         if(i >= 0) s.assigned.splice(i, 1);
+        var i2 = s.assigned.indexOf(String(jr.id));
+        if(i2 >= 0) s.assigned.splice(i2, 1);
       });
       onShiftJuniors.delete(jr.id);
+      onShiftJuniors.delete(String(jr.id));
       done++;
       simProgressCO(done / shuffled.length * 100);
       simStatusCO(done + ' / ' + shuffled.length + ' clocked out...');
@@ -4531,10 +4538,17 @@ function renderReqNameOptions(names, q){
     var checked = _reqFilterNames.indexOf(name) >= 0;
     var safeId = 'rno-' + name.replace(/[^a-z0-9]/gi,'_');
     return '<label class="req-name-option">' +
-      '<input type="checkbox" id="' + safeId + '"' + (checked?' checked':'') + ' onchange="reqNameToggle(\'' + name.replace(/'/g,"\'") + '\',this.checked)">' +
+      '<input type="checkbox" id="' + safeId + '"' + (checked?' checked':'') + ' data-rname="' + encodeURIComponent(name) + '" onchange="reqNameToggleEl(this)">' +
       (function(){ if(!q) return '<span>' + name + '</span>'; var lo=name.toLowerCase(),qi=lo.indexOf(q.toLowerCase()); if(qi<0) return '<span>'+name+'</span>'; return '<span>'+name.slice(0,qi)+'<strong>'+name.slice(qi,qi+q.length)+'</strong>'+name.slice(qi+q.length)+'</span>'; })() +
     '</label>';
   }).join('');
+}
+
+function reqNameToggleEl(el, forceOff){
+  var name = decodeURIComponent(el.getAttribute('data-rname')||'');
+  if(!name) return;
+  var checked = forceOff ? false : !!el.checked;
+  reqNameToggle(name, checked);
 }
 
 function reqNameToggle(name, checked){
@@ -4560,7 +4574,7 @@ function updateReqNameDisplay(){
     _reqFilterNames.forEach(function(name){
       var tag = document.createElement('span');
       tag.className = 'req-name-tag';
-      tag.innerHTML = name + '<button onclick="event.stopPropagation();reqNameToggle(\'' + name.replace(/'/g,"\'") + '\',false)" title="Remove">&#x2715;</button>';
+      tag.innerHTML = name + '<button data-rname="' + encodeURIComponent(name) + '" onclick="event.stopPropagation();reqNameToggleEl(this,true)" title="Remove">&#x2715;</button>';
       display.insertBefore(tag, placeholder);
     });
   }
@@ -5141,13 +5155,16 @@ function manualClockOut(jid, skipConfirm){
   }
   onShiftJuniors.delete(jid);
   onShiftJuniors.delete(String(jid));
-  jr.checkedIn = false;
+  // Keep checkedIn=true so the Check-ins tab shows them under "clocked out this session"
+  // (matches adminClockOut and simulator convention); clockedOut flag drives all status logic.
+  jr.assignment = null;
   jr.plannedShifts = [];
-  jr.checkInShift = '';
   clockedOut[jid] = true;
   dirtyJuniors.add(jr.id);
+  _lastSavedHash = '';
   renderOfficer();
   renderBoard();
+  if(typeof renderCheckins === 'function') renderCheckins();
   saveStateNow();
 }
 
@@ -5202,7 +5219,8 @@ function undoSent(slotId){
 
 
 function getJuniorStatus(jr){
-  if(!jr.checkedIn && clockedOut && (clockedOut[jr.id] || clockedOut[String(jr.id)])) return 'checked-out';
+  // Clocked out takes precedence — regardless of checkedIn flag state
+  if(clockedOut && (clockedOut[jr.id] || clockedOut[String(jr.id)])) return 'checked-out';
   if(!jr.checkedIn) return null;
   // Only use onShiftJuniors — this is cleared on clock-out so it's shift-specific
   if(onShiftJuniors.has(jr.id) || onShiftJuniors.has(String(jr.id))) return 'on-shift';
@@ -5440,6 +5458,29 @@ function renderBoard(){
   updateBoardClock();
   if(boardTimer) clearInterval(boardTimer);
   boardTimer = setInterval(updateBoardClock, 1000);
+
+  // Auto-scroll CI + Assigned sections (slow ping-pong when content overflows)
+  startBoardAutoScroll();
+}
+
+var _boardScrollTimer = null;
+function startBoardAutoScroll(){
+  if(_boardScrollTimer) clearInterval(_boardScrollTimer);
+  var dirs = {}; // per-element scroll direction: 1 down, -1 up
+  var pause = {}; // per-element pause counter (ticks to wait at each end)
+  _boardScrollTimer = setInterval(function(){
+    ['.board-ci-section', '.board-ass-section'].forEach(function(sel){
+      var el = document.querySelector(sel);
+      if(!el) return;
+      var max = el.scrollHeight - el.clientHeight;
+      if(max <= 4) return; // nothing to scroll
+      if(pause[sel] > 0){ pause[sel]--; return; }
+      if(dirs[sel] === undefined) dirs[sel] = 1;
+      el.scrollTop += dirs[sel];
+      if(el.scrollTop >= max - 1){ dirs[sel] = -1; pause[sel] = 40; } // ~3s pause at bottom
+      else if(el.scrollTop <= 0){ dirs[sel] = 1; pause[sel] = 40; }  // ~3s pause at top
+    });
+  }, 75); // ~13px/sec — slow, readable crawl
 }
 
 function updateBoardClock(){
@@ -5488,7 +5529,7 @@ function _stateHash(){
       activeSlots.length,
       activeSlots.map(function(s){ return s.id + ':' + s.assigned.length + ':' + (s.sent?1:0); }).join('|'),
       juniors.filter(function(j){ return j.checkedIn || j.assignment || (j.noteLog && j.noteLog.length) || dirtyJuniors.has(j.id); }).map(function(j){
-        return j.id + ':' + (j.checkedIn?1:0) + ':' + (j.assignment||'') + ':' + j.order + ':' + (j.noteLog ? j.noteLog.length : 0) + ':' + (j.checkInDate||'');
+        return j.id + ':' + (j.checkedIn?1:0) + ':' + (clockedOut[j.id]?1:0) + ':' + (j.assignment||'') + ':' + j.order + ':' + (j.noteLog ? j.noteLog.length : 0) + ':' + (j.checkInDate||'');
       }).join('|'),
       committeeRequests.map(function(r){ return r.id + ':' + r.status; }).join('|'),
       currentDate, currentShift
@@ -5837,6 +5878,8 @@ function stopPolling(){
 function pollForUpdates(){
   if(!DB_AVAILABLE) return;
   if(isSaving) return;
+  // Never apply remote state mid-simulation — the sim is mutating juniors locally
+  if(typeof _simCIRunning !== 'undefined' && (_simCIRunning || _simCORunning)) return;
   // Don't poll if we saved very recently — our local state is newer than Neon
   if(Date.now() - lastSaveTime < 60000) return; // 60s grace after any save — prevents poll from overwriting recent changes
   fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
