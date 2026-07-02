@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -369,6 +369,12 @@ function applySimDate(){
 
 function switchTab(t, el){
   currentTab = t;
+  // Push history entry so browser back button navigates between tabs
+  if(history.state && history.state.tab !== t){
+    history.pushState({tab: t}, '', '#' + t);
+  } else if(!history.state){
+    history.replaceState({tab: t}, '', '#' + t);
+  }
   // Re-render tabs to update active state
   renderTabs(t);
   // Show correct panel
@@ -3804,6 +3810,9 @@ function loginAs(role){
     localStorage.setItem('jrc_saved_role', role);
     localStorage.setItem('jrc_session_expiry', String(sessionExpiry));
   } catch(e){{}}
+  // Set initial history entry so back button stays within app
+  var firstTab = ROLE_TABS[role] ? ROLE_TABS[role][0] : 'officer';
+  history.replaceState({tab: firstTab}, '', '#' + firstTab);
 
   // Hide login, show app
   document.getElementById('login-screen').style.display = 'none';
@@ -6548,6 +6557,28 @@ function _restoreLogin(){
   } catch(e){}
   return false;
 }
+
+// Handle browser back/forward navigation between tabs
+window.addEventListener('popstate', function(e){
+  if(e.state && e.state.tab){
+    // Switch to the tab without pushing another history entry
+    var t = e.state.tab;
+    currentTab = t;
+    renderTabs(t);
+    document.querySelectorAll('.panel').forEach(function(p){ p.style.display='none'; p.classList.remove('active'); });
+    var panel = document.getElementById('panel-' + t);
+    if(panel){ panel.style.display='block'; panel.classList.add('active'); }
+    // Re-render the target panel
+    if(t==='officer') renderOfficer();
+    if(t==='roster') renderRoster();
+    if(t==='requests') refreshRequests();
+    if(t==='checkins') renderCheckins();
+    if(t==='board') renderBoard();
+    if(t==='hours') renderHours();
+    if(t==='simulate') { renderUserMgmt(); renderStrandedPanel(); renderSimulateMigrationStatus(); }
+    if(t==='setup') renderSetup();
+  }
+});
 
 function initApp(){
   // Set version display
