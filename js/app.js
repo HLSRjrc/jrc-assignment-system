@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -5358,6 +5358,8 @@ function renderBoard(){
       return '<span style="font-size:8px;padding:0 4px;border-radius:4px;background:'+( colors[sh]||'#99BBDD')+';color:#001F40;margin-left:3px">'+sh+':'+ ciByShift[sh]+'</span>';
     }).join('');
     h += '<div class="board-col-hdr ci">&#9679; In (' + normal.length + ')'+ ciHdrExtra +'</div>';
+    var ciCols = normal.length > 20 ? 2 : 1;
+    h += '<div style="column-count:' + ciCols + ';column-gap:6px">';
     if(normal.length === 0){
       h += '<div class="board-empty">None waiting</div>';
     } else {
@@ -5368,6 +5370,7 @@ function renderBoard(){
             fmtNameShort(r.j.name) + '</div>';
         });
     }
+    h += '</div>';
     return h;
   }
 
@@ -5381,6 +5384,8 @@ function renderBoard(){
       return '<span style="font-size:8px;padding:0 4px;border-radius:4px;background:'+( colors[sh]||'#99BBDD')+';color:#001F40;margin-left:3px">'+sh+':'+ assByShift[sh]+'</span>';
     }).join('');
     h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')' + assHdrExtra + '</div>';
+    var assCols = assAll.length > 20 ? 2 : 1;
+    h += '<div style="column-count:' + assCols + ';column-gap:6px">';
     if(assAll.length === 0){
       h += '<div class="board-empty">None yet</div>';
     } else {
@@ -5391,6 +5396,7 @@ function renderBoard(){
             fmtNameShort(r.j.name) + '</div>';
         });
     }
+    h += '</div>';
     return h;
   }
 
@@ -5444,6 +5450,28 @@ function renderBoard(){
 
   // Total active across all shifts for header
   var totalActive = ciAll.filter(function(r){ return !r.pending; }).length + assAll.length + outAll.length;
+
+  // Dynamic left panel width — scales based on how many names are waiting vs out
+  // When lots are out and few waiting: shrink left. When lots waiting: expand left.
+  var waitingCount = ciAll.filter(function(r){return !r.pending;}).length + assAll.length;
+  var outCount = outAll.length;
+  var totalCount = waitingCount + outCount;
+  var leftPct;
+  if(totalCount === 0){
+    leftPct = 20; // default
+  } else if(outCount === 0){
+    leftPct = 30; // all waiting, no out-on-shift
+  } else if(waitingCount === 0){
+    leftPct = 12; // all out, nothing waiting — very narrow left
+  } else {
+    // Proportional: left gets more space when waiting list is large
+    // Min 12%, max 35%
+    leftPct = Math.round(12 + (waitingCount / totalCount) * 23);
+    leftPct = Math.max(12, Math.min(35, leftPct));
+  }
+  // Apply to the board body element
+  var boardBody = document.querySelector('.board-body');
+  if(boardBody) boardBody.style.setProperty('--board-left-width', leftPct + 'vw');
 
   // Sub-column count for out-on-shift — scales with committee count
   var totalCommittees = outAll.length > 0 ? (function(){
