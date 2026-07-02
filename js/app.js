@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -5358,7 +5358,7 @@ function renderBoard(){
       return '<span style="font-size:8px;padding:0 4px;border-radius:4px;background:'+( colors[sh]||'#99BBDD')+';color:#001F40;margin-left:3px">'+sh+':'+ ciByShift[sh]+'</span>';
     }).join('');
     h += '<div class="board-col-hdr ci">&#9679; In (' + normal.length + ')'+ ciHdrExtra +'</div>';
-    var ciCols = (normal.length > 15 && waitingCount > outCount) ? 2 : 1;
+    var ciCols = normal.length > 60 ? 4 : normal.length > 30 ? 3 : normal.length > 15 ? 2 : 1;
     h += '<div style="column-count:' + ciCols + ';column-gap:6px">';
     if(normal.length === 0){
       h += '<div class="board-empty">None waiting</div>';
@@ -5384,7 +5384,7 @@ function renderBoard(){
       return '<span style="font-size:8px;padding:0 4px;border-radius:4px;background:'+( colors[sh]||'#99BBDD')+';color:#001F40;margin-left:3px">'+sh+':'+ assByShift[sh]+'</span>';
     }).join('');
     h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')' + assHdrExtra + '</div>';
-    var assCols = (assAll.length > 15 && waitingCount > outCount) ? 2 : 1;
+    var assCols = assAll.length > 30 ? 3 : assAll.length > 15 ? 2 : 1;
     h += '<div style="column-count:' + assCols + ';column-gap:6px">';
     if(assAll.length === 0){
       h += '<div class="board-empty">None yet</div>';
@@ -5415,7 +5415,7 @@ function renderBoard(){
     // Total committee groups across all shifts — drives sub-column count
     var totalGroups = 0;
     shifts.forEach(function(sh){ totalGroups += Object.keys(byShift[sh]).length; });
-    var subCols = window._boardSubCols || (totalGroups >= 20 ? 'cols4' : totalGroups >= 12 ? 'cols3' : totalGroups >= 6 ? 'cols2' : 'cols1');
+    var subCols = window._boardSubCols || (totalGroups >= 30 ? 'cols5' : totalGroups >= 20 ? 'cols4' : totalGroups >= 12 ? 'cols3' : totalGroups >= 6 ? 'cols2' : 'cols1');
 
     var h = '<div class="board-out-col">';
     h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + outAll.length + ')</div>';
@@ -5430,12 +5430,15 @@ function renderBoard(){
         if(committees.length === 0) return;
         isLate = nowMins >= lateAfter[sh];
         // Shift divider — only when multiple shifts are on board
-        if(showTagOut){
-          h += '<div class="board-shift-divider' + (isLate ? ' late' : '') + '">' + SL[sh] + (isLate ? ' &#9888; LATE' : '') + '</div>';
-        }
+        // Shift shown per-committee label now — no divider needed
         committees.forEach(function(committee){
           h += '<div class="board-committee-group">';
-          h += '<div class="board-committee-label' + (isLate ? ' late' : '') + '">' + committee + '</div>';
+          var shiftBadgeColor = sh==='8am' ? '#4499CC' : sh==='12pm' ? '#F0C040' : '#5CDB95';
+          var shiftBadgeText  = sh==='8am' ? '8AM' : sh==='12pm' ? '12PM' : '4PM';
+          h += '<div class="board-committee-label' + (isLate ? ' late' : '') + '">' +
+            committee +
+            ' <span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;background:' + shiftBadgeColor + ';color:#001F40;vertical-align:middle">' + shiftBadgeText + '</span>' +
+          '</div>';
           byShift[sh][committee].forEach(function(j){
             h += '<div class="board-name out' + (isLate ? ' late' : '') + '">' + fmtNameShort(j.name) + '</div>';
           });
