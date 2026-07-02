@@ -6503,11 +6503,10 @@ function _autoAssignRolesFromRoster(){
 }
 
 function _preloadAdults(){
-  // Show loading state on login form
+  // Silently pre-load state so login works immediately — no visible loading state
+  // (the "Connecting..." message was showing as an error on the login screen)
   var btn = document.querySelector('#personal-login .btn-primary');
-  var errEl = document.getElementById('pl-err');
   if(btn) btn.disabled = true;
-  if(errEl){ errEl.style.color = '#667788'; errEl.textContent = 'Connecting...'; }
 
   fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
     .then(function(r){ return r.json(); })
@@ -6517,11 +6516,11 @@ function _preloadAdults(){
       }
     })
     .catch(function(){
-      if(errEl){ errEl.style.color = '#CC0000'; errEl.textContent = 'Could not connect to server. Check your connection.'; }
+      // Silently fail — user will see a normal login form; Neon will be tried again on submit
+      DB_AVAILABLE = false;
     })
     .finally(function(){
       if(btn) btn.disabled = false;
-      if(errEl && errEl.textContent === 'Connecting...') errEl.textContent = '';
     });
 }
 
