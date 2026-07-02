@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2397,6 +2397,8 @@ function onSetupDateChange(){
   html += '</div>';
   prev.innerHTML = html;
   prev.style.display = 'block';
+  // Save currentDate to Neon so TV board picks it up on next poll
+  saveState();
 }
 
 function loadAllSlotsFromPreview(){
@@ -5961,6 +5963,7 @@ function pollForUpdates(){
         if(id === 'panel-kiosk') renderKiosk();
         if(id === 'panel-requests') renderRequests();
         if(id === 'panel-checkins') renderCheckins();
+        if(id === 'panel-board' || document.documentElement.classList.contains('tv-mode')) renderBoard();
       }
       updateHeaderDate();
     })
