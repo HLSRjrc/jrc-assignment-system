@@ -280,7 +280,7 @@ exports.handler = async (event) => {
                 ON CONFLICT (id) DO UPDATE SET
                   name=EXCLUDED.name, title=EXCLUDED.title,
                   phone=EXCLUDED.phone, email=EXCLUDED.email,
-                  inactive=EXCLUDED.inactive, note_log=EXCLUDED.note_log,
+                  inactive=EXCLUDED.inactive,
                 updated_at=NOW()`
           ));
         }
