@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -5617,7 +5617,7 @@ function _doSave(){
         isSaving = false;
       });
     }
-    console.log('State saved to Neon');
+    console.log('[JRC] State saved to Neon — juniors sent:', activeJuniors.length, 'checkedIn:', juniors.filter(function(j){return j.checkedIn;}).length);
     lastSyncTime = Date.now();
     _lastSavedHash = _stateHash();
     hideSyncError();
@@ -5742,6 +5742,7 @@ function _applyState(data){
   var jRows = data.juniors;
 
   // Rebuild juniors array from Neon — Neon is the authoritative source
+  console.log('[JRC] _applyState: jRows=', jRows ? jRows.length : 0, 'checkedIn=', jRows ? jRows.filter(function(r){return r.checked_in;}).length : 0);
   if(jRows && Array.isArray(jRows) && jRows.length > 0){
     juniors = jRows.map(function(row){
       return {
