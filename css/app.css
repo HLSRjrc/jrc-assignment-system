@@ -322,11 +322,12 @@ select.finput{cursor:pointer}
 /* Body: waiting panel (narrow left) + out-on-shift (wide right) */
 .board-body{
   display:grid;
-  grid-template-columns:220px 1fr;  /* fixed narrow waiting | flexible out */
+  grid-template-columns:var(--board-left-width, 220px) 1fr;
   gap:0;
   flex:1;
   min-height:0;
   overflow:hidden;
+  transition:grid-template-columns .8s ease;
 }
 
 /* Waiting panel — stacks CI + Assigned vertically */
@@ -451,7 +452,7 @@ select.finput{cursor:pointer}
 /* TV body — exact viewport height */
 .tv-mode .board-body{
   height:calc(100vh - 58px);
-  grid-template-columns:clamp(160px,16vw,240px) 1fr;
+  grid-template-columns:var(--board-left-width, clamp(160px,16vw,240px)) 1fr;
   overflow:hidden;
 }
 
