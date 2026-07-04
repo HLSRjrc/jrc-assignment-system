@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -423,36 +423,13 @@ function kLookup(){
   if(jr.checkedIn && !clockedOut[jr.id]){
     pendingJr = jr;
     document.getElementById('kco-name').innerHTML = (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
-    document.getElementById('kco-assignment').textContent = jr.assignment ? 'Currently assigned to: ' + jr.assignment : 'Not yet assigned to a committee';
-    var nextEl = document.getElementById('kco-next-shift');
-    if(nextEl) nextEl.textContent = '';
+    document.getElementById('kco-assignment').textContent = jr.assignment ? jr.assignment + ' — ' + SL[jr.checkInShift||currentShift] : SL[jr.checkInShift||currentShift];
+    var qEl = document.getElementById('kco-question');
+    if(qEl) qEl.textContent = 'Clock out for your ' + SL[jr.checkInShift||currentShift] + ' shift?';
     document.getElementById('k-entry').style.display = 'none';
     document.getElementById('k-clockout').style.display = 'block';
     return;
   }
-  // Age-out returning for next shift — skip full check-in, go straight to confirmation
-  if(jr.ageout && clockedOut[jr.id]){
-    var nextShift = getShiftFromTime(getSimTime()) || currentShift;
-    var hasNextPlanned = jr.plannedShifts && jr.plannedShifts.indexOf(nextShift) >= 0;
-    if(hasNextPlanned){
-      pendingJr = jr;
-      // Show a streamlined welcome-back screen
-      document.getElementById('k-entry').style.display = 'none';
-      var aoRetEl = document.getElementById('k-ao-return');
-      if(aoRetEl){
-        document.getElementById('kaor-name').innerHTML =
-          (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
-        var preAssign = jr.shiftAssignments && jr.shiftAssignments[nextShift];
-        document.getElementById('kaor-shift').textContent = SL[nextShift] + (preAssign ? ' — ' + preAssign : '');
-        aoRetEl.style.display = 'block';
-      } else {
-        // Fallback: go through normal confirm
-        document.getElementById('k-confirm').style.display = 'block';
-      }
-      return;
-    }
-  }
-
   // Block check-in if outside the strict time windows
   if(!getShiftFromTime(getSimTime())){
     document.getElementById('k-entry').style.display = 'none';
@@ -498,6 +475,7 @@ function kAoNext(){
   }
   document.getElementById('kc-badges').innerHTML = b;
   document.getElementById('k-ao-shifts').style.display = 'none';
+  var kaon = document.getElementById('k-ao-next'); if(kaon) kaon.style.display = 'none';
   updateKioskShiftBanner();
   document.getElementById('k-confirm').style.display = 'block';
 }
@@ -548,9 +526,9 @@ function kConfirm(){
 }
 
 function kAgeOutReturn(){
-  // Age-out returning for next shift — re-check-in and restore pre-assignment
+  // Age-out confirming next shift check-in
   if(!pendingJr) return;
-  var nextShift = getShiftFromTime(getSimTime()) || currentShift;
+  var nextShift = pendingJr._nextShift || getShiftFromTime(getSimTime()) || currentShift;
   checkInOrder++;
   pendingJr.checkedIn        = true;
   pendingJr.order            = checkInOrder;
@@ -575,7 +553,7 @@ function kAgeOutReturn(){
   _lastSavedHash = '';
   saveStateNow();
   // Show done screen
-  var aoRetEl = document.getElementById('k-ao-return');
+  var aoRetEl = document.getElementById('k-ao-next');
   if(aoRetEl) aoRetEl.style.display = 'none';
   document.getElementById('kdo-name').innerHTML =
     (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
@@ -587,19 +565,41 @@ function kAgeOutReturn(){
 
 function kClockOut(){
   if(!pendingJr) return;
-  // Keep them in their slot — just mark as clocked out so pill shows strikethrough
-  // They stay on the dashboard card but disappear from status board
   onShiftJuniors.delete(pendingJr.id);
   onShiftJuniors.delete(String(pendingJr.id));
   pendingJr.checkedIn = false;
-  // Keep pendingJr.assignment so they stay in the slot card
   clockedOut[pendingJr.id] = true;
   dirtyJuniors.add(pendingJr.id);
+  _lastSavedHash = '';
   saveStateNow();
-  document.getElementById('kdo-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
-  document.getElementById('k-clockout').style.display = 'none';
-  document.getElementById('k-clockout-done').style.display = 'block';
   renderOfficer();
+  renderBoard();
+  document.getElementById('k-clockout').style.display = 'none';
+
+  // Age-out with a next planned shift → chain to next-shift confirmation
+  if(pendingJr.ageout && pendingJr.plannedShifts && pendingJr.plannedShifts.length > 0){
+    var currentShiftIdx = ['8am','12pm','4pm'].indexOf(pendingJr.checkInShift || currentShift);
+    var nextShifts = (pendingJr.plannedShifts || []).filter(function(sh){
+      return ['8am','12pm','4pm'].indexOf(sh) > currentShiftIdx;
+    });
+    if(nextShifts.length > 0){
+      var nextShift = nextShifts[0];
+      var preAssign = pendingJr.shiftAssignments && pendingJr.shiftAssignments[nextShift];
+      document.getElementById('kaon-name').innerHTML =
+        (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
+      document.getElementById('kaon-committee').textContent = preAssign ? preAssign : 'Assignment TBD';
+      document.getElementById('kaon-question').textContent =
+        'Check in for your ' + SL[nextShift] + (preAssign ? ' — ' + preAssign + ' — assignment?' : ' shift?');
+      // Store next shift on pendingJr so kAgeOutReturn knows which shift to use
+      pendingJr._nextShift = nextShift;
+      document.getElementById('k-ao-next').style.display = 'block';
+      return;
+    }
+  }
+
+  // Regular junior or age-out with no more shifts — show done screen
+  document.getElementById('kdo-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
+  document.getElementById('k-clockout-done').style.display = 'block';
   pendingJr = null;
 }
 
