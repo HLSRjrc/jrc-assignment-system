@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -492,6 +492,10 @@ function kConfirm(){
   pendingJr.checkInTimestamp = getSimTime().getTime(); // epoch ms — used in Check-ins tab
   clockedOut[pendingJr.id] = false;
   delete clockedOut[pendingJr.id];
+  delete clockedOut[String(pendingJr.id)];
+  // Remove from onShiftJuniors — they're back in, not out on shift anymore
+  onShiftJuniors.delete(pendingJr.id);
+  onShiftJuniors.delete(String(pendingJr.id));
   // If age-out has a pre-assignment for the current shift, restore it
   if(pendingJr.ageout && pendingJr.shiftAssignments && pendingJr.shiftAssignments[currentShift]){
     var preSlot = activeSlots.find(function(s){ return s.name === pendingJr.shiftAssignments[currentShift] && s.shift === currentShift; });
@@ -1334,6 +1338,8 @@ function placeStragglers(){
   var placed = 0;
   ci.forEach(function(jr){
     var eligible = jr.hasHat ? open : open.filter(function(s){ return !s.hat; });
+    // Last resort: if no non-hat slots available, allow non-hat juniors into hat slots
+    if(!eligible.length) eligible = open;
     if(!eligible.length) return;
 
     // Respect history block unless every eligible slot is already sent
@@ -1455,6 +1461,14 @@ function autoAssign(){
     return freshest[0] || null;
   }
 
+  function pickSlotFallback(jr){
+    // Last resort — ignore hat restriction when no eligible slots exist
+    var open = allOpen.filter(function(s){ return s.assigned.length < s.capacity; });
+    if(!open.length) return null;
+    open.sort(function(a,b){ return b.assigned.length - a.assigned.length; });
+    return open[0];
+  }
+
   // Assign in check-in order
   var pool = reg.slice().sort(function(a,b){ return a.order - b.order; });
   var placed = 0, skipped = 0;
@@ -1477,7 +1491,7 @@ function autoAssign(){
       if(wouldBeTrueSolo){ skipped++; return; }
     }
 
-    var pick = pickSlot(jr, pool);
+    var pick = pickSlot(jr, pool) || pickSlotFallback(jr);
     if(!pick){ skipped++; return; }
     assignJr(jr, pick.name);
     pick.assigned.push(jr.id);
@@ -1485,7 +1499,23 @@ function autoAssign(){
   });
 
   var msg = placed + ' junior' + (placed !== 1 ? 's' : '') + ' assigned.';
-  if(skipped) msg += ' ' + skipped + ' junior' + (skipped !== 1 ? 's' : '') + ' left in pool — use Place Straggler.';
+  if(skipped){
+    var stragglers = pool.filter(function(j){ return !j.assignment; });
+    var noHatSlots = stragglers.filter(function(j){
+      return !j.hasHat && activeSlots.every(function(s){
+        return s.shift !== currentShift || s.assigned.length >= s.capacity || s.hat;
+      });
+    });
+    var hatOnly = stragglers.filter(function(j){
+      return j.hasHat && activeSlots.every(function(s){
+        return s.shift !== currentShift || s.assigned.length >= s.capacity;
+      });
+    });
+    var reason = noHatSlots.length === stragglers.length ? ' (no open non-hat slots)' :
+                 hatOnly.length === stragglers.length ? ' (all slots full)' :
+                 ' (hat/capacity mismatch)';
+    msg += ' ' + skipped + ' junior' + (skipped !== 1 ? 's' : '') + ' left in pool' + reason + ' — use Place Straggler.';
+  }
   showAlert(msg, placed > 0 ? 'success' : 'warn');
   renderOfficer();
   saveStateNow();
@@ -1500,7 +1530,10 @@ function clearAssignments(){
       j.assignment = null; j.prevLast = null;
     }
   });
-  activeSlots.forEach(function(s){ s.assigned = []; });
+  activeSlots.forEach(function(s){ s.assigned = []; s.sent = false; });
+  // Clear out-on-shift tracking so juniors appear back in the pool
+  onShiftJuniors = new Set();
+  onShiftSlots = new Set();
   activePick = null;
   document.getElementById('off-alert').style.display = 'none';
   renderOfficer();
@@ -1946,6 +1979,8 @@ function adminUndoClockOut(jid){
   clockedOut[jr.id] = false;
   delete clockedOut[jr.id];
   delete clockedOut[String(jr.id)];
+  onShiftJuniors.delete(jr.id);
+  onShiftJuniors.delete(String(jr.id));
   dirtyJuniors.add(jr.id);
   _lastSavedHash = '';
   saveStateNow();
@@ -5257,9 +5292,10 @@ function getJuniorStatus(jr){
   if(!jr.checkedIn) return null;
   // Only use onShiftJuniors — this is cleared on clock-out so it's shift-specific
   if(onShiftJuniors.has(jr.id) || onShiftJuniors.has(String(jr.id))) return 'on-shift';
-  // Check slot data only for current shift — prevents old sent slots bleeding into next shift
+  // Check slot data — slot shift must match junior's current check-in shift
+  var jrShift = jr.checkInShift || currentShift;
   var inSentSlot = activeSlots.some(function(s){
-    if(s.shift !== currentShift) return false; // only current shift slots
+    if(s.shift !== jrShift) return false; // slot must match junior's current shift
     return (onShiftSlots.has(String(s.id)) || onShiftSlots.has(s.id)) &&
            (s.assigned.indexOf(jr.id) >= 0 || s.assigned.indexOf(String(jr.id)) >= 0);
   });
@@ -5317,6 +5353,10 @@ function renderBoard(){
         if(!j.checkInShift) return;
         if(j.checkedIn && j.checkInShift === sh) return;
         if(checkedInForShift.indexOf(j) >= 0) return;
+        // Skip if already showing in outAll or assAll for current shift (don't double-list)
+        var alreadyListed = outAll.some(function(r){ return r.j.id === j.id; }) ||
+                            assAll.some(function(r){ return r.j.id === j.id; });
+        if(alreadyListed) return;
         ciAll.push({j:j, sh:sh, pending:true});
       });
     }
