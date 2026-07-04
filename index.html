@@ -273,25 +273,28 @@ if(window.location.search.indexOf('partner=1') >= 0){
         <div class="confirm-name" id="kco-name" style="color:#fff"></div>
         <div style="font-size:13px;opacity:.85;margin-top:4px" id="kco-assignment"></div>
       </div>
-      <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:8px">Are you done with your current shift?</div>
-      <div style="font-size:13px;color:#667788;margin-bottom:12px">Clocking out will remove you from your current assignment.</div>
-      <div id="kco-next-shift" style="font-size:13px;color:#2A3DB5;font-weight:600;margin-bottom:20px"></div>
+      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:20px" id="kco-question">Are you done with your current shift?</div>
       <div style="display:flex;gap:10px">
         <button class="kiosk-btn" style="background:var(--red);flex:1" onclick="kClockOut()">Yes, Clock Out</button>
         <button class="kiosk-btn" style="background:#667788;flex:1" onclick="kCancelClockOut()">Cancel</button>
       </div>
     </div>
 
-    <!-- CLOCK-OUT DONE SCREEN -->
-    <!-- AGE-OUT RETURN SCREEN -->
-    <div id="k-ao-return" style="display:none;padding:1rem 0">
-      <div class="check-icon" style="background:#2A3DB5">&#9654;</div>
-      <div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px" id="kaor-name"></div>
-      <div style="font-size:15px;color:#667788;margin-bottom:4px">Welcome back!</div>
-      <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:1.5rem" id="kaor-shift"></div>
-      <button class="kiosk-btn" style="background:var(--navy)" onclick="kAgeOutReturn()">Check In for This Shift</button>
-      <button class="kiosk-btn kiosk-btn-secondary" onclick="kReset()" style="margin-top:8px">Cancel</button>
+    <!-- AGE-OUT NEXT SHIFT CONFIRMATION -->
+    <div id="k-ao-next" style="display:none">
+      <div class="confirm-box" style="background:linear-gradient(135deg,#1a3a6b,#2A3DB5);color:#fff;border:none">
+        <div style="font-size:13px;opacity:.8;margin-bottom:4px">Next Assignment</div>
+        <div class="confirm-name" id="kaon-name" style="color:#fff"></div>
+        <div style="font-size:14px;opacity:.9;margin-top:6px;font-weight:600" id="kaon-committee"></div>
+      </div>
+      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:20px" id="kaon-question"></div>
+      <div style="display:flex;gap:10px">
+        <button class="kiosk-btn" style="background:var(--navy);flex:1" onclick="kAgeOutReturn()">Yes, Check In</button>
+        <button class="kiosk-btn" style="background:#667788;flex:1" onclick="kReset()">Done for Now</button>
+      </div>
     </div>
+
+    <!-- CLOCK-OUT DONE SCREEN -->
 
     <div id="k-clockout-done" style="display:none;padding:1rem 0">
       <div class="check-icon" style="background:var(--red)">&#10003;</div>
