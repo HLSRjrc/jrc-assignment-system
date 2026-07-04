@@ -623,9 +623,9 @@ position:relative;z-index:1}
 .logout-btn:hover{color:#fff;border-color:rgba(255,255,255,.6);background:rgba(255,255,255,.1)}
 .user-badge{font-size:11px;color:rgba(255,255,255,.55);white-space:nowrap;letter-spacing:.03em;pointer-events:auto}
 /* HAT HIGHLIGHTING */
-.chip.has-hat{background:#FFF8E1;border-color:#F9A825;color:#5D3B00;font-weight:700}
-.pill.has-hat{background:#FFF8E1;border-color:#F9A825;color:#5D3B00;font-weight:700}
-.pill.has-hat.ao{background:#FFF0A0;border-color:#E6920A;color:#5D3B00}
+.chip.has-hat{font-weight:700}
+.pill.has-hat{font-weight:700}
+.pill.has-hat.ao{}
 .hat-icon{font-size:13px;margin-left:2px}
 
 /* NOTES QUEUE */
