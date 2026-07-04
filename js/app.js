@@ -10,7 +10,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3284,7 +3284,7 @@ function simProgressCO(pct){
 
 function simStartCheckIns(){
   if(_simCIRunning){ showAlert('Check-in sim already running.', 'warn'); return; }
-  var count  = Math.min(80, Math.max(5, parseInt(document.getElementById('sim-junior-count').value)||30));
+  var count  = Math.min(650, Math.max(5, parseInt(document.getElementById('sim-junior-count').value)||30));
   var shift  = document.getElementById('sim-shift-sel').value || '8am';
 
   // Pick random available juniors
@@ -3323,7 +3323,7 @@ function simStartCheckIns(){
       checkInOrder++;
       jr.checkedIn        = true;
       jr.order            = checkInOrder;
-      jr.hasHat           = Math.random() < 0.75; // 75% wear hats
+      jr.hasHat           = Math.random() < 0.75; // daily question — always randomize in sim
       jr.notes            = '';
       jr.checkInShift     = shift;
       jr.checkInDate      = currentDate;
@@ -5709,19 +5709,37 @@ function hideSyncError(){
 
 // Roster save — sends ALL juniors to Neon (used only on import)
 function saveRosterToNeon(callback){
-  console.log('Saving full roster to Neon (' + juniors.length + ' juniors)...');
-  fetch('/.netlify/functions/state', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', 'x-api-token': API_TOKEN},
-    body: JSON.stringify({ juniors: juniors, adults: adults })
-  }).then(function(r){
-    if(!r.ok) return r.text().then(function(b){ throw new Error(r.status + ': ' + b); });
-    console.log('Roster saved to Neon');
-    if(callback) callback(null);
-  }).catch(function(e){
-    console.error('Roster save failed:', e.message);
-    if(callback) callback(e);
-  });
+  // Send adults first, then juniors in chunks of 150 to avoid 502 timeouts
+  var CHUNK = 150;
+  var chunks = [];
+  for(var i = 0; i < juniors.length; i += CHUNK){
+    chunks.push(juniors.slice(i, i + CHUNK));
+  }
+  console.log('Saving roster to Neon: ' + juniors.length + ' juniors in ' + chunks.length + ' chunks + adults');
+
+  // Send adults + first chunk together
+  function sendChunk(idx){
+    if(idx >= chunks.length){
+      console.log('Roster fully saved to Neon');
+      if(callback) callback(null);
+      return;
+    }
+    var body = { juniors: chunks[idx] };
+    if(idx === 0) body.adults = adults; // send adults with first chunk only
+    fetch('/.netlify/functions/state', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'x-api-token': API_TOKEN},
+      body: JSON.stringify(body)
+    }).then(function(r){
+      if(!r.ok) return r.text().then(function(b){ throw new Error(r.status + ': ' + b); });
+      console.log('Roster chunk ' + (idx+1) + '/' + chunks.length + ' saved');
+      sendChunk(idx + 1);
+    }).catch(function(e){
+      console.error('Roster chunk ' + (idx+1) + ' failed:', e.message);
+      if(callback) callback(e);
+    });
+  }
+  sendChunk(0);
 }
 
 function loadState(){
