@@ -1,3 +1,53 @@
+
+function renderLateAgeOutAlert(){
+  var el = document.getElementById('late-ao-alert');
+  if(!el) return;
+  var shiftStart = currentShift==='8am' ? 480 : currentShift==='12pm' ? 720 : 960;
+  var nowMins = (function(){ var t=getSimTime(); return t.getHours()*60+t.getMinutes(); })();
+  var late = juniors.filter(function(j){
+    if(!j.ageout || !j.onBreak) return false;
+    if(j.onBreakNextShift !== currentShift) return false;
+    return nowMins >= shiftStart - 15;
+  });
+  if(!late.length){ el.style.display='none'; return; }
+  el.style.display = 'block';
+  el.innerHTML = '<div style="background:#FFF3CD;border:1px solid #F0C040;border-radius:8px;padding:10px 14px;margin-bottom:12px">' +
+    '<div style="font-weight:700;color:#7D4E00;margin-bottom:8px">&#9888; ' + late.length + ' age-out' + (late.length>1?'s are':'is') + ' late for ' + SL[currentShift] + '</div>' +
+    late.map(function(j){
+      var assign = j.shiftAssignments && j.shiftAssignments[currentShift];
+      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
+        '<span style="flex:1;font-size:13px">' + j.name + (assign ? ' <span style="color:#667788">→ ' + assign + '</span>' : '') + '</span>' +
+        '<button class="btn btn-sm" style="font-size:11px;padding:3px 10px;border-color:#CC0000;color:#CC0000" ' +
+        'onclick="releaseAgeOutSlot(' + j.id + ')">Release Slot</button>' +
+        '</div>';
+    }).join('') +
+  '</div>';
+}
+
+function releaseAgeOutSlot(jid){
+  var jr = juniors.find(function(j){ return j.id === jid; });
+  if(!jr) return;
+  if(!confirm('Release ' + jr.name.split(',')[0] + '\'s ' + SL[currentShift] + ' slot and put them back in the queue?')) return;
+  var sh = jr.onBreakNextShift || currentShift;
+  // Remove from pre-assigned slot
+  if(jr.shiftAssignments && jr.shiftAssignments[sh]){
+    var sl = activeSlots.find(function(s){ return s.name === jr.shiftAssignments[sh] && s.shift === sh; });
+    if(sl) sl.assigned = sl.assigned.filter(function(id){ return String(id) !== String(jid); });
+    delete jr.shiftAssignments[sh];
+  }
+  // Remove from planned shifts
+  if(jr.plannedShifts) jr.plannedShifts = jr.plannedShifts.filter(function(s){ return s !== sh; });
+  jr.onBreak = false;
+  jr.onBreakNextShift = null;
+  jr.checkedIn = false;
+  clockedOut[jr.id] = true; // fully signed out
+  dirtyJuniors.add(jr.id);
+  _lastSavedHash = '';
+  saveStateNow();
+  renderOfficer();
+  renderBoard();
+  showAlert(jr.name.split(',')[0] + '\'s slot released.', 'info');
+}
 var SL = {'8am':'8:00am–12:00pm','12pm':'12:00pm–4:00pm','4pm':'4:00pm–8:00pm'};
 var SHOW_START = new Date('2027-03-02');
 var SHOW_END = new Date('2027-03-20');
@@ -10,7 +60,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -430,6 +480,25 @@ function kLookup(){
     document.getElementById('k-clockout').style.display = 'block';
     return;
   }
+  // Age-out on break scanning in for their next shift
+  if(jr.ageout && jr.onBreak){
+    var nowShift = getShiftFromTime(getSimTime()) || currentShift;
+    var hasThisShift = jr.plannedShifts && nowShift && jr.plannedShifts.indexOf(nowShift) >= 0;
+    if(hasThisShift){
+      pendingJr = jr;
+      var preAssign = jr.shiftAssignments && jr.shiftAssignments[nowShift];
+      document.getElementById('kaon-name').innerHTML =
+        (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
+      document.getElementById('kaon-committee').textContent = preAssign ? preAssign : 'Assignment TBD';
+      document.getElementById('kaon-question').textContent =
+        'Check in for your ' + SL[nowShift] + (preAssign ? ' — ' + preAssign + ' — assignment?' : ' shift?');
+      pendingJr._nextShift = nowShift;
+      document.getElementById('k-entry').style.display = 'none';
+      document.getElementById('k-ao-next').style.display = 'block';
+      return;
+    }
+  }
+
   // Block check-in if outside the strict time windows
   if(!getShiftFromTime(getSimTime())){
     document.getElementById('k-entry').style.display = 'none';
@@ -536,6 +605,8 @@ function kAgeOutReturn(){
   pendingJr.checkInDate      = currentDate;
   pendingJr.checkInTimestamp = getSimTime().getTime();
   pendingJr.assignment       = null; // clear old assignment first
+  pendingJr.onBreak = false;
+  pendingJr.onBreakNextShift = null;
   clockedOut[pendingJr.id]   = false;
   delete clockedOut[pendingJr.id];
   onShiftJuniors.delete(pendingJr.id);
@@ -576,7 +647,7 @@ function kClockOut(){
   renderBoard();
   document.getElementById('k-clockout').style.display = 'none';
 
-  // Age-out with a next planned shift → chain to next-shift confirmation
+  // Age-out with future planned shifts → put on break, show "see you at X" screen
   if(pendingJr.ageout && pendingJr.plannedShifts && pendingJr.plannedShifts.length > 0){
     var currentShiftIdx = ['8am','12pm','4pm'].indexOf(pendingJr.checkInShift || currentShift);
     var nextShifts = (pendingJr.plannedShifts || []).filter(function(sh){
@@ -585,20 +656,31 @@ function kClockOut(){
     if(nextShifts.length > 0){
       var nextShift = nextShifts[0];
       var preAssign = pendingJr.shiftAssignments && pendingJr.shiftAssignments[nextShift];
-      document.getElementById('kaon-name').innerHTML =
+      // Put on break — not clocked out, not checked in, just resting
+      pendingJr.onBreak = true;
+      pendingJr.onBreakNextShift = nextShift;
+      clockedOut[pendingJr.id] = false;
+      delete clockedOut[pendingJr.id];
+      // Show "see you at X" done screen
+      document.getElementById('kdo-name').innerHTML =
         (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
-      document.getElementById('kaon-committee').textContent = preAssign ? preAssign : 'Assignment TBD';
-      document.getElementById('kaon-question').textContent =
-        'Check in for your ' + SL[nextShift] + (preAssign ? ' — ' + preAssign + ' — assignment?' : ' shift?');
-      // Store next shift on pendingJr so kAgeOutReturn knows which shift to use
-      pendingJr._nextShift = nextShift;
-      document.getElementById('k-ao-next').style.display = 'block';
+      var kdoMsg = document.getElementById('kdo-msg');
+      if(kdoMsg) kdoMsg.textContent = 'See you at ' + SL[nextShift] + (preAssign ? ' for ' + preAssign + '!' : '!');
+      document.getElementById('k-clockout-done').style.display = 'block';
+      dirtyJuniors.add(pendingJr.id);
+      _lastSavedHash = '';
+      saveStateNow();
+      renderOfficer();
+      renderBoard();
+      pendingJr = null;
       return;
     }
   }
 
-  // Regular junior or age-out with no more shifts — show done screen
+  // Regular junior or age-out with no more shifts — full clock-out done screen
   document.getElementById('kdo-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
+  var kdoMsg2 = document.getElementById('kdo-msg');
+  if(kdoMsg2) kdoMsg2.textContent = 'Great work today!';
   document.getElementById('k-clockout-done').style.display = 'block';
   pendingJr = null;
 }
@@ -956,6 +1038,7 @@ function unlockNote(jid){
 
 
 function renderOfficer(search){
+  renderLateAgeOutAlert();
   var ci = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id]; });
   var asgn = juniors.filter(function(j){ return j.assignment && !clockedOut[j.id]; });
   var un = ci.filter(function(j){ return !j.assignment; });
@@ -5420,6 +5503,14 @@ function renderBoard(){
         if(alreadyListed) return;
         ciAll.push({j:j, sh:sh, pending:true});
       });
+      // On-break age-outs waiting for future shift
+      juniors.forEach(function(j){
+        if(!j.ageout || !j.onBreak) return;
+        if(j.onBreakNextShift !== sh) return;
+        var shiftStart = sh==='8am' ? 480 : sh==='12pm' ? 720 : 960;
+        var isLate = nowMins >= shiftStart - 15;
+        ciAll.push({j:j, sh:sh, pending:true, onBreak:true, lateBreak:isLate});
+      });
     }
   });
 
@@ -5473,9 +5564,11 @@ function renderBoard(){
       h += '<div class="board-col-hdr pending">&#9711; Later Shifts (' + pending.length + ')</div>';
       pending.slice().sort(function(a,b){ return a.j.name.localeCompare(b.j.name); })
         .forEach(function(r){
-          h += '<div class="board-name pending">' +
+          var nameStyle = r.lateBreak ? ' late' : ' pending';
+          var lateTag = r.lateBreak ? ' <span style="font-size:8px;background:#FF6B6B;color:#fff;padding:0 4px;border-radius:3px;vertical-align:middle">LATE</span>' : '';
+          h += '<div class="board-name' + nameStyle + '">' +
             shiftPill(r.sh) +
-            fmtNameShort(r.j.name) + '</div>';
+            fmtNameShort(r.j.name) + lateTag + '</div>';
         });
     }
     return h;
