@@ -283,6 +283,16 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </div>
 
     <!-- CLOCK-OUT DONE SCREEN -->
+    <!-- AGE-OUT RETURN SCREEN -->
+    <div id="k-ao-return" style="display:none;padding:1rem 0">
+      <div class="check-icon" style="background:#2A3DB5">&#9654;</div>
+      <div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px" id="kaor-name"></div>
+      <div style="font-size:15px;color:#667788;margin-bottom:4px">Welcome back!</div>
+      <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:1.5rem" id="kaor-shift"></div>
+      <button class="kiosk-btn" style="background:var(--navy)" onclick="kAgeOutReturn()">Check In for This Shift</button>
+      <button class="kiosk-btn kiosk-btn-secondary" onclick="kReset()" style="margin-top:8px">Cancel</button>
+    </div>
+
     <div id="k-clockout-done" style="display:none;padding:1rem 0">
       <div class="check-icon" style="background:var(--red)">&#10003;</div>
       <div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px" id="kdo-name"></div>
@@ -403,7 +413,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div>
         <div style="font-size:11px;color:#667788;margin-bottom:3px">Juniors to check in</div>
-        <input type="number" class="finput" id="sim-junior-count" value="30" min="5" max="80" style="font-size:12px">
+        <input type="number" class="finput" id="sim-junior-count" value="30" min="5" max="650" style="font-size:12px">
       </div>
       <div>
         <div style="font-size:11px;color:#667788;margin-bottom:3px">Shift</div>
