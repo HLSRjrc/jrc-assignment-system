@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1076,12 +1076,12 @@ function renderOfficer(search){
              '</span>';
     }).join('');
 
-    var sentBanner = isSent ? '<div style="background:#E8F5ED;color:#155724;font-size:11px;font-weight:600;text-align:center;padding:4px 10px;border-radius:4px;margin-bottom:8px;letter-spacing:.05em">Out on Shift</div>' : '';
+    var sentBanner = isSent ? '<div style="background:#27AE60;color:#fff;font-size:12px;font-weight:800;text-align:center;padding:5px 10px;border-radius:4px;margin-bottom:8px;letter-spacing:.08em;text-transform:uppercase">&#9650; OUT ON SHIFT</div>' : '';
 
     var cardStyle = 'slot-card' + (full ? ' full' : '') + (isSent ? ' sent' : '');
 
     var hpBorder = s.highPriority && !isSent ? 'border:1px solid #CC0000;border-left:3px solid #CC0000;background:#FFF8F8;' : '';
-    return '<div class="' + cardStyle + '" data-slotid="' + s.id + '" style="' + (isSent ? 'border:1px solid #97C459;border-left:3px solid #27AE60;background:#F7FDF9;' : hpBorder) + '">' +
+    return '<div class="' + cardStyle + '" data-slotid="' + s.id + '" style="' + (isSent ? '' : hpBorder) + '">' +
       sentBanner +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;gap:8px">' +
         '<div style="flex:1">' +
@@ -1962,12 +1962,13 @@ function adminClockOut(jid){
   if(!jr) return;
   if(!confirm('Clock out ' + jr.name + '? This will remove them from the queue and any assignment.')) return;
   clockedOut[jr.id] = true;
-  // Remove from any active slots
+  jr.assignment = null;
+  // Remove from any active slots (both numeric and string id forms)
   activeSlots.forEach(function(s){
-    var idx = s.assigned.indexOf(jr.id);
-    if(idx >= 0) s.assigned.splice(idx, 1);
+    s.assigned = s.assigned.filter(function(id){ return String(id) !== String(jid); });
   });
   onShiftJuniors.delete(jr.id);
+  onShiftJuniors.delete(String(jr.id));
   dirtyJuniors.add(jr.id);
   _lastSavedHash = '';
   saveStateNow();
@@ -5058,7 +5059,8 @@ function undoSent(slotId){
 
 
 function getJuniorStatus(jr){
-  if(!jr.checkedIn && clockedOut && (clockedOut[jr.id] || clockedOut[String(jr.id)])) return 'checked-out';
+  // clockedOut ALWAYS takes precedence regardless of checkedIn flag
+  if(clockedOut && (clockedOut[jr.id] || clockedOut[String(jr.id)])) return 'checked-out';
   if(!jr.checkedIn) return null;
   // Only use onShiftJuniors — this is cleared on clock-out so it's shift-specific
   if(onShiftJuniors.has(jr.id) || onShiftJuniors.has(String(jr.id))) return 'on-shift';
@@ -5101,7 +5103,7 @@ function renderBoard(){
   shifts.forEach(function(sh){
     var checkedInForShift = juniors.filter(function(j){
       if(!j.checkedIn) return false;
-      if(clockedOut[j.id]) return false;
+      if(clockedOut[j.id] || clockedOut[String(j.id)]) return false;
       var jShift = j.checkInShift || currentShift;
       return jShift === sh;
     });
@@ -5111,6 +5113,27 @@ function renderBoard(){
       if(status === 'checked-in')  ciAll.push(rec);
       else if(status === 'assigned') assAll.push(rec);
       else if(status === 'on-shift') outAll.push(rec);
+    });
+    // Also include clocked-out juniors who were sent out — show strikethrough on board
+    juniors.forEach(function(j){
+      if(!(clockedOut[j.id] || clockedOut[String(j.id)])) return;
+      if(!j.checkedIn) return;
+      var jShift = j.checkInShift || sh;
+      if(jShift !== sh) return;
+      // Only show if they were actually sent out (had an assignment)
+      var hadAssignment = j.assignment ||
+        activeSlots.some(function(s){
+          return s.shift === sh && (s.assigned.indexOf(j.id)>=0 || s.assigned.indexOf(String(j.id))>=0);
+        });
+      if(!hadAssignment) return;
+      // Find their committee from slot data since assignment may be cleared
+      var committee = j.assignment || (function(){
+        var sl = activeSlots.find(function(s){
+          return s.shift===sh && (s.assigned.indexOf(j.id)>=0 || s.assigned.indexOf(String(j.id))>=0);
+        });
+        return sl ? sl.name : null;
+      })();
+      if(committee) outAll.push({j:j, sh:sh, clockedOut:true, committee:committee});
     });
 
     // Age-out pending (future shifts) — bucket into CI column with pending style
@@ -5150,8 +5173,7 @@ function renderBoard(){
     if(normal.length === 0){
       h += '<div class="board-empty">None waiting</div>';
     } else {
-      var ciCols = normal.length > 30 ? 3 : normal.length > 15 ? 2 : 1;
-      h += '<div style="column-count:' + ciCols + ';column-gap:6px">';
+      h += '<div>';
       normal.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
         .forEach(function(r){
           h += '<div class="board-name">' + shiftPill(r.sh) + fmtNameShort(r.j.name) + '</div>';
@@ -5192,8 +5214,7 @@ function renderBoard(){
   function buildAssigned(){
     if(assAll.length === 0) return '';
     var h = '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')</div>';
-    var assCols = assAll.length > 40 ? 4 : assAll.length > 20 ? 3 : assAll.length > 10 ? 2 : 1;
-    h += '<div style="column-count:' + assCols + ';column-gap:6px">';
+    h += '<div>';
     assAll.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
       .forEach(function(r){
         h += '<div class="board-name">' + shiftPill(r.sh) + fmtNameShort(r.j.name) + '</div>';
@@ -5209,9 +5230,9 @@ function renderBoard(){
     shifts.forEach(function(sh){ byShift[sh] = {}; });
     outAll.forEach(function(r){
       var sh = r.sh;
-      var committee = r.j.assignment || (r.j.shiftAssignments && r.j.shiftAssignments[sh]) || 'Unassigned';
+      var committee = r.committee || r.j.assignment || (r.j.shiftAssignments && r.j.shiftAssignments[sh]) || 'Unassigned';
       if(!byShift[sh][committee]) byShift[sh][committee] = [];
-      byShift[sh][committee].push(r.j);
+      byShift[sh][committee].push({j:r.j, clockedOut:r.clockedOut});
     });
 
     // Total committee groups across all shifts — drives sub-column count
@@ -5220,7 +5241,9 @@ function renderBoard(){
     var subCols = totalGroups >= 35 ? 'cols5' : totalGroups >= 10 ? 'cols4' : totalGroups >= 6 ? 'cols3' : totalGroups >= 3 ? 'cols2' : 'cols1';
 
     var h = '<div class="board-out-col">';
-    h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + outAll.length + ')</div>';
+    var activeOut = outAll.filter(function(r){return !r.clockedOut;}).length;
+    var coOut = outAll.filter(function(r){return r.clockedOut;}).length;
+    h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + activeOut + (coOut?' <span style="font-size:9px;opacity:.5">+'+coOut+' done</span>':'') + ')</div>';
 
     if(outAll.length === 0){
       h += '<div class="board-empty">None sent yet</div>';
@@ -5242,8 +5265,12 @@ function renderBoard(){
           h += '<div class="board-committee-label' + (isLate ? ' late' : '') + '">' + committee +
             ' <span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;background:' + shBadgeColor + ';color:#001F40">' + shBadgeText + '</span>' +
           '</div>';
-          byShift[sh][committee].forEach(function(j){
-            h += '<div class="board-name out' + (isLate ? ' late' : '') + '">' + fmtNameShort(j.name) + '</div>';
+          byShift[sh][committee].forEach(function(entry){
+            var j = entry.j || entry; // handle both {j, clockedOut} and plain junior
+            var co = entry.clockedOut;
+            h += '<div class="board-name out' + (isLate && !co ? ' late' : '') + '"' +
+              (co ? ' style="opacity:.45;text-decoration:line-through"' : '') + '>' +
+              fmtNameShort(j.name) + '</div>';
           });
           h += '</div>';
         });
