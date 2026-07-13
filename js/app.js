@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -5107,50 +5107,48 @@ function renderBoard(){
 
   // Build Checked-In column HTML
   function buildCI(){
-    var h = '<div class="board-waiting-col">';
-    // Pending age-outs at top
     var pending = ciAll.filter(function(r){ return r.pending; });
     var normal  = ciAll.filter(function(r){ return !r.pending; });
-    if(pending.length > 0){
-      h += '<div class="board-col-hdr pending">&#9711; Pending (' + pending.length + ')</div>';
-      pending.slice().sort(function(a,b){ return a.j.name.localeCompare(b.j.name); })
-        .forEach(function(r){
-          h += '<div class="board-name pending">' +
-            (showTagCI ? shiftPill(r.sh) : '') +
-            fmtNameShort(r.j.name) + '</div>';
-        });
-      h += '<div class="board-col-gap"></div>';
-    }
-    h += '<div class="board-col-hdr ci">&#9679; Checked In (' + normal.length + ')</div>';
+    var h = '<div class="board-col-hdr ci">&#9679; Checked In (' + normal.length + ')</div>';
     if(normal.length === 0){
       h += '<div class="board-empty">None waiting</div>';
     } else {
+      var ciCols = normal.length > 30 ? 3 : normal.length > 15 ? 2 : 1;
+      h += '<div style="column-count:' + ciCols + ';column-gap:6px">';
       normal.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
         .forEach(function(r){
-          h += '<div class="board-name">' +
-            (showTagCI ? shiftPill(r.sh) : '') +
-            fmtNameShort(r.j.name) + '</div>';
+          h += '<div class="board-name">' + shiftPill(r.sh) + fmtNameShort(r.j.name) + '</div>';
+        });
+      h += '</div>';
+    }
+    // Pending age-outs at bottom
+    if(pending.length > 0){
+      h += '<div class="board-col-gap"></div>';
+      h += '<div class="board-col-hdr pending">&#9711; Later Shifts (' + pending.length + ')</div>';
+      pending.slice().sort(function(a,b){ return a.j.name.localeCompare(b.j.name); })
+        .forEach(function(r){
+          var late = r.lateBreak;
+          h += '<div class="board-name ' + (late ? 'late' : 'pending') + '">' +
+            shiftPill(r.sh) + fmtNameShort(r.j.name) +
+            (late ? ' <span style="font-size:8px;background:#FF6B6B;color:#fff;padding:0 4px;border-radius:3px">LATE</span>' : '') +
+            '</div>';
         });
     }
-    h += '</div>';
     return h;
   }
 
-  // Build Assigned column HTML
+  // Build Assigned section HTML (no wrapper — goes inside board-right-col)
   function buildAssigned(){
-    var h = '<div class="board-waiting-col">';
+    if(assAll.length === 0) return '';
+    var h = '<div class="board-ass-section">';
     h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')</div>';
-    if(assAll.length === 0){
-      h += '<div class="board-empty">None yet</div>';
-    } else {
-      assAll.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
-        .forEach(function(r){
-          h += '<div class="board-name">' +
-            (showTagAss ? shiftPill(r.sh) : '') +
-            fmtNameShort(r.j.name) + '</div>';
-        });
-    }
-    h += '</div>';
+    var assCols = assAll.length > 30 ? 3 : assAll.length > 15 ? 2 : 1;
+    h += '<div style="column-count:' + assCols + ';column-gap:6px">';
+    assAll.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
+      .forEach(function(r){
+        h += '<div class="board-name">' + shiftPill(r.sh) + fmtNameShort(r.j.name) + '</div>';
+      });
+    h += '</div></div>';
     return h;
   }
 
@@ -5169,7 +5167,7 @@ function renderBoard(){
     // Total committee groups across all shifts — drives sub-column count
     var totalGroups = 0;
     shifts.forEach(function(sh){ totalGroups += Object.keys(byShift[sh]).length; });
-    var subCols = totalGroups >= 15 ? 'cols3' : totalGroups >= 6 ? 'cols2' : 'cols1';
+    var subCols = totalGroups >= 35 ? 'cols5' : totalGroups >= 20 ? 'cols4' : totalGroups >= 12 ? 'cols3' : totalGroups >= 6 ? 'cols2' : 'cols1';
 
     var h = '<div class="board-out-col">';
     h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + outAll.length + ')</div>';
@@ -5189,7 +5187,11 @@ function renderBoard(){
         }
         committees.forEach(function(committee){
           h += '<div class="board-committee-group">';
-          h += '<div class="board-committee-label' + (isLate ? ' late' : '') + '">' + committee + '</div>';
+          var shBadgeColor = sh==='8am'?'#4499CC':sh==='12pm'?'#F0C040':'#5CDB95';
+          var shBadgeText  = sh==='8am'?'8AM':sh==='12pm'?'12PM':'4PM';
+          h += '<div class="board-committee-label' + (isLate ? ' late' : '') + '">' + committee +
+            ' <span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;background:' + shBadgeColor + ';color:#001F40">' + shBadgeText + '</span>' +
+          '</div>';
           byShift[sh][committee].forEach(function(j){
             h += '<div class="board-name out' + (isLate ? ' late' : '') + '">' + fmtNameShort(j.name) + '</div>';
           });
@@ -5205,21 +5207,29 @@ function renderBoard(){
   // Total active across all shifts for header
   var totalActive = ciAll.filter(function(r){ return !r.pending; }).length + assAll.length + outAll.length;
 
+  // Dynamic left panel width based on waiting vs out ratio
+  var waitingCount = ciAll.filter(function(r){return !r.pending;}).length + assAll.length;
+  var outCount = outAll.length;
+  var total = waitingCount + outCount;
+  var leftPct;
+  if(total === 0){ leftPct = 25; }
+  else if(waitingCount === 0){ leftPct = 10; }
+  else { leftPct = Math.max(10, Math.min(65, Math.round(10 + (waitingCount/total)*55))); }
+
   var html = '<div class="board-wrap">' +
     '<div class="board-header">' +
       '<div>' +
         '<div class="board-title">JRC Live Status Board</div>' +
-        '<div class="board-clock" id="board-date-lbl">' + fmtDateLong(date) + '</div>' +
+        '<div id="board-date-lbl" style="font-size:13px;color:#99BBDD;font-weight:600">' + fmtDateLong(date) + '</div>' +
       '</div>' +
       '<div style="text-align:right">' +
         '<div id="board-clock" style="font-size:22px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums"></div>' +
         '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' juniors active</div>' +
       '</div>' +
     '</div>' +
-    '<div class="board-body">' +
-      buildCI() +
-      buildAssigned() +
-      buildOut() +
+    '<div class="board-body" id="board-body-el" style="grid-template-columns:' + leftPct + 'vw 1fr">' +
+      '<div class="board-waiting-col"><div class="board-ci-section">' + buildCI() + '</div></div>' +
+      '<div class="board-right-col">' + buildAssigned() + buildOut() + '</div>' +
     '</div>' +
   '</div>';
 
@@ -5229,6 +5239,28 @@ function renderBoard(){
   updateBoardClock();
   if(boardTimer) clearInterval(boardTimer);
   boardTimer = setInterval(updateBoardClock, 1000);
+
+  // Auto-scroll CI + Assigned sections (slow ping-pong crawl when overflowing)
+  startBoardAutoScroll();
+}
+
+var _boardScrollTimer = null;
+function startBoardAutoScroll(){
+  if(_boardScrollTimer) clearInterval(_boardScrollTimer);
+  var dirs = {}, pause = {};
+  _boardScrollTimer = setInterval(function(){
+    ['.board-ci-section','.board-ass-section'].forEach(function(sel){
+      var el = document.querySelector(sel);
+      if(!el) return;
+      var max = el.scrollHeight - el.clientHeight;
+      if(max <= 4) return;
+      if(pause[sel] > 0){ pause[sel]--; return; }
+      if(dirs[sel] === undefined) dirs[sel] = 1;
+      el.scrollTop += dirs[sel];
+      if(el.scrollTop >= max - 1){ dirs[sel] = -1; pause[sel] = 40; }
+      else if(el.scrollTop <= 0){ dirs[sel] = 1; pause[sel] = 40; }
+    });
+  }, 75);
 }
 
 function updateBoardClock(){
