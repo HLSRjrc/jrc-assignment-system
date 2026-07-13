@@ -448,11 +448,22 @@ if(window.location.search.indexOf('partner=1') >= 0){
       <!-- Clock Out -->
       <div style="background:#FFF0F0;border-radius:8px;padding:12px">
         <div style="font-size:12px;font-weight:700;color:#C62828;margin-bottom:8px">&#9650; Clock Out</div>
-        <div style="margin-bottom:8px">
-          <div style="font-size:11px;color:#667788;margin-bottom:3px">Over (minutes)</div>
-          <input type="number" class="finput" id="sim-co-mins" value="5" min="1" max="60" style="font-size:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;color:#667788;margin-bottom:3px">Over (minutes)</div>
+            <input type="number" class="finput" id="sim-co-mins" value="5" min="1" max="60" style="font-size:12px">
+          </div>
+          <div>
+            <div style="font-size:11px;color:#667788;margin-bottom:3px">Shift</div>
+            <select class="finput" id="sim-co-shift" style="font-size:12px">
+              <option value="">All shifts</option>
+              <option value="8am">8:00 AM</option>
+              <option value="12pm">12:00 PM</option>
+              <option value="4pm">4:00 PM</option>
+            </select>
+          </div>
         </div>
-        <div style="font-size:11px;color:#667788;margin-bottom:8px">Clocks out all juniors currently out on shift</div>
+        <div style="font-size:11px;color:#667788;margin-bottom:8px">Clocks out juniors currently out on selected shift</div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-sm" style="background:#C62828;color:#fff;border-color:#C62828;flex:1" onclick="simClockOut()">&#9654; Start</button>
           <button class="btn btn-sm btn-danger" onclick="simStopCO()">&#9646;&#9646;</button>
@@ -562,16 +573,43 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- REQUESTS APPROVAL PANEL -->
 <div id="panel-requests" class="panel">
-  <div class="action-row">
-    <div style="font-size:13px;color:#667788;flex:1">Review and approve committee shift requests. Approved requests appear in the officer&apos;s approved list for shift setup.</div>
-    <select class="finput" style="max-width:160px" id="req-filter" onchange="renderRequests()">
-      <option value="all" selected>All requests</option>
-      <option value="pending">Pending only</option>
-      <option value="approved">Approved</option>
-      <option value="rejected">Rejected</option>
-    </select>
+
+  <!-- Status chips -->
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+    <button class="req-chip active" data-status="all"      onclick="reqChipClick(this)">All</button>
+    <button class="req-chip"        data-status="pending"  onclick="reqChipClick(this)">Pending</button>
+    <button class="req-chip"        data-status="approved" onclick="reqChipClick(this)">Approved</button>
+    <button class="req-chip"        data-status="rejected" onclick="reqChipClick(this)">Rejected</button>
+    <button class="req-chip"        data-status="virtual"  onclick="reqChipClick(this)">Virtual</button>
+    <button id="req-refresh-btn" class="btn btn-sm" style="border-color:var(--navy);color:var(--navy);margin-left:auto" onclick="refreshRequests()">&#8635; Refresh</button>
   </div>
+
+  <!-- Search row: committee multiselect + date -->
+  <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;margin-bottom:6px">
+    <div style="position:relative" id="req-name-wrap">
+      <div id="req-name-display" onclick="toggleReqNameDropdown()" style="min-height:36px;padding:6px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;cursor:pointer;background:#fff;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+        <span id="req-name-placeholder" style="color:#999">Filter by committee...</span>
+      </div>
+      <div id="req-name-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--gray-200);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:200;margin-top:2px">
+        <div style="padding:6px 8px;border-bottom:1px solid var(--gray-100)">
+          <input type="text" id="req-name-search" placeholder="Type to search..." oninput="reqNameSearchFilter()" style="width:100%;padding:5px 8px;border:1px solid var(--gray-200);border-radius:4px;font-size:13px;font-family:var(--font)" autocomplete="off">
+        </div>
+        <div id="req-name-options" style="max-height:220px;overflow-y:auto;padding:4px 0"></div>
+      </div>
+    </div>
+    <input type="date" id="req-search-date" class="finput" oninput="reqFilterUpdate()" style="font-size:13px;width:160px" title="Filter by date">
+  </div>
+
+  <!-- Active filter summary -->
+  <div id="req-filter-summary" style="display:none;margin-bottom:8px;font-size:12px;color:#667788;display:flex;align-items:center;gap:8px">
+    <span id="req-filter-summary-text"></span>
+    <button onclick="reqClearFilters()" style="background:none;border:none;cursor:pointer;color:var(--navy);font-size:12px;font-weight:600;padding:0">&#x2715; Clear filters</button>
+  </div>
+
   <div id="req-list"></div>
+
+  <!-- Hidden legacy select for compatibility -->
+  <select id="req-filter" style="display:none"><option value="all" selected>All</option></select>
 </div>
 
 <!-- COMMITTEE REQUEST FORM PANEL -->
