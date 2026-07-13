@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1433,35 +1433,54 @@ function autoAssign(){
     var eligible = jr.hasHat ? allOpen : allOpen.filter(function(s){ return !s.hat; });
     if(!eligible.length) return null;
 
-    // Rule 2 (history): hard block on most recent committee, soft variety preference
     var last = lastCommittee(jr);
-    var noRepeat = last ? eligible.filter(function(s){ return s.name !== last; }) : eligible;
-    if(noRepeat.length > 0) eligible = noRepeat; // fallback to all if no other options
-
     var visited = visitMap(jr);
 
     // Rule 4 (high priority): fill HP slots to capacity first
     var hpOpen = eligible.filter(function(s){ return s.highPriority; });
     if(hpOpen.length){
+      // Even-fill within HP slots: 1s first, then min
       var hpAtOne = hpOpen.filter(function(s){ return s.assigned.length === 1; });
-      var hpCands = hpAtOne.length ? hpAtOne : hpOpen;
+      var hpMinFill = hpOpen.reduce(function(m,s){ return Math.min(m, s.assigned.length); }, Infinity);
+      var hpCands = hpAtOne.length ? hpAtOne : hpOpen.filter(function(s){ return s.assigned.length === hpMinFill; });
+      var hpNoRepeat = last ? hpCands.filter(function(s){ return s.name !== last; }) : hpCands;
+      if(hpNoRepeat.length) hpCands = hpNoRepeat;
       hpCands = hatPool(jr, hpCands, pool);
       hpCands.sort(function(a,b){ return (visited[a.name]||0)-(visited[b.name]||0); });
       if(hpCands.length) return hpCands[0];
     }
 
-    // Rules 1+3 (no-solo + even fill): slots at 1 first, then min fill
+    // Regular slots — core rule: everyone gets 2 before anyone gets 3, etc.
     var regular = eligible.filter(function(s){ return !s.highPriority; });
     if(!regular.length) regular = eligible;
 
-    var atOne = regular.filter(function(s){ return s.assigned.length === 1; });
+    // STEP 1: Find the global minimum fill across all regular slots
     var minFill = regular.reduce(function(m,s){ return Math.min(m, s.assigned.length); }, Infinity);
-    var cands = atOne.length ? atOne : regular.filter(function(s){ return s.assigned.length === minFill; });
 
-    // Rule 5 (hat)
+    // STEP 2: Candidates are ONLY slots at the minimum fill level
+    // (never skip ahead to give someone a 3rd when another slot has 0 or 1)
+    var atMin = regular.filter(function(s){ return s.assigned.length === minFill; });
+
+    // STEP 3: Prefer slots at 1 (no-solo fix) within the min-fill group
+    // Exception: if minFill is 0 and there are also slots at 1, fill the 1s first
+    var atOne = regular.filter(function(s){ return s.assigned.length === 1; });
+    var cands;
+    if(atOne.length && minFill === 0){
+      // Some empty, some at 1 — fill the 1s first (no-solo priority)
+      cands = atOne;
+    } else {
+      cands = atMin;
+    }
+
+    // STEP 4: History soft-block — avoid last committee if other options exist
+    var noRepeat = last ? cands.filter(function(s){ return s.name !== last; }) : cands;
+    if(noRepeat.length) cands = noRepeat;
+    // (if noRepeat is empty, stay with original cands — don't fall back to overfilled slots)
+
+    // STEP 5: Hat priority
     cands = hatPool(jr, cands, pool);
 
-    // Rule 6 (variety): least visited
+    // STEP 6: Variety — least visited committee
     cands.sort(function(a,b){ return (visited[a.name]||0)-(visited[b.name]||0); });
     var minV = cands.length ? (visited[cands[0].name]||0) : 0;
     var freshest = cands.filter(function(s){ return (visited[s.name]||0) === minV; });
