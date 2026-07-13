@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2352,7 +2352,7 @@ function onSetupDateChange(){
       var v = (window._plannedJuniors||{})[sh] || '';
       return '<div><div style="font-size:11px;color:#667788;margin-bottom:3px">' + SL[sh] + '</div>' +
         '<input type="number" class="finput" style="font-size:12px" placeholder="# juniors" value="' + v + '" ' +
-        'oninput="if(!window._plannedJuniors)window._plannedJuniors={};window._plannedJuniors[\'' + sh + '\']=this.value;onSetupDateChange()" min="0" max="500"></div>';
+        'oninput="if(!window._plannedJuniors)window._plannedJuniors={};window._plannedJuniors[\'' + sh + '\']=this.value;if(window._nbpTimer)clearTimeout(window._nbpTimer);window._nbpTimer=setTimeout(onSetupDateChange,600)" min="0" max="500"></div>';
     }).join('') +
     '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy)" onclick="onSetupDateChange()">&#9654; Preview Fill</button>' +
     '</div>' +
@@ -2402,7 +2402,7 @@ function onSetupDateChange(){
       html += fillRatio;
       html += '<input type="number" class="finput" style="width:60px;font-size:12px;padding:3px 6px" value="' + s.cap + '" ' +
         'data-pskey="' + capKey + '" onclick="event.stopPropagation()" ' +
-        'oninput="event.stopPropagation();(window._ps[\'' + capKey + '\']).cap=parseInt(this.value)||2;onSetupDateChange()" min="1" max="40">';
+        'oninput="event.stopPropagation();(window._ps[\'' + capKey + '\']).cap=parseInt(this.value)||2;if(window._nbpTimer)clearTimeout(window._nbpTimer);window._nbpTimer=setTimeout(onSetupDateChange,600)" min="1" max="40">';
       html += '<span style="font-size:11px;color:#667788">juniors</span>';
       html += (isAdded
         ? '<span style="color:#155724;font-size:11px;font-weight:600">&#10003; Added</span>'
