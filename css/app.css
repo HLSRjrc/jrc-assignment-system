@@ -346,6 +346,7 @@ select.finput{cursor:pointer}
 .board-shift-divider{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#99BBDD;margin:4px 0 2px;padding-bottom:1px;border-bottom:1px solid rgba(255,255,255,.12);break-after:avoid}
 
 /* ── TV MODE (?tv=1) ── */
+.tv-mode *{pointer-events:none !important;cursor:none !important;user-select:none !important}
 .tv-mode body,.tv-mode html{overflow:hidden;height:100%}
 .tv-mode .board-wrap{height:100vh;overflow:hidden}
 .tv-mode #main-header,.tv-mode #logout-wrap,.tv-mode .tab-bar,.tv-mode #tab-bar{display:none!important}
@@ -733,3 +734,26 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
   100%{transform:translateX(-50%)}
 }
 .tv-mode #board-ticker{font-size:clamp(14px,1.3vw,20px)}
+
+/* Board tab in-app — identical to TV mode */
+body.board-tab-active *{pointer-events:none !important;cursor:none !important;user-select:none !important}
+body.board-tab-active{overflow:hidden}
+body.board-tab-active #main-header,
+body.board-tab-active #tab-bar,
+body.board-tab-active #logout-wrap{display:none !important}
+body.board-tab-active .app{padding:0 !important;max-width:100% !important}
+body.board-tab-active #main-app{padding:0 !important}
+body.board-tab-active #panel-board{
+  position:fixed;top:0;left:0;right:0;bottom:0;
+  z-index:100;padding:0 !important;
+  overflow:hidden;
+}
+body.board-tab-active .board-wrap{height:100vh;overflow:hidden}
+body.board-tab-active .board-body{height:calc(100vh - 62px) !important;grid-template-columns:200px 1fr !important}
+body.board-tab-active .board-name{font-size:clamp(20px,1.8vw,26px);padding:clamp(1px,.15vh,3px) 2px;line-height:1.2}
+body.board-tab-active .board-col-hdr{font-size:clamp(10px,.9vw,14px)}
+body.board-tab-active .board-committee-label{font-size:clamp(9px,.85vw,12px)}
+body.board-tab-active .board-shift-pill{font-size:clamp(9px,.8vw,11px)}
+body.board-tab-active #board-clock{font-size:clamp(28px,3vw,48px) !important;font-weight:700}
+body.board-tab-active #board-date-lbl{font-size:clamp(12px,1.1vw,16px)}
+body.board-tab-active #board-ticker{font-size:clamp(14px,1.3vw,20px)}
