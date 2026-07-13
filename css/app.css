@@ -294,25 +294,25 @@ select.finput{cursor:pointer}
 
 /* STATUS BOARD */
 /* ── STATUS BOARD — TV-optimized, 60" screen readable at 6ft ── */
-.board-wrap{padding:0;background:var(--navy);min-height:100vh;color:#fff;display:flex;flex-direction:column}
+.board-wrap{padding:0;background:var(--navy);min-height:100%;color:#fff;display:flex;flex-direction:column}
 .board-header{padding:10px 24px 8px;border-bottom:3px solid var(--orange);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
 .board-title{font-size:20px;font-weight:700;color:#fff;letter-spacing:.04em}
 
 /* Body: left=CI, right=Assigned+Out stacked */
 .board-body{
   display:grid;
-  grid-template-columns:var(--board-left-width,30vw) 1fr;
+  grid-template-columns:180px 1fr; /* CI always fixed narrow width */
   gap:0;flex:1;min-height:0;overflow:hidden;
-  transition:grid-template-columns .6s ease;
+  height:calc(100vh - 120px);
 }
 
 /* Left: checked-in panel */
 .board-waiting-col{border-right:2px solid rgba(255,255,255,.15);display:flex;flex-direction:column;overflow:hidden;min-height:0}
-.board-ci-section{flex:1;overflow:hidden;padding:8px 10px;min-height:0}
+.board-ci-section{flex:1;overflow-y:auto;padding:8px 10px;min-height:0;scroll-behavior:auto}
 
 /* Right panel: assigned stacked above out-on-shift */
 .board-right-col{display:flex;flex-direction:column;overflow:hidden;min-height:0}
-.board-ass-section{flex:0 0 auto;padding:6px 14px 4px;border-bottom:1px solid rgba(255,255,255,.12)}
+.board-ass-section{flex:0 0 auto;max-height:22vh;overflow-y:auto;padding:4px 14px;border-bottom:1px solid rgba(255,255,255,.12);scroll-behavior:auto}
 .board-out-col{flex:1;overflow-y:auto;padding:8px 14px;min-height:0;scroll-behavior:auto}
 
 /* Column headers */
@@ -356,7 +356,7 @@ select.finput{cursor:pointer}
 .tv-mode .board-title{font-size:clamp(18px,1.8vw,26px)}
 .tv-mode #board-date-lbl{font-size:clamp(12px,1.1vw,16px)}
 .tv-mode #board-clock{font-size:clamp(28px,3vw,48px)!important;font-weight:700}
-.tv-mode .board-body{height:calc(100vh - 60px);overflow:hidden}
+.tv-mode .board-body{height:calc(100vh - 62px) !important;overflow:hidden;grid-template-columns:200px 1fr !important}
 .tv-mode .board-name{font-size:clamp(20px,1.8vw,26px);padding:clamp(1px,.15vh,3px) 2px;line-height:1.2}
 .tv-mode .board-col-hdr{font-size:clamp(10px,.9vw,14px)}
 .tv-mode .board-committee-label{font-size:clamp(9px,.85vw,12px)}
@@ -725,3 +725,5 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
 .req-name-option{display:flex;align-items:center;gap:8px;padding:7px 12px;font-size:13px;cursor:pointer;color:var(--gray-700)}
 .req-name-option:hover{background:var(--gray-50)}
 .req-name-option input[type=checkbox]{accent-color:var(--navy);width:15px;height:15px;flex-shrink:0}
+
+#panel-board{padding:0 !important;height:calc(100vh - 80px);overflow:hidden}
