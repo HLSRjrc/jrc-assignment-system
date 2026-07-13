@@ -1,53 +1,10 @@
+// JRC Assignment System — Main Application Script
+// Loaded via <script src="/js/app.js"></script>
 
-function renderLateAgeOutAlert(){
-  var el = document.getElementById('late-ao-alert');
-  if(!el) return;
-  var shiftStart = currentShift==='8am' ? 480 : currentShift==='12pm' ? 720 : 960;
-  var nowMins = (function(){ var t=getSimTime(); return t.getHours()*60+t.getMinutes(); })();
-  var late = juniors.filter(function(j){
-    if(!j.ageout || !j.onBreak) return false;
-    if(j.onBreakNextShift !== currentShift) return false;
-    return nowMins >= shiftStart - 15;
-  });
-  if(!late.length){ el.style.display='none'; return; }
-  el.style.display = 'block';
-  el.innerHTML = '<div style="background:#FFF3CD;border:1px solid #F0C040;border-radius:8px;padding:10px 14px;margin-bottom:12px">' +
-    '<div style="font-weight:700;color:#7D4E00;margin-bottom:8px">&#9888; ' + late.length + ' age-out' + (late.length>1?'s are':'is') + ' late for ' + SL[currentShift] + '</div>' +
-    late.map(function(j){
-      var assign = j.shiftAssignments && j.shiftAssignments[currentShift];
-      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">' +
-        '<span style="flex:1;font-size:13px">' + j.name + (assign ? ' <span style="color:#667788">→ ' + assign + '</span>' : '') + '</span>' +
-        '<button class="btn btn-sm" style="font-size:11px;padding:3px 10px;border-color:#CC0000;color:#CC0000" ' +
-        'onclick="releaseAgeOutSlot(' + j.id + ')">Release Slot</button>' +
-        '</div>';
-    }).join('') +
-  '</div>';
-}
+// ============================================================
+// DATA
+// ============================================================
 
-function releaseAgeOutSlot(jid){
-  var jr = juniors.find(function(j){ return j.id === jid; });
-  if(!jr) return;
-  if(!confirm('Release ' + jr.name.split(',')[0] + '\'s ' + SL[currentShift] + ' slot and put them back in the queue?')) return;
-  var sh = jr.onBreakNextShift || currentShift;
-  // Remove from pre-assigned slot
-  if(jr.shiftAssignments && jr.shiftAssignments[sh]){
-    var sl = activeSlots.find(function(s){ return s.name === jr.shiftAssignments[sh] && s.shift === sh; });
-    if(sl) sl.assigned = sl.assigned.filter(function(id){ return String(id) !== String(jid); });
-    delete jr.shiftAssignments[sh];
-  }
-  // Remove from planned shifts
-  if(jr.plannedShifts) jr.plannedShifts = jr.plannedShifts.filter(function(s){ return s !== sh; });
-  jr.onBreak = false;
-  jr.onBreakNextShift = null;
-  jr.checkedIn = false;
-  clockedOut[jr.id] = true; // fully signed out
-  dirtyJuniors.add(jr.id);
-  _lastSavedHash = '';
-  saveStateNow();
-  renderOfficer();
-  renderBoard();
-  showAlert(jr.name.split(',')[0] + '\'s slot released.', 'info');
-}
 var SL = {'8am':'8:00am–12:00pm','12pm':'12:00pm–4:00pm','4pm':'4:00pm–8:00pm'};
 var SHOW_START = new Date('2027-03-02');
 var SHOW_END = new Date('2027-03-20');
@@ -60,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -109,9 +66,9 @@ function updateKioskShiftBanner(){
   }
 }
 
-function setSimTime(h, m){
+function setSimTime(h, m, dateStr){
   var now = new Date();
-  var target = new Date();
+  var target = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
   target.setHours(h, m, 0, 0);
   simTimeOffset = target - now;
   simTimeEnabled = true;
@@ -280,23 +237,8 @@ document.addEventListener('DOMContentLoaded', function(){
   // TV mode — add ?tv=1 to URL to activate full-screen board layout
   if(window.location.search.indexOf('tv=1') >= 0){
     document.documentElement.classList.add('tv-mode');
-    // Hide login screen immediately — TV never needs it
-    var ls = document.getElementById('login-screen');
-    if(ls) ls.style.display = 'none';
-    var ma = document.getElementById('main-app');
-    if(ma) ma.style.display = 'block';
-    // Load state first, then log in as board once state arrives
-    loadState();
-    startPolling();
-    // Try loginAs at 600ms; retry at 2s in case Neon was slow
-    var _tvLoggedIn = false;
-    function _tvLogin(){
-      if(_tvLoggedIn) return;
-      _tvLoggedIn = true;
-      loginAs('board');
-    }
-    setTimeout(_tvLogin, 600);
-    setTimeout(_tvLogin, 2500); // safety retry
+    // Auto-login to status board role so the TV goes straight to the board
+    setTimeout(function(){ loginAs('board'); }, 150);
     return;
   }
 
@@ -361,13 +303,14 @@ function updateHeaderClock(){
   el.textContent = h + ':' + String(m).padStart(2,'0') + ' ' + ampm + (simTimeEnabled ? ' ⏱' : '');
 }
 function applySimTime(){
-  var h = parseInt(document.getElementById('sim-hour').value);
-  var m = parseInt(document.getElementById('sim-min').value);
+  var h = parseInt(document.getElementById('sim-hour').value) || 8;
+  var m = parseInt(document.getElementById('sim-min').value) || 0;
+  m = Math.max(0, Math.min(59, m));
   var ampm = document.getElementById('sim-ampm').value;
   // Convert to 24h
   if(ampm === 'pm' && h !== 12) h += 12;
   if(ampm === 'am' && h === 12) h = 0;
-  setSimTime(h, m);
+  setSimTime(h, m, currentDate);
   var ampm = h >= 12 ? 'PM' : 'AM';
   var h12 = h > 12 ? h-12 : (h===0 ? 12 : h);
   var label = h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
@@ -381,9 +324,12 @@ function simUpdate(){} // no-op — status shown after apply
 function applySimDate(){
   simUpdate(); // refresh status display first
   var d = document.getElementById('sim-date').value;
-  var h = parseInt(document.getElementById('sim-hour').value);
-  var m = parseInt(document.getElementById('sim-min').value);
-  // h is already 24h value from select
+  var h = parseInt(document.getElementById('sim-hour').value) || 8;
+  var m = parseInt(document.getElementById('sim-min').value) || 0;
+  m = Math.max(0, Math.min(59, m));
+  var ampm2 = document.getElementById('sim-ampm').value;
+  if(ampm2 === 'pm' && h !== 12) h += 12;
+  if(ampm2 === 'am' && h === 12) h = 0;
   var tempDate = new Date(); tempDate.setHours(h, m, 0, 0);
   var s = getShiftFromTime(tempDate);
   // If date changed, clear all day-specific session data
@@ -411,7 +357,7 @@ function applySimDate(){
   if(sd) sd.value = d;
   var ss = document.getElementById('setup-shift');
   if(ss) ss.value = s;
-  setSimTime(h, m);
+  setSimTime(h, m, d); // pass date so offset is relative to that date, not today
   var ampm = h >= 12 ? 'PM' : 'AM';
   var h12 = h > 12 ? h-12 : (h===0 ? 12 : h);
   var label = h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
@@ -430,12 +376,6 @@ function applySimDate(){
 
 function switchTab(t, el){
   currentTab = t;
-  // Push history entry so browser back button navigates between tabs
-  if(history.state && history.state.tab !== t){
-    history.pushState({tab: t}, '', '#' + t);
-  } else if(!history.state){
-    history.replaceState({tab: t}, '', '#' + t);
-  }
   // Re-render tabs to update active state
   renderTabs(t);
   // Show correct panel
@@ -445,7 +385,7 @@ function switchTab(t, el){
   if(t === 'officer') renderOfficer();
   if(t === 'roster') renderRoster();
   if(t === 'setup') renderSetup();
-  if(t === 'requests') refreshRequests();
+  if(t === 'requests') renderRequests();
   if(t === 'reqform') renderReqForm();
   if(t === 'board') renderBoard();
   if(t === 'checkins') renderCheckins();
@@ -473,32 +413,13 @@ function kLookup(){
   if(jr.checkedIn && !clockedOut[jr.id]){
     pendingJr = jr;
     document.getElementById('kco-name').innerHTML = (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
-    document.getElementById('kco-assignment').textContent = jr.assignment ? jr.assignment + ' — ' + SL[jr.checkInShift||currentShift] : SL[jr.checkInShift||currentShift];
-    var qEl = document.getElementById('kco-question');
-    if(qEl) qEl.textContent = 'Clock out for your ' + SL[jr.checkInShift||currentShift] + ' shift?';
+    document.getElementById('kco-assignment').textContent = jr.assignment ? 'Currently assigned to: ' + jr.assignment : 'Not yet assigned to a committee';
+    var nextEl = document.getElementById('kco-next-shift');
+    if(nextEl) nextEl.textContent = '';
     document.getElementById('k-entry').style.display = 'none';
     document.getElementById('k-clockout').style.display = 'block';
     return;
   }
-  // Age-out on break scanning in for their next shift
-  if(jr.ageout && jr.onBreak){
-    var nowShift = getShiftFromTime(getSimTime()) || currentShift;
-    var hasThisShift = jr.plannedShifts && nowShift && jr.plannedShifts.indexOf(nowShift) >= 0;
-    if(hasThisShift){
-      pendingJr = jr;
-      var preAssign = jr.shiftAssignments && jr.shiftAssignments[nowShift];
-      document.getElementById('kaon-name').innerHTML =
-        (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
-      document.getElementById('kaon-committee').textContent = preAssign ? preAssign : 'Assignment TBD';
-      document.getElementById('kaon-question').textContent =
-        'Check in for your ' + SL[nowShift] + (preAssign ? ' — ' + preAssign + ' — assignment?' : ' shift?');
-      pendingJr._nextShift = nowShift;
-      document.getElementById('k-entry').style.display = 'none';
-      document.getElementById('k-ao-next').style.display = 'block';
-      return;
-    }
-  }
-
   // Block check-in if outside the strict time windows
   if(!getShiftFromTime(getSimTime())){
     document.getElementById('k-entry').style.display = 'none';
@@ -544,7 +465,6 @@ function kAoNext(){
   }
   document.getElementById('kc-badges').innerHTML = b;
   document.getElementById('k-ao-shifts').style.display = 'none';
-  var kaon = document.getElementById('k-ao-next'); if(kaon) kaon.style.display = 'none';
   updateKioskShiftBanner();
   document.getElementById('k-confirm').style.display = 'block';
 }
@@ -562,10 +482,6 @@ function kConfirm(){
   pendingJr.checkInTimestamp = getSimTime().getTime(); // epoch ms — used in Check-ins tab
   clockedOut[pendingJr.id] = false;
   delete clockedOut[pendingJr.id];
-  delete clockedOut[String(pendingJr.id)];
-  // Remove from onShiftJuniors — they're back in, not out on shift anymore
-  onShiftJuniors.delete(pendingJr.id);
-  onShiftJuniors.delete(String(pendingJr.id));
   // If age-out has a pre-assignment for the current shift, restore it
   if(pendingJr.ageout && pendingJr.shiftAssignments && pendingJr.shiftAssignments[currentShift]){
     var preSlot = activeSlots.find(function(s){ return s.name === pendingJr.shiftAssignments[currentShift] && s.shift === currentShift; });
@@ -594,94 +510,21 @@ function kConfirm(){
   saveStateNow();
 }
 
-function kAgeOutReturn(){
-  // Age-out confirming next shift check-in
-  if(!pendingJr) return;
-  var nextShift = pendingJr._nextShift || getShiftFromTime(getSimTime()) || currentShift;
-  checkInOrder++;
-  pendingJr.checkedIn        = true;
-  pendingJr.order            = checkInOrder;
-  pendingJr.checkInShift     = nextShift;
-  pendingJr.checkInDate      = currentDate;
-  pendingJr.checkInTimestamp = getSimTime().getTime();
-  pendingJr.assignment       = null; // clear old assignment first
-  pendingJr.onBreak = false;
-  pendingJr.onBreakNextShift = null;
-  clockedOut[pendingJr.id]   = false;
-  delete clockedOut[pendingJr.id];
-  onShiftJuniors.delete(pendingJr.id);
-  onShiftJuniors.delete(String(pendingJr.id));
-  // Restore pre-assignment for this shift if exists
-  var preAssign = pendingJr.shiftAssignments && pendingJr.shiftAssignments[nextShift];
-  if(preAssign){
-    var preSlot = activeSlots.find(function(s){ return s.name === preAssign && s.shift === nextShift; });
-    if(preSlot && preSlot.assigned.indexOf(pendingJr.id) < 0){
-      preSlot.assigned.push(pendingJr.id);
-      pendingJr.assignment = preAssign;
-    }
-  }
-  dirtyJuniors.add(pendingJr.id);
-  _lastSavedHash = '';
-  saveStateNow();
-  // Show done screen
-  var aoRetEl = document.getElementById('k-ao-next');
-  if(aoRetEl) aoRetEl.style.display = 'none';
-  document.getElementById('kdo-name').innerHTML =
-    (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
-  document.getElementById('k-clockout-done').style.display = 'block';
-  renderOfficer();
-  renderBoard();
-  pendingJr = null;
-}
-
 function kClockOut(){
   if(!pendingJr) return;
+  // Keep them in their slot — just mark as clocked out so pill shows strikethrough
+  // They stay on the dashboard card but disappear from status board
   onShiftJuniors.delete(pendingJr.id);
   onShiftJuniors.delete(String(pendingJr.id));
   pendingJr.checkedIn = false;
+  // Keep pendingJr.assignment so they stay in the slot card
   clockedOut[pendingJr.id] = true;
   dirtyJuniors.add(pendingJr.id);
-  _lastSavedHash = '';
   saveStateNow();
-  renderOfficer();
-  renderBoard();
-  document.getElementById('k-clockout').style.display = 'none';
-
-  // Age-out with future planned shifts → put on break, show "see you at X" screen
-  if(pendingJr.ageout && pendingJr.plannedShifts && pendingJr.plannedShifts.length > 0){
-    var currentShiftIdx = ['8am','12pm','4pm'].indexOf(pendingJr.checkInShift || currentShift);
-    var nextShifts = (pendingJr.plannedShifts || []).filter(function(sh){
-      return ['8am','12pm','4pm'].indexOf(sh) > currentShiftIdx;
-    });
-    if(nextShifts.length > 0){
-      var nextShift = nextShifts[0];
-      var preAssign = pendingJr.shiftAssignments && pendingJr.shiftAssignments[nextShift];
-      // Put on break — not clocked out, not checked in, just resting
-      pendingJr.onBreak = true;
-      pendingJr.onBreakNextShift = nextShift;
-      clockedOut[pendingJr.id] = false;
-      delete clockedOut[pendingJr.id];
-      // Show "see you at X" done screen
-      document.getElementById('kdo-name').innerHTML =
-        (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
-      var kdoMsg = document.getElementById('kdo-msg');
-      if(kdoMsg) kdoMsg.textContent = 'See you at ' + SL[nextShift] + (preAssign ? ' for ' + preAssign + '!' : '!');
-      document.getElementById('k-clockout-done').style.display = 'block';
-      dirtyJuniors.add(pendingJr.id);
-      _lastSavedHash = '';
-      saveStateNow();
-      renderOfficer();
-      renderBoard();
-      pendingJr = null;
-      return;
-    }
-  }
-
-  // Regular junior or age-out with no more shifts — full clock-out done screen
   document.getElementById('kdo-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
-  var kdoMsg2 = document.getElementById('kdo-msg');
-  if(kdoMsg2) kdoMsg2.textContent = 'Great work today!';
+  document.getElementById('k-clockout').style.display = 'none';
   document.getElementById('k-clockout-done').style.display = 'block';
+  renderOfficer();
   pendingJr = null;
 }
 
@@ -1038,9 +881,8 @@ function unlockNote(jid){
 
 
 function renderOfficer(search){
-  renderLateAgeOutAlert();
-  var ci = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id]; });
-  var asgn = juniors.filter(function(j){ return j.assignment && !clockedOut[j.id]; });
+  var ci = juniors.filter(function(j){ return j.checkedIn; });
+  var asgn = juniors.filter(function(j){ return j.assignment; });
   var un = ci.filter(function(j){ return !j.assignment; });
   var totalOpen = activeSlots.reduce(function(a, s){ return a + Math.max(0, s.capacity - s.assigned.length); }, 0);
   document.getElementById('s-ci').textContent = ci.length;
@@ -1475,15 +1317,13 @@ function toggleHighPriority(slotId){
 }
 
 function placeStragglers(){
-  var ci = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id] && !j.assignment && !j.ageout; });
+  var ci = juniors.filter(function(j){ return j.checkedIn && !j.assignment && !j.ageout; });
   if(ci.length === 0){ showAlert('No unassigned juniors to place.', 'info'); return; }
   var open = activeSlots.filter(function(s){ return s.shift === currentShift && s.assigned.length < s.capacity; });
   if(open.length === 0){ showAlert('No open slots in this shift.', 'warn'); return; }
   var placed = 0;
   ci.forEach(function(jr){
     var eligible = jr.hasHat ? open : open.filter(function(s){ return !s.hat; });
-    // Last resort: if no non-hat slots available, allow non-hat juniors into hat slots
-    if(!eligible.length) eligible = open;
     if(!eligible.length) return;
 
     // Respect history block unless every eligible slot is already sent
@@ -1507,7 +1347,7 @@ function placeStragglers(){
 }
 
 function autoAssign(){
-  var ci = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id] && !j.assignment; });
+  var ci = juniors.filter(function(j){ return j.checkedIn && !j.assignment; });
   var reg = ci.filter(function(j){ return !j.ageout; });
   if(reg.length === 0){
     var aoWaiting = ci.filter(function(j){ return j.ageout; }).length;
@@ -1556,41 +1396,24 @@ function autoAssign(){
     var eligible = jr.hasHat ? allOpen : allOpen.filter(function(s){ return !s.hat; });
     if(!eligible.length) return null;
 
+    // Rule 2 (history): hard block on most recent committee, soft variety preference
     var last = lastCommittee(jr);
+    var noRepeat = last ? eligible.filter(function(s){ return s.name !== last; }) : eligible;
+    if(noRepeat.length > 0) eligible = noRepeat; // fallback to all if no other options
+
     var visited = visitMap(jr);
 
-    // Hat priority: if this junior has a hat AND hat slots need filling, direct them there first
-    // before even considering non-hat slots (ensures hat slots fill before giving hat juniors to non-hat)
-    if(jr.hasHat){
-      var hatOpen = eligible.filter(function(s){ return s.hat; });
-      var nonHatOpen = eligible.filter(function(s){ return !s.hat; });
-      // Count hat juniors not yet assigned
-      var hatJrsLeft = pool.filter(function(j){ return !j.assignment && j.hasHat; }).length;
-      // Hat slots still needing hat juniors
-      var hatSlotsNeed = hatOpen.reduce(function(a,s){ return a + (s.capacity - s.assigned.length); }, 0);
-      // If hat slots need filling and we have enough hat juniors, prioritize hat slots
-      if(hatOpen.length && hatSlotsNeed > 0){
-        // Only route to hat slot if doing so won't leave hat slots short
-        // i.e. hat juniors remaining >= hat spots remaining (with some room to spare)
-        var mustFillHat = hatJrsLeft <= hatSlotsNeed + 2;
-        if(mustFillHat) eligible = hatOpen;
-      }
-    }
-
-    // History: avoid most recent committee
-    var noRepeat = last ? eligible.filter(function(s){ return s.name !== last; }) : eligible;
-    if(noRepeat.length > 0) eligible = noRepeat;
-
-    // High priority slots: fill to capacity first
+    // Rule 4 (high priority): fill HP slots to capacity first
     var hpOpen = eligible.filter(function(s){ return s.highPriority; });
     if(hpOpen.length){
       var hpAtOne = hpOpen.filter(function(s){ return s.assigned.length === 1; });
       var hpCands = hpAtOne.length ? hpAtOne : hpOpen;
+      hpCands = hatPool(jr, hpCands, pool);
       hpCands.sort(function(a,b){ return (visited[a.name]||0)-(visited[b.name]||0); });
       if(hpCands.length) return hpCands[0];
     }
 
-    // Even fill: slots at 1 first (give everyone their first person), then min fill
+    // Rules 1+3 (no-solo + even fill): slots at 1 first, then min fill
     var regular = eligible.filter(function(s){ return !s.highPriority; });
     if(!regular.length) regular = eligible;
 
@@ -1598,19 +1421,14 @@ function autoAssign(){
     var minFill = regular.reduce(function(m,s){ return Math.min(m, s.assigned.length); }, Infinity);
     var cands = atOne.length ? atOne : regular.filter(function(s){ return s.assigned.length === minFill; });
 
-    // Variety: least visited committee
+    // Rule 5 (hat)
+    cands = hatPool(jr, cands, pool);
+
+    // Rule 6 (variety): least visited
     cands.sort(function(a,b){ return (visited[a.name]||0)-(visited[b.name]||0); });
     var minV = cands.length ? (visited[cands[0].name]||0) : 0;
     var freshest = cands.filter(function(s){ return (visited[s.name]||0) === minV; });
     return freshest[0] || null;
-  }
-
-  function pickSlotFallback(jr){
-    // Last resort — ignore hat restriction when no eligible slots exist
-    var open = allOpen.filter(function(s){ return s.assigned.length < s.capacity; });
-    if(!open.length) return null;
-    open.sort(function(a,b){ return b.assigned.length - a.assigned.length; });
-    return open[0];
   }
 
   // Assign in check-in order
@@ -1620,22 +1438,18 @@ function autoAssign(){
   pool.forEach(function(jr){
     var stillUnassigned = pool.filter(function(j){ return !j.assignment; });
 
-    // Rule 1 (no solo): if last person left, only block if every open slot has capacity 2
-    // and none have exactly 1 already (no pair to complete). Slots with capacity > 2 are fine to enter alone.
+    // Rule 1 (no solo): if last person left, only assign if there's a solo to complete
     if(stillUnassigned.length === 1 && stillUnassigned[0].id === jr.id){
-      var openForJr = activeSlots.filter(function(s){
+      var canCompleteSolo = activeSlots.some(function(s){
         return s.shift === currentShift &&
+               s.assigned.length === 1 &&
                s.assigned.length < s.capacity &&
                (jr.hasHat || !s.hat);
       });
-      // Only skip if ALL open slots have capacity exactly 2 AND assigned.length === 0 (would be alone)
-      var wouldBeTrueSolo = openForJr.length > 0 && openForJr.every(function(s){
-        return s.capacity === 2 && s.assigned.length === 0;
-      });
-      if(wouldBeTrueSolo){ skipped++; return; }
+      if(!canCompleteSolo){ skipped++; return; }
     }
 
-    var pick = pickSlot(jr, pool) || pickSlotFallback(jr);
+    var pick = pickSlot(jr, pool);
     if(!pick){ skipped++; return; }
     assignJr(jr, pick.name);
     pick.assigned.push(jr.id);
@@ -1643,23 +1457,7 @@ function autoAssign(){
   });
 
   var msg = placed + ' junior' + (placed !== 1 ? 's' : '') + ' assigned.';
-  if(skipped){
-    var stragglers = pool.filter(function(j){ return !j.assignment; });
-    var noHatSlots = stragglers.filter(function(j){
-      return !j.hasHat && activeSlots.every(function(s){
-        return s.shift !== currentShift || s.assigned.length >= s.capacity || s.hat;
-      });
-    });
-    var hatOnly = stragglers.filter(function(j){
-      return j.hasHat && activeSlots.every(function(s){
-        return s.shift !== currentShift || s.assigned.length >= s.capacity;
-      });
-    });
-    var reason = noHatSlots.length === stragglers.length ? ' (no open non-hat slots)' :
-                 hatOnly.length === stragglers.length ? ' (all slots full)' :
-                 ' (hat/capacity mismatch)';
-    msg += ' ' + skipped + ' junior' + (skipped !== 1 ? 's' : '') + ' left in pool' + reason + ' — use Place Straggler.';
-  }
+  if(skipped) msg += ' ' + skipped + ' junior' + (skipped !== 1 ? 's' : '') + ' left in pool — use Place Straggler.';
   showAlert(msg, placed > 0 ? 'success' : 'warn');
   renderOfficer();
   saveStateNow();
@@ -1674,10 +1472,7 @@ function clearAssignments(){
       j.assignment = null; j.prevLast = null;
     }
   });
-  activeSlots.forEach(function(s){ s.assigned = []; s.sent = false; });
-  // Clear out-on-shift tracking so juniors appear back in the pool
-  onShiftJuniors = new Set();
-  onShiftSlots = new Set();
+  activeSlots.forEach(function(s){ s.assigned = []; });
   activePick = null;
   document.getElementById('off-alert').style.display = 'none';
   renderOfficer();
@@ -1906,7 +1701,7 @@ function renderCheckins(){
   // ── Quick Check-in Roster ─────────────────────────────────
   // Collapsed by default; toggled via button
   var notCI = juniors.filter(function(j){
-    return !j.inactive && (!j.checkedIn || clockedOut[j.id]);
+    return !j.inactive && !j.checkedIn;
   }).slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
 
   var outsideWindow = !getShiftFromTime(getSimTime());
@@ -2050,7 +1845,7 @@ function renderCIRosterRows(){
   if(!searchEl || !rowsEl) return;
   var q = searchEl.value.toLowerCase();
   var notCI = juniors.filter(function(j){
-    return !j.inactive && (!j.checkedIn || clockedOut[j.id]);
+    return !j.inactive && !j.checkedIn;
   }).slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
   var filtered = q ? notCI.filter(function(j){ return j.name.toLowerCase().indexOf(q) >= 0; }) : notCI;
   if(filtered.length === 0){
@@ -2074,7 +1869,7 @@ function renderCIRosterRows(){
 function quickCheckIn(jid){
   var jr = juniors.find(function(j){ return j.id === jid; });
   if(!jr) return;
-  if(jr.checkedIn && !clockedOut[jr.id]){ showAlert(jr.name + ' is already checked in.', 'info'); return; }
+  if(jr.checkedIn){ showAlert(jr.name + ' is already checked in.', 'info'); return; }
   checkInOrder++;
   jr.checkedIn        = true;
   jr.order            = checkInOrder;
@@ -2122,12 +1917,7 @@ function adminUndoClockOut(jid){
   if(!jr) return;
   clockedOut[jr.id] = false;
   delete clockedOut[jr.id];
-  delete clockedOut[String(jr.id)];
-  onShiftJuniors.delete(jr.id);
-  onShiftJuniors.delete(String(jr.id));
-  dirtyJuniors.add(jr.id);
-  _lastSavedHash = '';
-  saveStateNow();
+  saveState();
   renderCheckinsTable();
   renderOfficer();
   renderBoard();
@@ -2341,16 +2131,11 @@ function clearAllSlots(){
     if(!confirm('Some slots already have juniors assigned. Clear everything?')) return;
   }
   activeSlots = [];
-  onShiftSlots = new Set();
-  onShiftJuniors = new Set();
   // Also clear assignments on juniors
-  juniors.forEach(function(j){ j.assignment = null; j.prevLast = null; dirtyJuniors.add(j.id); });
-  var br = document.getElementById('bulk-result'); if(br) br.textContent = 'All slots cleared.';
-  _lastSavedHash = '';
-  saveStateNow();
+  juniors.forEach(function(j){ j.assignment = null; j.prevLast = null; });
+  document.getElementById('bulk-result').textContent = 'All slots cleared.';
+  saveState();
   renderSetup();
-  renderOfficer();
-  renderBoard();
 }
 
 function initSetupDatePicker(){
@@ -2507,16 +2292,13 @@ function onSetupDateChange(){
   // Gather all slots for this date
   var slots = SCHEDULE_2026[date] || [];
   // Also pull from approved 2027 requests for this specific date
-  var approvedForDate = committeeRequests.filter(function(r){
-    return r.status==='approved' && !r.virtual &&
-      r.shifts && r.shifts.some(function(s){ return !s.virtual && (s.date===date || s.all20); });
-  });
-  console.log('[JRC] Setup date', date, '— approved requests matching:', approvedForDate.length);
-  approvedForDate.forEach(function(r){
-    r.shifts.filter(function(s){ return !s.virtual && (s.date===date || s.all20); }).forEach(function(s){
-      console.log('[JRC]   slot:', r.name, 'shift:', s.shift, 'cap:', s.cap, 'date:', s.date);
+  committeeRequests.filter(function(r){
+    return r.status==='approved' && r.shifts.some(function(s){ return s.date===date || s.all20; });
+  }).forEach(function(r){
+    r.shifts.filter(function(s){ return s.date===date || s.all20; }).forEach(function(s){
+      // avoid duplicates if same committee/shift already in slots
       var exists = slots.some(function(x){ return x.name===r.name && x.shift===s.shift; });
-      if(!exists) slots.push({name:r.name, shift:s.shift||'8am', cap:s.cap||s.capacity||2, hat:r.hat||false, isNew:true});
+      if(!exists) slots.push({name:r.name, shift:s.shift, cap:s.cap, hat:r.hat, isNew:true});
     });
   });
 
@@ -2539,7 +2321,6 @@ function onSetupDateChange(){
       '<div class="shift-preview-title">' + fmtDateLong(date) + '</div>' +
       '<div class="shift-preview-count">' + totalSlots + ' committee slots &bull; ' + totalJuniors + ' junior spots requested</div>' +
     '</div>' +
-    '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy)" onclick="loadAllSlotsFromPreview()">&#43; Load All to Dashboard</button>' +
   '</div>';
 
   ['8am','12pm','4pm'].forEach(function(sh){
@@ -2566,12 +2347,7 @@ function onSetupDateChange(){
           (s.isNew ? ' <span class="badge" style="background:#E8F4E8;color:#155724;font-size:9px">New</span>' : '') +
         '</div>' +
         '<div class="preview-cap">' + s.cap + '</div>' +
-        '<div class="preview-status">' +
-          (isAdded
-            ? '<span style="color:#155724;font-size:11px;font-weight:600">&#10003; Added</span>'
-            : (function(){ var k=encodeURIComponent(s.name)+'|'+sh; window._ps=window._ps||{}; window._ps[k]={name:s.name,shift:sh,cap:s.cap,hat:s.hat}; return '<button class="btn btn-sm" style="font-size:11px;padding:3px 10px" data-k="'+k+'" onclick="addSinglePreviewSlotEl(this)">&#43; Add</button>'; })()
-          ) +
-        '</div>' +
+        '<div class="preview-status"></div>' +
       '</div>';
     });
 
@@ -2581,34 +2357,6 @@ function onSetupDateChange(){
   html += '</div>';
   prev.innerHTML = html;
   prev.style.display = 'block';
-  // Save currentDate to Neon so TV board picks it up on next poll
-  saveState();
-}
-
-function loadAllSlotsFromPreview(){
-  var date = document.getElementById('setup-date') ? document.getElementById('setup-date').value : '';
-  if(!date) return;
-  var slots = SCHEDULE_2026[date] ? SCHEDULE_2026[date].slice() : [];
-  committeeRequests.filter(function(r){
-    return r.status==='approved' && r.shifts.some(function(s){ return s.date===date || s.all20; });
-  }).forEach(function(r){
-    r.shifts.filter(function(s){ return s.date===date || s.all20; }).forEach(function(s){
-      if(s.virtual) return; // skip virtual
-      var exists = slots.some(function(x){ return x.name===r.name && x.shift===s.shift; });
-      if(!exists) slots.push({name:r.name, shift:s.shift, cap:s.cap, hat:r.hat});
-    });
-  });
-  var added = 0;
-  slots.forEach(function(s){
-    var already = activeSlots.some(function(a){ return a.name===s.name && a.shift===s.shift; });
-    if(already) return;
-    activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
-    added++;
-  });
-  onSetupDateChange();
-  renderSetup();
-  renderSetupApproved();
-  showAlert('Loaded ' + added + ' slot' + (added!==1?'s':'') + ' to dashboard.', 'success');
 }
 
 function addSinglePreviewSlot(name, shift, cap, hat){
@@ -2799,7 +2547,7 @@ function runCullPreview(){
   ['8am','12pm','4pm'].forEach(function(sh){
     var target = sh === '8am' ? t8 : sh === '12pm' ? t12 : t4;
     if(target === 0){ results[sh] = null; return; }
-    var shSlots = allSlots.filter(function(s){ return s.shift === sh && !s.virtual; }).map(function(s){
+    var shSlots = allSlots.filter(function(s){ return s.shift === sh; }).map(function(s){
       return {name:s.name, shift:s.shift, cap:s.cap, hat:s.hat, highPriority:isPriority(s.name, s.shift)};
     });
     results[sh] = cullShift(shSlots, target, dateCounts, totalShowDays);
@@ -3253,356 +3001,6 @@ function renderSimulateMigrationStatus(){
   }
 }
 
-// ============================================================
-// TEST DATA GENERATOR
-// ============================================================
-var _tgenCheckedInIds = []; // track generated check-ins so we can clear them
-
-function tgenCheckIn(){
-  var shift = (document.getElementById('tgen-shift')||{}).value || '8am';
-  var count = Math.min(100, parseInt((document.getElementById('tgen-count')||{}).value)||10);
-  var result = document.getElementById('tgen-checkin-result');
-
-  // Pick random juniors not already checked in
-  var available = juniors.filter(function(j){ return !j.inactive && (!j.checkedIn || clockedOut[j.id]); });
-  if(!available.length){ if(result) result.textContent = 'No available juniors to check in.'; return; }
-
-  var toCheckIn = [];
-  var shuffled = available.slice().sort(function(){ return Math.random()-.5; });
-  for(var i = 0; i < Math.min(count, shuffled.length); i++) toCheckIn.push(shuffled[i]);
-
-  toCheckIn.forEach(function(j){
-    checkInOrder++;
-    j.checkedIn        = true;
-    j.order            = checkInOrder;
-    j.hasHat           = false;
-    j.notes            = '';
-    j.checkInShift     = shift;
-    j.checkInDate      = currentDate;
-    j.checkInTimestamp = Date.now();
-    j.assignment       = null;
-    clockedOut[j.id]   = false;
-    delete clockedOut[j.id];
-    _tgenCheckedInIds.push(j.id);
-  });
-
-  _lastSavedHash = '';
-  saveStateNow();
-  renderOfficer();
-  renderBoard();
-  if(renderCheckins) renderCheckins();
-  if(result) result.textContent = '&#10003; Checked in ' + toCheckIn.length + ' juniors for ' + shift + '.';
-  showAlert('Test: checked in ' + toCheckIn.length + ' juniors for ' + shift, 'success');
-}
-
-function tgenClearCheckIns(){
-  if(!confirm('Clear all test check-ins? This resets everyone currently checked in.')) return;
-  juniors.forEach(function(j){
-    if(!j.checkedIn) return;
-    j.checkedIn        = false;
-    j.assignment       = null;
-    j.checkInShift     = '';
-    j.checkInDate      = '';
-    j.checkInTimestamp = 0;
-    j.order            = 0;
-    clockedOut[j.id]   = false;
-    delete clockedOut[j.id];
-  });
-  activeSlots.forEach(function(s){ s.assigned = []; });
-  checkInOrder = 0;
-  _tgenCheckedInIds = [];
-  _lastSavedHash = '';
-  saveStateNow();
-  renderOfficer();
-  renderBoard();
-  if(renderCheckins) renderCheckins();
-  var result = document.getElementById('tgen-checkin-result');
-  if(result) result.textContent = 'All check-ins cleared.';
-  showAlert('Test check-ins cleared.', 'info');
-}
-
-var _tgenRequestIds = []; // track generated request IDs so we can clear them
-
-function tgenRequests(){
-  var count  = Math.min(50, parseInt((document.getElementById('tgen-req-count')||{}).value)||5);
-  var status = (document.getElementById('tgen-req-status')||{}).value || 'pending';
-  var result = document.getElementById('tgen-req-result');
-
-  var committeeNames = Object.keys(CD);
-  if(!committeeNames.length) committeeNames = ['Agriculture Education','Horse Show','Mutton Bustin','Rodeo','Transportation'];
-
-  var shifts = ['8am','12pm','4pm'];
-  var locations = ['Gate 1','Gate 3','Main Arena','South Hall','North Barn','Livestock Pavilion','Rodeo Arena','Welcome Center'];
-  var duties = [
-    'Assist guests with directions and seating',
-    'Help with livestock check-in and management',
-    'Support vendors and exhibitors',
-    'Crowd control and safety monitoring',
-    'Registration desk assistance',
-    'Parking lot direction and management',
-    'Junior activities coordination',
-    'Stage and equipment setup assistance'
-  ];
-
-  var showDates = Object.keys(SCHEDULE_2026).sort();
-  if(!showDates.length){
-    // Fallback dates
-    for(var d = 2; d <= 20; d++){
-      showDates.push('2026-03-' + String(d).padStart(2,'0'));
-    }
-  }
-
-  var statuses = ['pending','approved','rejected'];
-  var generated = 0;
-
-  for(var i = 0; i < count; i++){
-    var name = committeeNames[Math.floor(Math.random() * committeeNames.length)];
-    var cd   = CD[name] || {};
-    var sh   = shifts[Math.floor(Math.random() * shifts.length)];
-    var date = showDates[Math.floor(Math.random() * showDates.length)];
-    var cap  = 2 + Math.floor(Math.random() * 8);
-    var stat = status === 'mixed' ? statuses[Math.floor(Math.random() * statuses.length)] : status;
-
-    var req = {
-      id: Date.now() + i + Math.floor(Math.random() * 100),
-      submittedAt: new Date(Date.now() - Math.random() * 7 * 24 * 3600000).toISOString(),
-      status: stat,
-      source: 'test_generated',
-      name: name + ' (TEST)',
-      chair: cd.chair || 'Test Chair',
-      chairPhone: cd.cp || '713-555-' + String(1000 + Math.floor(Math.random()*9000)),
-      chairEmail: 'test@example.com',
-      liaison: cd.liaison || 'Test Liaison',
-      liaisonPhone: cd.lp || '713-555-' + String(1000 + Math.floor(Math.random()*9000)),
-      liaisonEmail: 'liaison@example.com',
-      location: locations[Math.floor(Math.random() * locations.length)],
-      duties: duties[Math.floor(Math.random() * duties.length)],
-      notes: '',
-      hat: Math.random() > 0.7,
-      highPriority: false,
-      virtual: false,
-      all20: false,
-      shifts: [{date: date, shift: sh, cap: cap, all20: false, preshow: false}],
-      schedulingNotes: '',
-      virtualHoursLogged: {}
-    };
-    committeeRequests.unshift(req);
-    _tgenRequestIds.push(req.id);
-    generated++;
-  }
-
-  _lastSavedHash = '';
-  // Save all generated requests to Neon in one batch
-  var chunk = committeeRequests.filter(function(r){ return _tgenRequestIds.indexOf(r.id) >= 0; });
-  if(DB_AVAILABLE){
-    fetch('/.netlify/functions/state', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
-      body: JSON.stringify({committeeRequests: chunk, batchMode: true})
-    }).then(function(){ renderRequests(); updateReqFilterSummary(); })
-    .catch(function(e){ console.warn('tgenRequests save error:', e); });
-  }
-  renderRequests();
-  if(result) result.textContent = '&#10003; Generated ' + generated + ' test requests.';
-  showAlert('Generated ' + generated + ' test requests.', 'success');
-}
-
-function tgenClearRequests(){
-  if(!_tgenRequestIds.length){ 
-    showAlert('No test requests to clear (only clears ones generated this session).', 'info'); 
-    return; 
-  }
-  if(!confirm('Delete ' + _tgenRequestIds.length + ' generated test requests?')) return;
-  var toDelete = _tgenRequestIds.slice();
-  committeeRequests = committeeRequests.filter(function(r){ return toDelete.indexOf(r.id) < 0; });
-  _tgenRequestIds = [];
-  // Delete from Neon
-  if(DB_AVAILABLE){
-    fetch('/.netlify/functions/state', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
-      body: JSON.stringify({deleteIds: toDelete, batchMode: true})
-    }).catch(function(e){ console.warn('tgenClear error:', e); });
-  }
-  renderRequests();
-  var result = document.getElementById('tgen-req-result');
-  if(result) result.textContent = 'Test requests cleared.';
-  showAlert('Test requests cleared.', 'info');
-}
-
-
-// ============================================================
-// SHOW DAY SIMULATOR
-// ============================================================
-var _simCITimers   = [];   // check-in timers
-var _simCOTimers   = [];   // clock-out timers
-var _simCIRunning  = false;
-var _simCORunning  = false;
-
-function simStopAll(){
-  _simCITimers.forEach(function(t){ clearTimeout(t); }); _simCITimers = []; _simCIRunning = false;
-  _simCOTimers.forEach(function(t){ clearTimeout(t); }); _simCOTimers = []; _simCORunning = false;
-  var ci = document.getElementById('sim-status-ci'); if(ci) ci.textContent = 'Stopped.';
-  var co = document.getElementById('sim-status-co'); if(co) co.textContent = 'Stopped.';
-  showAlert('Simulator stopped.', 'info');
-}
-// Keep old simStop as alias
-function simStop(){ simStopAll(); }
-
-function simStatusCI(msg){ var el=document.getElementById('sim-status-ci'); if(el) el.textContent=msg; }
-function simStatusCO(msg){ var el=document.getElementById('sim-status-co'); if(el) el.textContent=msg; }
-
-function simProgressCI(pct){
-  var bar=document.getElementById('sim-progress-bar-ci'),wrap=document.getElementById('sim-progress-ci');
-  if(wrap) wrap.style.display='block'; if(bar) bar.style.width=Math.min(100,pct)+'%';
-}
-function simProgressCO(pct){
-  var bar=document.getElementById('sim-progress-bar-co'),wrap=document.getElementById('sim-progress-co');
-  if(wrap) wrap.style.display='block'; if(bar) bar.style.width=Math.min(100,pct)+'%';
-}
-
-function simStartCheckIns(){
-  if(_simCIRunning){ showAlert('Check-in sim already running.', 'warn'); return; }
-  var count  = Math.min(650, Math.max(5, parseInt(document.getElementById('sim-junior-count').value)||30));
-  var shift  = document.getElementById('sim-shift-sel').value || '8am';
-
-  // Pick random available juniors
-  var available = juniors.filter(function(j){ return !j.inactive && (!j.checkedIn || clockedOut[j.id]); });
-  if(available.length < count){
-    showAlert('Only ' + available.length + ' juniors available — using all of them.', 'info');
-    count = available.length;
-  }
-  if(!count){ showAlert('No juniors available to check in.', 'warn'); return; }
-
-  var selected = available.slice().sort(function(){ return Math.random()-.5; }).slice(0, count);
-
-  _simCIRunning = true;
-  simProgressCI(0);
-  simStatusCI('&#9654; Trickling in ' + count + ' juniors over 5 min...');
-
-  // Spread check-ins over 5 minutes (300,000ms) with random jitter
-  // Generate random intervals that sum to ~300s
-  var totalMs = 300000;
-  var delays  = [];
-  var used    = 0;
-  for(var i = 0; i < selected.length; i++){
-    var remaining = selected.length - i;
-    var maxDelay  = (totalMs - used) / remaining * 1.8;
-    var d = i === 0 ? Math.random() * 5000 : Math.random() * maxDelay;
-    used += d;
-    delays.push(Math.round(used));
-  }
-  // Sort delays
-  delays.sort(function(a,b){ return a-b; });
-
-  var done = 0;
-  selected.forEach(function(jr, idx){
-    var t = setTimeout(function(){
-      if(!_simCIRunning) return;
-      checkInOrder++;
-      jr.checkedIn        = true;
-      jr.order            = checkInOrder;
-      jr.hasHat           = Math.random() < 0.75; // daily question — always randomize in sim
-      jr.notes            = '';
-      jr.checkInShift     = shift;
-      jr.checkInDate      = currentDate;
-      jr.checkInTimestamp = Date.now();
-      jr.assignment       = null;
-      clockedOut[jr.id]   = false;
-      delete clockedOut[jr.id];
-      done++;
-      dirtyJuniors.add(jr.id);
-      simProgressCI(done / selected.length * 100);
-      simStatusCI(done + ' / ' + selected.length + ' checked in...');
-      renderOfficer();
-      renderBoard();
-      if(renderCheckins) renderCheckins();
-      // Save to Neon every 5 check-ins so TV board updates during trickle
-      if(done % 5 === 0){ _lastSavedHash = ''; saveStateNow(); }
-      if(done === selected.length){
-        _lastSavedHash = '';
-        saveStateNow();
-        _simCIRunning = false;
-        // Diagnostic: count by shift
-        var byShift = {};
-        juniors.filter(function(j){return j.checkedIn;}).forEach(function(j){
-          byShift[j.checkInShift||'unknown'] = (byShift[j.checkInShift||'unknown']||0)+1;
-        });
-        var breakdown = Object.keys(byShift).map(function(s){return s+':'+byShift[s];}).join(', ');
-        simStatusCI('&#10003; ' + done + ' checked in for ' + shift + '. (' + breakdown + ')');
-        showAlert(done + ' juniors checked in!', 'success');
-        renderOfficer();
-        renderBoard();
-      }
-    }, delays[idx]);
-    _simCITimers.push(t);
-  });
-}
-
-function simStartClockOuts(){
-  if(_simCORunning){ showAlert('Clock-out sim already running.', 'warn'); return; }
-
-  // Clock out all juniors currently marked as "on-shift" (sent out)
-  var onShift = juniors.filter(function(j){
-    return j.checkedIn && !clockedOut[j.id] && getJuniorStatus(j) === 'on-shift';
-  });
-
-  if(!onShift.length){
-    showAlert('No juniors currently out on shift to clock out.', 'warn');
-    return;
-  }
-
-  _simCORunning = true;
-  simProgressCO(0);
-  simStatusCO('&#9650; Clocking out ' + onShift.length + ' juniors over ~5 min...');
-
-  // Stagger clock-outs over 5 minutes with realistic clustering
-  var totalMs = 300000;
-  var shuffled = onShift.slice().sort(function(){ return Math.random()-.5; });
-  var delays = [];
-  var used = 0;
-  for(var i = 0; i < shuffled.length; i++){
-    var remaining = shuffled.length - i;
-    var d = i === 0 ? Math.random()*15000 : Math.random() * ((totalMs - used) / remaining * 1.6);
-    used += d;
-    delays.push(Math.round(used));
-  }
-  delays.sort(function(a,b){ return a-b; });
-
-  var done = 0;
-  shuffled.forEach(function(jr, idx){
-    var t = setTimeout(function(){
-      if(!_simCORunning) return;
-      // Clock them out — remove from slot, clear assignment, mark clockedOut
-      clockedOut[jr.id] = true;
-      jr.assignment = null;
-      activeSlots.forEach(function(s){
-        var i = s.assigned.indexOf(jr.id);
-        if(i >= 0) s.assigned.splice(i, 1);
-        var i2 = s.assigned.indexOf(String(jr.id));
-        if(i2 >= 0) s.assigned.splice(i2, 1);
-      });
-      onShiftJuniors.delete(jr.id);
-      onShiftJuniors.delete(String(jr.id));
-      done++;
-      simProgressCO(done / shuffled.length * 100);
-      simStatusCO(done + ' / ' + shuffled.length + ' clocked out...');
-      renderOfficer();
-      renderBoard();
-      if(renderCheckins) renderCheckins();
-      if(done === shuffled.length){
-        _lastSavedHash = '';
-        saveStateNow();
-        _simCORunning = false;
-        simStatusCO('&#10003; ' + done + ' clocked out.');
-        showAlert(done + ' juniors clocked out!', 'success');
-      }
-    }, delays[idx]);
-    _simCOTimers.push(t);
-  });
-}
-
-
 function renderSetup(){
   // Initialize sim-date picker to today if not already set
   var sdEl = document.getElementById('sim-date');
@@ -3796,36 +3194,17 @@ function activateShift(){
   }
 
   var dateEl = document.getElementById('setup-date');
-  var selectedDate = (dateEl ? dateEl.value : '') || currentDate;
-  currentDate = selectedDate;
+  currentDate = (dateEl ? dateEl.value : '') || currentDate;
 
-  // If no slots loaded yet, auto-load all approved slots for this date
-  if(activeSlots.length === 0 && selectedDate){
-    var autoSlots = SCHEDULE_2026[selectedDate] ? SCHEDULE_2026[selectedDate].slice() : [];
-    committeeRequests.filter(function(r){
-      return r.status==='approved' && r.shifts.some(function(s){ return s.date===selectedDate||s.all20; });
-    }).forEach(function(r){
-      r.shifts.filter(function(s){ return (s.date===selectedDate||s.all20) && !s.virtual; }).forEach(function(s){
-        var exists = autoSlots.some(function(x){ return x.name===r.name && x.shift===s.shift; });
-        if(!exists) autoSlots.push({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false});
-      });
-    });
-    autoSlots.forEach(function(s){
-      activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
-    });
-  }
-
-  // Set active shift: always use the earliest shift that has slots loaded.
-  // This prevents accidentally defaulting to 12pm when 8am slots are present.
+  // Auto-detect active shift: use whichever shift has the most loaded slots
   var shiftCounts = {'8am':0, '12pm':0, '4pm':0};
   activeSlots.forEach(function(s){ if(shiftCounts[s.shift] !== undefined) shiftCounts[s.shift]++; });
-  var shiftOrder = ['8am','12pm','4pm'];
-  var chosenShift = null;
-  // Pick earliest shift that has at least one slot
-  for(var si = 0; si < shiftOrder.length; si++){
-    if(shiftCounts[shiftOrder[si]] > 0){ chosenShift = shiftOrder[si]; break; }
-  }
-  currentShift = chosenShift || '8am';
+  var dominantShift = currentShift; // fallback to whatever is already active
+  var maxCount = 0;
+  Object.keys(shiftCounts).forEach(function(sh){
+    if(shiftCounts[sh] > maxCount){ maxCount = shiftCounts[sh]; dominantShift = sh; }
+  });
+  currentShift = dominantShift;
 
   updateHeaderDate();
   saveStateNow();
@@ -3904,22 +3283,7 @@ function enterPartnerMode(){
 function partnerSubmitAnother(){
   var m = document.getElementById('rf-submit-msg');
   if(m) m.innerHTML = '';
-  var sb = document.getElementById('rf-submit-btn');
-  if(sb){ sb.style.display = ''; sb.disabled = false; sb.textContent = 'Submit Request'; }
-  renderReqForm(); // full reset first
-  // Restore saved committee info
-  if(_lastCommitteeInfo){
-    var fi = _lastCommitteeInfo;
-    var map = {
-      'rf-name': fi.name, 'rf-chair': fi.chair, 'rf-chair-phone': fi.chairPhone,
-      'rf-chair-email': fi.chairEmail, 'rf-liaison': fi.liaison,
-      'rf-liaison-phone': fi.liaisonPhone, 'rf-liaison-email': fi.liaisonEmail
-    };
-    Object.keys(map).forEach(function(id){
-      var el = document.getElementById(id);
-      if(el && map[id]) el.value = map[id];
-    });
-  }
+  renderReqForm();
 }
 
 
@@ -4012,10 +3376,6 @@ function loginAs(role){
     localStorage.setItem('jrc_saved_role', role);
     localStorage.setItem('jrc_session_expiry', String(sessionExpiry));
   } catch(e){{}}
-  // Set initial history entry so back button stays within app (preserve ?tv=1 if present)
-  var firstTab = ROLE_TABS[role] ? ROLE_TABS[role][0] : 'officer';
-  var tvParam = window.location.search.indexOf('tv=1') >= 0 ? window.location.search : '';
-  history.replaceState({tab: firstTab}, '', tvParam + '#' + firstTab);
 
   // Hide login, show app
   document.getElementById('login-screen').style.display = 'none';
@@ -4118,32 +3478,30 @@ var psRowCount = 1;
 
 function setReqType(type){
   currentReqType = type;
-  var showEl  = document.getElementById('rf-showtime-section');
-  var preEl   = document.getElementById('rf-preshow-section');
-  var virtEl  = document.getElementById('rf-virtual-section');
+  var showEl = document.getElementById('rf-showtime-section');
+  var preEl  = document.getElementById('rf-preshow-section');
   var btnShow = document.getElementById('rf-btn-showtime');
   var btnPre  = document.getElementById('rf-btn-preshow');
-  var btnVirt = document.getElementById('rf-btn-virtual');
 
-  // Reset all
-  [showEl,preEl,virtEl].forEach(function(el){ if(el) el.style.display='none'; });
-  [btnShow,btnPre,btnVirt].forEach(function(b){
-    if(!b) return;
-    b.style.background='#fff'; b.style.color='var(--navy)'; b.style.borderColor='var(--gray-200)';
-  });
-
-  // If switching to virtual, clear shift rows so they don't bleed into the submission
-  if(type === 'virtual'){
-    var sl = document.getElementById('rf-specific-list'); if(sl) sl.innerHTML = '';
-    var a20 = document.getElementById('rf-all20'); if(a20) a20.checked = false;
-    var a20s = document.getElementById('rf-all20-section'); if(a20s) a20s.style.display = 'none';
-    ['rf-s1-check','rf-s2-check','rf-s3-check'].forEach(function(id){ var el=document.getElementById(id); if(el) el.checked=false; });
+  if(type === 'showtime'){
+    showEl.style.display = 'block';
+    preEl.style.display  = 'none';
+    btnShow.style.background   = 'var(--navy)';
+    btnShow.style.color        = '#fff';
+    btnShow.style.borderColor  = 'var(--navy)';
+    btnPre.style.background    = '#fff';
+    btnPre.style.color         = 'var(--navy)';
+    btnPre.style.borderColor   = 'var(--gray-200)';
+  } else {
+    showEl.style.display = 'none';
+    preEl.style.display  = 'block';
+    btnPre.style.background    = 'var(--navy)';
+    btnPre.style.color         = '#fff';
+    btnPre.style.borderColor   = 'var(--navy)';
+    btnShow.style.background   = '#fff';
+    btnShow.style.color        = 'var(--navy)';
+    btnShow.style.borderColor  = 'var(--gray-200)';
   }
-  // Activate selected
-  var activeEl  = type==='showtime' ? showEl  : type==='preshow' ? preEl  : virtEl;
-  var activeBtn = type==='showtime' ? btnShow : type==='preshow' ? btnPre : btnVirt;
-  if(activeEl)  activeEl.style.display='block';
-  if(activeBtn){ activeBtn.style.background='var(--navy)'; activeBtn.style.color='#fff'; activeBtn.style.borderColor='var(--navy)'; }
 }
 
 function removePsRow(id){
@@ -4239,23 +3597,14 @@ function checkMar20(id){
   }
 }
 
-function renderReqForm(keepCommitteeInfo){
-  // Reset form — optionally keep committee info for quick re-submit
-  if(!keepCommitteeInfo){
-    ['rf-name','rf-chair','rf-chair-phone','rf-chair-email','rf-liaison','rf-liaison-phone',
-     'rf-liaison-email','rf-location','rf-duties','rf-notes'].forEach(function(id){
-      var el = document.getElementById(id);
-      if(el) el.value = '';
-    });
-    var hat = document.getElementById('rf-hat'); if(hat) hat.checked = false;
-  } else {
-    // Only clear event details for the showtime section; committee info stays
-    ['rf-location','rf-duties','rf-notes'].forEach(function(id){
-      var el = document.getElementById(id);
-      if(el) el.value = '';
-    });
-    var hat = document.getElementById('rf-hat'); if(hat) hat.checked = false;
-  }
+function renderReqForm(){
+  // Reset form
+  ['rf-name','rf-chair','rf-chair-phone','rf-chair-email','rf-liaison','rf-liaison-phone',
+   'rf-liaison-email','rf-location','rf-duties','rf-notes'].forEach(function(id){
+    var el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  var hat = document.getElementById('rf-hat'); if(hat) hat.checked = false;
   var all20 = document.getElementById('rf-all20'); if(all20) all20.checked = false;
   ['rf-s1-check','rf-s2-check','rf-s3-check'].forEach(function(id){
     var el = document.getElementById(id); if(el) el.checked = false;
@@ -4269,13 +3618,6 @@ function renderReqForm(keepCommitteeInfo){
   currentReqType = 'showtime';
   psRowCount = 1;
   try { setReqType('showtime'); } catch(e){}
-  // Reset virtual fields
-  ['rf-virt-start','rf-virt-end','rf-virt-desc'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-  var vc=document.getElementById('rf-virt-cap'); if(vc) vc.value='2';
-  var vh=document.getElementById('rf-virt-hours'); if(vh) vh.value='2';
-  // Reset preshow event detail fields
-  ['rf-location-ps','rf-duties-ps','rf-notes-ps'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; });
-  var hps=document.getElementById('rf-hat-ps'); if(hps) hps.checked=false;
   // Reset pre-show rows
   var psRows = document.getElementById('rf-ps-rows');
   if(psRows) psRows.innerHTML = '<div class="rf-ps-row" style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:10px;align-items:flex-end;margin-bottom:10px" id="rf-ps-row-1">' +
@@ -4287,13 +3629,9 @@ function renderReqForm(keepCommitteeInfo){
     '</select></div><div><div class="form-lbl">Juniors</div><input class="finput" type="number" id="rf-ps-cap-1" min="1" max="40" value="4" style="width:70px"></div></div>';
   // Add one blank shift row by default
   addSpecificShift();
-  var sb = document.getElementById('rf-submit-btn'); if(sb){ sb.style.display=''; sb.disabled=false; sb.textContent='Submit Request'; }
 }
 
 function submitRequest(){
-  // Prevent double-submit
-  var submitBtn = document.getElementById('rf-submit-btn');
-  if(submitBtn){ submitBtn.disabled = true; submitBtn.textContent = 'Submitting...'; }
   var name = (document.getElementById('rf-name').value || '').trim();
   var chair = (document.getElementById('rf-chair').value || '').trim();
   var chairPhone = (document.getElementById('rf-chair-phone').value || '').trim();
@@ -4301,27 +3639,19 @@ function submitRequest(){
   var liaison = (document.getElementById('rf-liaison').value || '').trim();
   var liaisonPhone = (document.getElementById('rf-liaison-phone').value || '').trim();
   var liaisonEmail = (document.getElementById('rf-liaison-email').value || '').trim();
-  // Pick the right event details fields depending on type
-  // Virtual has no location/duties/notes/hat — showtime uses rf-*, preshow uses rf-*-ps
-  var isPs = currentReqType === 'preshow';
-  var isVirt = currentReqType === 'virtual';
-  var locationId = isPs ? 'rf-location-ps' : 'rf-location';
-  var dutiesId   = isPs ? 'rf-duties-ps'   : 'rf-duties';
-  var notesId    = isPs ? 'rf-notes-ps'    : 'rf-notes';
-  var hatId      = isPs ? 'rf-hat-ps'      : 'rf-hat';
-  var location = isVirt ? '' : (document.getElementById(locationId)||{value:''}).value.trim();
-  var duties   = isVirt ? '' : (document.getElementById(dutiesId)||{value:''}).value.trim();
-  var notes    = isVirt ? '' : (document.getElementById(notesId)||{value:''}).value.trim();
-  var hat      = isVirt ? false : (document.getElementById(hatId)||{checked:false}).checked;
+  var location = (document.getElementById('rf-location').value || '').trim();
+  var duties = (document.getElementById('rf-duties').value || '').trim();
+  var notes = (document.getElementById('rf-notes').value || '').trim();
+  var hat = document.getElementById('rf-hat').checked;
   var msg = document.getElementById('rf-submit-msg');
 
-  // Highlight missing required fields (skip event details for virtual)
+  // Highlight missing required fields
   var requiredMap = {
     'rf-name': name, 'rf-chair': chair, 'rf-chair-phone': chairPhone,
     'rf-chair-email': chairEmail, 'rf-liaison': liaison,
-    'rf-liaison-phone': liaisonPhone, 'rf-liaison-email': liaisonEmail
+    'rf-liaison-phone': liaisonPhone, 'rf-liaison-email': liaisonEmail,
+    'rf-location': location, 'rf-duties': duties
   };
-  if(!isVirt){ requiredMap[locationId] = location; requiredMap[dutiesId] = duties; }
   var missing = false;
   Object.keys(requiredMap).forEach(function(id){
     var el = document.getElementById(id);
@@ -4338,7 +3668,6 @@ function submitRequest(){
   if(missing){
     msg.innerHTML = '<div class="alert alert-danger">Please fill in all required fields highlighted in red.</div>';
     msg.scrollIntoView({behavior:'smooth',block:'nearest'});
-    if(submitBtn){ submitBtn.disabled = false; }
     return;
   }
   var cpDigits = chairPhone.replace(/\D/g,'');
@@ -4354,12 +3683,11 @@ function submitRequest(){
     return;
   }
 
-  var all20   = currentReqType === 'showtime' ? document.getElementById('rf-all20').checked : false;
-  var shifts  = [];
+  var all20 = currentReqType === 'showtime' ? document.getElementById('rf-all20').checked : false;
+  var shifts = [];
   var preshow = currentReqType === 'preshow';
-  var virtual = currentReqType === 'virtual';
 
-  if(!virtual && preshow){
+  if(preshow){
     // Collect pre-show rows
     var psRowEls = document.getElementById('rf-ps-rows').querySelectorAll('.rf-ps-row');
     psRowEls.forEach(function(row){
@@ -4376,7 +3704,7 @@ function submitRequest(){
       msg.innerHTML = '<div class="alert alert-danger">Please fill in at least one date and time for the pre-show request.</div>';
       return;
     }
-  } else if(!virtual){
+  } else {
 
   if(all20){
     var s1 = document.getElementById('rf-s1-check').checked;
@@ -4402,57 +3730,37 @@ function submitRequest(){
       msg.innerHTML = '<div class="alert alert-danger">Please add at least one shift.</div>';
       return;
     }
-  } } // end showtime; end preshow block (only runs when !virtual)
-
-  if(virtual){
-    var vStart = (document.getElementById('rf-virt-start')||{}).value||'';
-    var vEnd   = (document.getElementById('rf-virt-end')||{}).value||'';
-    var vCap   = parseInt((document.getElementById('rf-virt-cap')||{}).value)||2;
-    var vDesc  = ((document.getElementById('rf-virt-desc')||{}).value||'').trim();
-    var vHours = parseFloat((document.getElementById('rf-virt-hours')||{}).value)||0;
-    if(!vStart||!vEnd||!vDesc){
-      msg.innerHTML='<div class="alert alert-danger">Please fill in start date, end date, and a description for the virtual assignment.</div>';
-      return;
-    }
-    shifts.push({virtual:true, date:vStart, endDate:vEnd, cap:vCap, desc:vDesc, estimatedHours:vHours});
-  }
+  } } // end showtime; end preshow block
 
   var req = {
-    id: (++requestIdCounter),
+    id: requestIdCounter++,
     submittedAt: new Date().toISOString(),
     status: 'pending',
     name:name, chair:chair, chairPhone:chairPhone, chairEmail:chairEmail,
     liaison:liaison, liaisonPhone:liaisonPhone, liaisonEmail:liaisonEmail,
     location:location, duties:duties, notes:notes, hat:hat,
-    all20:all20, preshow:preshow, virtual:virtual, shifts:shifts,
-    schedulingNotes: '',
-    virtualHoursLogged: {}
+    all20:all20, preshow:preshow, shifts:shifts,
+    schedulingNotes: ''
   };
   committeeRequests.unshift(req);
-  _lastSavedHash = ''; // force save even if hash looks unchanged
-  saveStateNow();      // persist to Neon immediately
-  if(submitBtn) submitBtn.style.display = 'none'; // hide until Submit Another is clicked
-
-  // Save committee info now before anything clears it — used by partnerSubmitAnother
-  _lastCommitteeInfo = {
-    name: name, chair: chair, chairPhone: chairPhone, chairEmail: chairEmail,
-    liaison: liaison, liaisonPhone: liaisonPhone, liaisonEmail: liaisonEmail
-  };
 
   msg.innerHTML = '<div class="alert alert-success">Request submitted! The JRC scheduling team will review it shortly.</div>';
 
-  // Show done screen then offer to submit another
-  setTimeout(function(){
-    msg.innerHTML = '<div style="text-align:center;padding:24px">' +
-      '<div style="font-size:40px;margin-bottom:12px">&#10003;</div>' +
-      '<div style="font-size:18px;font-weight:700;color:var(--navy);margin-bottom:8px">Request Submitted!</div>' +
-      '<div style="font-size:14px;color:#667788;margin-bottom:20px">The JRC scheduling team will be in touch if they have questions.</div>' +
-      '<button class="btn btn-primary" onclick="partnerSubmitAnother()">&#43; Submit Another Request</button>' +
-      '</div>';
-  }, 1500);
+  // If in partner mode, show a done screen
+  var partnerHeader = document.getElementById('partner-header');
+  if(partnerHeader && partnerHeader.style.display !== 'none'){
+    setTimeout(function(){
+      msg.innerHTML = '<div style="text-align:center;padding:24px">' +
+        '<div style="font-size:40px;margin-bottom:12px">&#10003;</div>' +
+        '<div style="font-size:18px;font-weight:700;color:var(--navy);margin-bottom:8px">Request Submitted!</div>' +
+        '<div style="font-size:14px;color:#667788;margin-bottom:20px">The JRC scheduling team will be in touch if they have questions.</div>' +
+        '<button class="btn btn-primary" onclick="partnerSubmitAnother()">&#43; Submit Another Request</button>' +
+        '</div>';
+    }, 1500);
+  } else {
+    setTimeout(function(){ renderReqForm(); }, 2000);
+  }
 }
-
-var _lastCommitteeInfo = null;
 
 // ============================================================
 // REQUEST APPROVALS
@@ -4503,21 +3811,6 @@ function renderReqByDate(){
   var hits = [];
   committeeRequests.forEach(function(r){
     r.shifts.forEach(function(s){
-      if(s.virtual){
-        // Virtual: show if selected date falls within start–end range
-        if(date >= (s.date||'') && date <= (s.endDate||s.date||'')){
-          hits.push({
-            name:r.name, status:r.status, shift:'virtual', virtual:true,
-            cap:s.cap, hat:false, all20:false,
-            liaison:r.liaison, liaisonPhone:r.liaisonPhone, liaisonEmail:r.liaisonEmail||'',
-            chair:r.chair, chairPhone:r.chairPhone||'',
-            location:'Remote', duties:s.desc||'', notes:r.notes||'',
-            estimatedHours:s.estimatedHours||0,
-            rid:r.id, fromRequest:true
-          });
-        }
-        return;
-      }
       if(s.all20 || s.date === date){
         var effShift = s.preshow ? psTimeToShift(s.startTime) : s.shift;
         hits.push({
@@ -4558,11 +3851,8 @@ function renderReqByDate(){
     return;
   }
 
-  var byShift = {'8am':[],'12pm':[],'4pm':[],'virtual':[]};
-  merged.forEach(function(h){
-    if(h.virtual) byShift.virtual.push(h);
-    else if(byShift[h.shift]) byShift[h.shift].push(h);
-  });
+  var byShift = {'8am':[],'12pm':[],'4pm':[]};
+  merged.forEach(function(h){ if(byShift[h.shift]) byShift[h.shift].push(h); });
 
   var shiftColors = {'8am':'#4499CC','12pm':'#D4860A','4pm':'#27AE60'};
   var shiftNames  = {'8am':'8:00 AM Shift','12pm':'12:00 PM Shift','4pm':'4:00 PM Shift'};
@@ -4643,35 +3933,6 @@ function renderReqByDate(){
     html += '</div>';
   });
 
-  // Virtual section — separate from in-person shifts
-  if(byShift.virtual.length){
-    html += '<div style="margin-bottom:16px;border:1px solid #B2DFDB;border-radius:8px;overflow:hidden">';
-    html += '<div style="background:#00897B;color:#fff;padding:8px 14px;display:flex;justify-content:space-between;align-items:center">';
-    html += '<span style="font-weight:700;font-size:13px">Virtual Assignments</span>';
-    html += '<span style="font-size:11px;opacity:.85">' + byShift.virtual.length + ' committee' + (byShift.virtual.length!==1?'s':'') + '</span>';
-    html += '</div>';
-    byShift.virtual.sort(function(a,b){ return a.name.localeCompare(b.name); }).forEach(function(h,ri){
-      var rowKey = 'virt-' + ri;
-      var detailHtml =
-        '<div style="padding:10px 14px 12px 28px;background:#F0FAF8;font-size:12px;line-height:1.8">' +
-        (h.duties ? '<div><strong>Description:</strong> ' + h.duties + '</div>' : '') +
-        (h.estimatedHours ? '<div><strong>Est. Hours:</strong> ' + h.estimatedHours + ' hrs per junior</div>' : '') +
-        (h.chair ? '<div><strong>Chair:</strong> ' + h.chair + (h.chairPhone ? ' &bull; ' + h.chairPhone : '') + '</div>' : '') +
-        (h.liaison ? '<div><strong>Liaison:</strong> ' + h.liaison + (h.liaisonPhone ? ' &bull; ' + h.liaisonPhone : '') + (h.liaisonEmail ? ' &bull; <a href="mailto:' + h.liaisonEmail + '" style="color:var(--navy)">' + h.liaisonEmail + '</a>' : '') + '</div>' : '') +
-        '</div>';
-      html += '<div style="border-top:1px solid #E0F2F1">';
-      html += '<div style="display:flex;align-items:center;padding:7px 14px;cursor:pointer;gap:10px" onclick="toggleReqRow(\'' + rowKey + '\')">';
-      html += '<span id="req-row-icon-' + rowKey + '" style="font-size:10px;color:#99AABB;flex-shrink:0">&#9654;</span>';
-      html += '<div style="flex:1;font-weight:500;font-size:13px">' + h.name + '</div>';
-      html += '<div style="font-size:12px;color:#667788;flex-shrink:0">' + h.cap + ' juniors</div>';
-      html += '<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;flex-shrink:0;background:' + (statusBg[h.status]||'#eee') + ';color:' + (statusColors[h.status]||'#333') + '">' + h.status + '</span>';
-      html += '</div>';
-      html += '<div id="req-row-detail-' + rowKey + '" style="display:none">' + detailHtml + '</div>';
-      html += '</div>';
-    });
-    html += '</div>';
-  }
-
   listEl.innerHTML = html;
 }
 
@@ -4685,193 +3946,10 @@ function toggleReqRow(key){
 }
 
 
-// ============================================================
-// REQUESTS FILTER SYSTEM
-// ============================================================
-var _reqFilterStatus   = 'all';      // current status chip selection
-var _reqFilterNames    = [];         // array of selected committee names
-var _reqFilterDate     = '';         // ISO date string or ''
-
-function reqChipClick(btn){
-  // Toggle status — clicking active chip deactivates (goes to 'all')
-  var status = btn.getAttribute('data-status');
-  _reqFilterStatus = (btn.classList.contains('active') && status !== 'all') ? 'all' : status;
-  // Update chip visuals
-  document.querySelectorAll('.req-chip[data-status]').forEach(function(b){
-    b.classList.toggle('active', b.getAttribute('data-status') === _reqFilterStatus);
-  });
-  renderRequests();
-}
-
-function toggleReqNameDropdown(){
-  var dd = document.getElementById('req-name-dropdown');
-  if(!dd) return;
-  var isOpen = dd.style.display !== 'none';
-  if(isOpen){ dd.style.display = 'none'; return; }
-  // Build option list from all unique committee names in committeeRequests
-  var names = {};
-  committeeRequests.forEach(function(r){ if(r.name) names[r.name] = true; });
-  var sorted = Object.keys(names).sort();
-  renderReqNameOptions(sorted, '');
-  dd.style.display = 'block';
-  var inp = document.getElementById('req-name-search');
-  if(inp){ inp.value = ''; inp.focus(); }
-  // Close on outside click
-  setTimeout(function(){
-    document.addEventListener('click', _closeReqNameDropdown, {once:true, capture:true});
-  }, 0);
-}
-
-function _closeReqNameDropdown(e){
-  var wrap = document.getElementById('req-name-wrap');
-  if(wrap && wrap.contains(e.target)) return;
-  var dd = document.getElementById('req-name-dropdown');
-  if(dd) dd.style.display = 'none';
-}
-
-function reqNameSearchFilter(){
-  var q = (document.getElementById('req-name-search').value || '').toLowerCase();
-  var names = {};
-  committeeRequests.forEach(function(r){ if(r.name) names[r.name] = true; });
-  var sorted = Object.keys(names).sort().filter(function(n){
-    return !q || n.toLowerCase().indexOf(q) >= 0;
-  });
-  renderReqNameOptions(sorted, q);
-}
-
-function renderReqNameOptions(names, q){
-  var el = document.getElementById('req-name-options');
-  if(!el) return;
-  if(!names.length){
-    el.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:#999;font-style:italic">No matches for "' + q + '"</div>';
-    return;
-  }
-  el.innerHTML = names.map(function(name){
-    var checked = _reqFilterNames.indexOf(name) >= 0;
-    var safeId = 'rno-' + name.replace(/[^a-z0-9]/gi,'_');
-    return '<label class="req-name-option">' +
-      '<input type="checkbox" id="' + safeId + '"' + (checked?' checked':'') + ' data-rname="' + encodeURIComponent(name) + '" onchange="reqNameToggleEl(this)">' +
-      (function(){ if(!q) return '<span>' + name + '</span>'; var lo=name.toLowerCase(),qi=lo.indexOf(q.toLowerCase()); if(qi<0) return '<span>'+name+'</span>'; return '<span>'+name.slice(0,qi)+'<strong>'+name.slice(qi,qi+q.length)+'</strong>'+name.slice(qi+q.length)+'</span>'; })() +
-    '</label>';
-  }).join('');
-}
-
-function reqNameToggleEl(el, forceOff){
-  var name = decodeURIComponent(el.getAttribute('data-rname')||'');
-  if(!name) return;
-  var checked = forceOff ? false : !!el.checked;
-  reqNameToggle(name, checked);
-}
-
-function reqNameToggle(name, checked){
-  if(checked){
-    if(_reqFilterNames.indexOf(name) < 0) _reqFilterNames.push(name);
-  } else {
-    _reqFilterNames = _reqFilterNames.filter(function(n){ return n !== name; });
-  }
-  updateReqNameDisplay();
-  renderRequests();
-}
-
-function updateReqNameDisplay(){
-  var display = document.getElementById('req-name-display');
-  var placeholder = document.getElementById('req-name-placeholder');
-  if(!display) return;
-  // Remove old tags (keep placeholder)
-  Array.from(display.querySelectorAll('.req-name-tag')).forEach(function(t){ t.remove(); });
-  if(_reqFilterNames.length === 0){
-    if(placeholder) placeholder.style.display = 'inline';
-  } else {
-    if(placeholder) placeholder.style.display = 'none';
-    _reqFilterNames.forEach(function(name){
-      var tag = document.createElement('span');
-      tag.className = 'req-name-tag';
-      tag.innerHTML = name + '<button data-rname="' + encodeURIComponent(name) + '" onclick="event.stopPropagation();reqNameToggleEl(this,true)" title="Remove">&#x2715;</button>';
-      display.insertBefore(tag, placeholder);
-    });
-  }
-}
-
-function reqFilterUpdate(){
-  _reqFilterDate = (document.getElementById('req-search-date')||{}).value || '';
-  renderRequests();
-  updateReqFilterSummary();
-}
-
-function updateReqFilterSummary(){
-  var el = document.getElementById('req-filter-summary');
-  var txt = document.getElementById('req-filter-summary-text');
-  if(!el || !txt) return;
-  var parts = [];
-  if(_reqFilterStatus !== 'all') parts.push('Status: ' + _reqFilterStatus);
-  if(_reqFilterNames.length) parts.push(_reqFilterNames.length + ' committee' + (_reqFilterNames.length>1?'s':'') + ' selected');
-  if(_reqFilterDate) parts.push('Date: ' + _reqFilterDate);
-  if(parts.length){ el.style.display='flex'; txt.textContent = parts.join(' · '); }
-  else { el.style.display='none'; }
-}
-
-function reqClearFilters(){
-  _reqFilterStatus = 'all';
-  _reqFilterNames  = [];
-  _reqFilterDate   = '';
-  document.querySelectorAll('.req-chip[data-status]').forEach(function(b){
-    b.classList.toggle('active', b.getAttribute('data-status') === 'all');
-  });
-  var sd = document.getElementById('req-search-date'); if(sd) sd.value = '';
-  var si = document.getElementById('req-name-search'); if(si) si.value = '';
-  updateReqNameDisplay();
-  updateReqFilterSummary();
-  renderRequests();
-}
-
-
-function refreshRequests(){
-  // Force-fetch latest committeeRequests from Neon regardless of poll timing
-  if(!DB_AVAILABLE){ renderRequests(); return; }
-  var btn = document.getElementById('req-refresh-btn');
-  if(btn){ btn.disabled = true; btn.textContent = '⟳ Loading...'; }
-  fetch('/.netlify/functions/state', {headers:{'x-api-token': API_TOKEN}})
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-      console.log('[JRC] refreshRequests: Neon returned', data && data.committeeRequests ? data.committeeRequests.length : 0, 'requests');
-      if(data && data.committeeRequests !== undefined){
-        // Always update — even if empty, so deletions are reflected
-        committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
-        var maxId = committeeRequests.reduce(function(m,r){ return Math.max(m, r.id||0); }, 0);
-        if(maxId >= requestIdCounter) requestIdCounter = maxId + 1;
-        console.log('[JRC] first request:', committeeRequests[0] ? committeeRequests[0].name + ' / ' + committeeRequests[0].status : 'none');
-      }
-      renderRequests();
-      updateReqFilterSummary();
-      if(btn){ btn.disabled = false; btn.textContent = '⟳ Refresh'; }
-    })
-    .catch(function(e){
-      console.error('[JRC] refreshRequests error:', e);
-      if(btn){ btn.disabled = false; btn.textContent = '⟳ Refresh'; }
-    });
-}
-
 function renderRequests(){
-  // Apply all active filters
+  var filter = (document.getElementById('req-filter') ? document.getElementById('req-filter').value : 'all');
   var list = committeeRequests.filter(function(r){
-    // Status / type filter
-    if(_reqFilterStatus === 'virtual'){
-      if(!(r.virtual || (r.shifts && r.shifts.length && r.shifts[0].virtual))) return false;
-    } else if(_reqFilterStatus !== 'all'){
-      if(r.status !== _reqFilterStatus) return false;
-    }
-    // Committee name multiselect
-    if(_reqFilterNames.length && _reqFilterNames.indexOf(r.name) < 0) return false;
-    // Date filter — match any shift that touches this date
-    if(_reqFilterDate){
-      var dateMatch = r.shifts && r.shifts.some(function(s){
-        if(s.all20) return true;
-        if(s.virtual) return _reqFilterDate >= (s.date||'') && _reqFilterDate <= (s.endDate||s.date||'');
-        return s.date === _reqFilterDate;
-      });
-      if(!dateMatch) return false;
-    }
-    return true;
+    return filter === 'all' || r.status === filter;
   });
 
   var el = document.getElementById('req-list');
@@ -4879,7 +3957,7 @@ function renderRequests(){
 
   if(!list.length){
     el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray-400);font-size:14px">' +
-      (_reqFilterStatus === 'pending' ? 'No pending requests. All caught up!' : 'No requests found.') +
+      (filter === 'pending' ? 'No pending requests. All caught up!' : 'No requests found.') +
     '</div>';
     return;
   }
@@ -4888,12 +3966,8 @@ function renderRequests(){
     var dt = new Date(r.submittedAt);
     var dateStr = 'Submitted ' + (dt.getMonth()+1) + '/' + dt.getDate() + ' at ' +
       dt.getHours() + ':' + String(dt.getMinutes()).padStart(2,'0');
-    var shifts = r.shifts || [];
-    var isPreshow = r.preshow || (shifts.length && shifts[0].preshow);
-    var isVirtual = r.virtual || (shifts.length && shifts[0].virtual);
 
     var shiftPills = r.shifts.map(function(s){
-      if(s.virtual) return '<span class="shift-pill" style="background:#E0F2F1;color:#00695C">' + fmtDate(s.date) + (s.endDate && s.endDate!==s.date ? ' – ' + fmtDate(s.endDate) : '') + ' &bull; Virtual &bull; ' + s.cap + ' juniors' + (s.estimatedHours ? ' &bull; ~' + s.estimatedHours + 'h' : '') + '</span>';
       return '<span class="shift-pill">' + (s.all20 ? 'All 20 &bull; ' : fmtDate(s.date) + ' &bull; ') +
         SL[s.shift] + ' &bull; ' + s.cap + ' juniors</span>';
     }).join('');
@@ -4912,7 +3986,7 @@ function renderRequests(){
         '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
           '<button class="btn" style="font-size:12px;padding:5px 12px" onclick="editRequest(' + r.id + ')"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"> Edit</button>' +
           '<button class="btn btn-danger" style="font-size:12px;padding:5px 12px" onclick="revokeRequest(' + r.id + ')">&#x21A9; Revoke Approval</button>' +
-          '<button class="btn" style="font-size:12px;padding:5px 12px;border-color:#CC0000;color:#CC0000" onclick="rejectRequest(' + r.id + ')">&#x2715; Reject</button>' +
+          '<button class="btn" style="font-size:12px;padding:5px 12px;border-color:#CC0000;color:#CC0000" onclick="rejectRequest(' + r.id + ')">&#x2715; Deny &amp; Archive</button>' +
           '<button class="btn" style="font-size:12px;padding:5px 10px;border-color:#CC0000;color:#CC0000" onclick="deleteRequest(' + r.id + ')" title="Delete">&#x1F5D1;</button>' +
         '</div>';
     }
@@ -4920,7 +3994,7 @@ function renderRequests(){
     return '<div class="req-card ' + r.status + '">' +
       '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:8px">' +
         '<div>' +
-          '<div style="font-size:15px;font-weight:700;color:var(--navy)">' + r.name + (r.hat ? ' <span class="badge b-hat"><img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> Hat req.</span>' : '') + (isVirtual ? ' <span class="badge" style="background:#00897B;color:#fff;font-size:10px">Virtual</span>' : '') + '</div>' +
+          '<div style="font-size:15px;font-weight:700;color:var(--navy)">' + r.name + (r.hat ? ' <span class="badge b-hat"><img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> Hat req.</span>' : '') + '</div>' +
           '<div style="font-size:12px;color:#667788;margin-top:2px">' + dateStr + ' &bull; ' + r.chair + ' &bull; ' + r.chairPhone + '</div>' +
         '</div>' +
         '<span class="req-badge ' + r.status + '">' + r.status + '</span>' +
@@ -4960,14 +4034,7 @@ function deleteRequest(id){
   if(!confirm('Permanently delete the request from "' + r.name + '"? This cannot be undone.')) return;
   committeeRequests = committeeRequests.filter(function(x){ return x.id !== id; });
   renderRequests();
-  // Delete directly from Neon — saveStateNow only upserts, won't remove the record
-  if(DB_AVAILABLE){
-    fetch('/.netlify/functions/state', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
-      body: JSON.stringify({deleteIds:[id], batchMode:true})
-    }).catch(function(e){ console.warn('deleteRequest Neon error:', e.message); });
-  }
+  saveStateNow();
   showAlert('Request deleted.', 'info');
 }
 
@@ -5017,7 +4084,6 @@ function editRequest(id){
   });
 
   var isPreshow = r.preshow || (shifts.length && shifts[0].preshow);
-  var isVirtual = r.virtual || (shifts.length && shifts[0].virtual);
   var body =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
       '<div style="grid-column:1/-1"><div class="form-lbl">Committee Name *</div><input class="finput" id="edit-name" value="'+escHtml(r.name||'')+'"></div>' +
@@ -5367,16 +4433,13 @@ function manualClockOut(jid, skipConfirm){
   }
   onShiftJuniors.delete(jid);
   onShiftJuniors.delete(String(jid));
-  // Keep checkedIn=true so the Check-ins tab shows them under "clocked out this session"
-  // (matches adminClockOut and simulator convention); clockedOut flag drives all status logic.
-  jr.assignment = null;
+  jr.checkedIn = false;
   jr.plannedShifts = [];
+  jr.checkInShift = '';
   clockedOut[jid] = true;
   dirtyJuniors.add(jr.id);
-  _lastSavedHash = '';
   renderOfficer();
   renderBoard();
-  if(typeof renderCheckins === 'function') renderCheckins();
   saveStateNow();
 }
 
@@ -5431,15 +4494,13 @@ function undoSent(slotId){
 
 
 function getJuniorStatus(jr){
-  // Clocked out takes precedence — regardless of checkedIn flag state
-  if(clockedOut && (clockedOut[jr.id] || clockedOut[String(jr.id)])) return 'checked-out';
+  if(!jr.checkedIn && clockedOut && (clockedOut[jr.id] || clockedOut[String(jr.id)])) return 'checked-out';
   if(!jr.checkedIn) return null;
   // Only use onShiftJuniors — this is cleared on clock-out so it's shift-specific
   if(onShiftJuniors.has(jr.id) || onShiftJuniors.has(String(jr.id))) return 'on-shift';
-  // Check slot data — slot shift must match junior's current check-in shift
-  var jrShift = jr.checkInShift || currentShift;
+  // Check slot data only for current shift — prevents old sent slots bleeding into next shift
   var inSentSlot = activeSlots.some(function(s){
-    if(s.shift !== jrShift) return false; // slot must match junior's current shift
+    if(s.shift !== currentShift) return false; // only current shift slots
     return (onShiftSlots.has(String(s.id)) || onShiftSlots.has(s.id)) &&
            (s.assigned.indexOf(jr.id) >= 0 || s.assigned.indexOf(String(jr.id)) >= 0);
   });
@@ -5497,19 +4558,7 @@ function renderBoard(){
         if(!j.checkInShift) return;
         if(j.checkedIn && j.checkInShift === sh) return;
         if(checkedInForShift.indexOf(j) >= 0) return;
-        // Skip if already showing in outAll or assAll for current shift (don't double-list)
-        var alreadyListed = outAll.some(function(r){ return r.j.id === j.id; }) ||
-                            assAll.some(function(r){ return r.j.id === j.id; });
-        if(alreadyListed) return;
         ciAll.push({j:j, sh:sh, pending:true});
-      });
-      // On-break age-outs waiting for future shift
-      juniors.forEach(function(j){
-        if(!j.ageout || !j.onBreak) return;
-        if(j.onBreakNextShift !== sh) return;
-        var shiftStart = sh==='8am' ? 480 : sh==='12pm' ? 720 : 960;
-        var isLate = nowMins >= shiftStart - 15;
-        ciAll.push({j:j, sh:sh, pending:true, onBreak:true, lateBreak:isLate});
       });
     }
   });
@@ -5520,10 +4569,9 @@ function renderBoard(){
     list.forEach(function(r){ seen[r.sh] = true; });
     return Object.keys(seen).length > 1;
   }
-  // Always show shift tags so it's always clear which shift each person is on
-  var showTagCI  = true;
-  var showTagAss = true;
-  var showTagOut = multiShift(outAll);  // out-on-shift uses dividers instead
+  var showTagCI  = multiShift(ciAll);
+  var showTagAss = multiShift(assAll);
+  var showTagOut = multiShift(outAll);
 
   // Shift label pill for a name row (only rendered when tags are shown)
   function shiftPill(sh){
@@ -5533,66 +4581,46 @@ function renderBoard(){
 
   // Build Checked-In column HTML
   function buildCI(){
-    var h = '';
-    // Normal active check-ins first, pending age-outs at bottom
+    var h = '<div class="board-waiting-col">';
+    // Pending age-outs at top
     var pending = ciAll.filter(function(r){ return r.pending; });
     var normal  = ciAll.filter(function(r){ return !r.pending; });
-    // Group by shift for header counts
-    var ciByShift = {};
-    normal.forEach(function(r){ ciByShift[r.sh] = (ciByShift[r.sh]||0)+1; });
-    var ciHdrExtra = Object.keys(ciByShift).sort().map(function(sh){
-      var colors={'8am':'#4499CC','12pm':'#F0C040','4pm':'#5CDB95'};
-      return '<span style="font-size:8px;padding:0 4px;border-radius:4px;background:'+( colors[sh]||'#99BBDD')+';color:#001F40;margin-left:3px">'+sh+':'+ ciByShift[sh]+'</span>';
-    }).join('');
-    h += '<div class="board-col-hdr ci">&#9679; In (' + normal.length + ')'+ ciHdrExtra +'</div>';
-    var ciCols = normal.length > 60 ? 4 : normal.length > 30 ? 3 : normal.length > 15 ? 2 : 1;
-    h += '<div style="column-count:' + ciCols + ';column-gap:6px">';
+    if(pending.length > 0){
+      h += '<div class="board-col-hdr pending">&#9711; Pending (' + pending.length + ')</div>';
+      pending.slice().sort(function(a,b){ return a.j.name.localeCompare(b.j.name); })
+        .forEach(function(r){
+          h += '<div class="board-name pending">' +
+            (showTagCI ? shiftPill(r.sh) : '') +
+            fmtNameShort(r.j.name) + '</div>';
+        });
+      h += '<div class="board-col-gap"></div>';
+    }
+    h += '<div class="board-col-hdr ci">&#9679; Checked In (' + normal.length + ')</div>';
     if(normal.length === 0){
       h += '<div class="board-empty">None waiting</div>';
     } else {
       normal.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
         .forEach(function(r){
           h += '<div class="board-name">' +
-            shiftPill(r.sh) +
+            (showTagCI ? shiftPill(r.sh) : '') +
             fmtNameShort(r.j.name) + '</div>';
         });
     }
     h += '</div>';
-    // Pending age-outs at bottom
-    if(pending.length > 0){
-      h += '<div class="board-col-gap"></div>';
-      h += '<div class="board-col-hdr pending">&#9711; Later Shifts (' + pending.length + ')</div>';
-      pending.slice().sort(function(a,b){ return a.j.name.localeCompare(b.j.name); })
-        .forEach(function(r){
-          var nameStyle = r.lateBreak ? ' late' : ' pending';
-          var lateTag = r.lateBreak ? ' <span style="font-size:8px;background:#FF6B6B;color:#fff;padding:0 4px;border-radius:3px;vertical-align:middle">LATE</span>' : '';
-          h += '<div class="board-name' + nameStyle + '">' +
-            shiftPill(r.sh) +
-            fmtNameShort(r.j.name) + lateTag + '</div>';
-        });
-    }
     return h;
   }
 
   // Build Assigned column HTML
   function buildAssigned(){
-    var h = '';
-    var assByShift = {};
-    assAll.forEach(function(r){ assByShift[r.sh] = (assByShift[r.sh]||0)+1; });
-    var assHdrExtra = Object.keys(assByShift).sort().map(function(sh){
-      var colors={'8am':'#4499CC','12pm':'#F0C040','4pm':'#5CDB95'};
-      return '<span style="font-size:8px;padding:0 4px;border-radius:4px;background:'+( colors[sh]||'#99BBDD')+';color:#001F40;margin-left:3px">'+sh+':'+ assByShift[sh]+'</span>';
-    }).join('');
-    h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')' + assHdrExtra + '</div>';
-    var assCols = assAll.length > 30 ? 3 : assAll.length > 15 ? 2 : 1;
-    h += '<div style="column-count:' + assCols + ';column-gap:6px">';
+    var h = '<div class="board-waiting-col">';
+    h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')</div>';
     if(assAll.length === 0){
       h += '<div class="board-empty">None yet</div>';
     } else {
       assAll.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
         .forEach(function(r){
           h += '<div class="board-name">' +
-            shiftPill(r.sh) +
+            (showTagAss ? shiftPill(r.sh) : '') +
             fmtNameShort(r.j.name) + '</div>';
         });
     }
@@ -5615,7 +4643,7 @@ function renderBoard(){
     // Total committee groups across all shifts — drives sub-column count
     var totalGroups = 0;
     shifts.forEach(function(sh){ totalGroups += Object.keys(byShift[sh]).length; });
-    var subCols = window._boardSubCols || (totalGroups >= 35 ? 'cols5' : totalGroups >= 15 ? 'cols4' : totalGroups >= 8 ? 'cols3' : totalGroups >= 4 ? 'cols2' : 'cols1');
+    var subCols = totalGroups >= 15 ? 'cols3' : totalGroups >= 6 ? 'cols2' : 'cols1';
 
     var h = '<div class="board-out-col">';
     h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + outAll.length + ')</div>';
@@ -5630,15 +4658,12 @@ function renderBoard(){
         if(committees.length === 0) return;
         isLate = nowMins >= lateAfter[sh];
         // Shift divider — only when multiple shifts are on board
-        // Shift shown per-committee label now — no divider needed
+        if(showTagOut){
+          h += '<div class="board-shift-divider' + (isLate ? ' late' : '') + '">' + SL[sh] + (isLate ? ' &#9888; LATE' : '') + '</div>';
+        }
         committees.forEach(function(committee){
           h += '<div class="board-committee-group">';
-          var shiftBadgeColor = sh==='8am' ? '#4499CC' : sh==='12pm' ? '#F0C040' : '#5CDB95';
-          var shiftBadgeText  = sh==='8am' ? '8AM' : sh==='12pm' ? '12PM' : '4PM';
-          h += '<div class="board-committee-label' + (isLate ? ' late' : '') + '">' +
-            committee +
-            ' <span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;background:' + shiftBadgeColor + ';color:#001F40;vertical-align:middle">' + shiftBadgeText + '</span>' +
-          '</div>';
+          h += '<div class="board-committee-label' + (isLate ? ' late' : '') + '">' + committee + '</div>';
           byShift[sh][committee].forEach(function(j){
             h += '<div class="board-name out' + (isLate ? ' late' : '') + '">' + fmtNameShort(j.name) + '</div>';
           });
@@ -5654,41 +4679,6 @@ function renderBoard(){
   // Total active across all shifts for header
   var totalActive = ciAll.filter(function(r){ return !r.pending; }).length + assAll.length + outAll.length;
 
-  // Dynamic left panel width — tracks the ratio of waiting:out
-  // Early shift (all waiting, none out)  → left gets ~65% 
-  // Shift change (roughly equal)          → left gets ~40%
-  // Mid-shift (all out, none waiting)     → left gets ~14%
-  var waitingCount = ciAll.filter(function(r){return !r.pending;}).length + assAll.length;
-  var outCount = outAll.length;
-  var total = waitingCount + outCount;
-  var leftPct;
-  var boardBody = document.getElementById('board-body-el') || document.querySelector('.board-body');
-  if(boardBody){
-    if(waitingCount === 0){
-      // Nothing waiting — shrink left to just the header label width
-      boardBody.style.gridTemplateColumns = 'minmax(120px,10vw) 1fr';
-    } else {
-      // Waiting ratio drives width: 0 waiting → 10vw, all waiting → 65vw
-      var waitRatio = waitingCount / total;
-      leftPct = Math.round(10 + waitRatio * 55);
-      leftPct = Math.max(10, Math.min(65, leftPct));
-      boardBody.style.gridTemplateColumns = leftPct + 'vw 1fr';
-    }
-  }
-
-  // Sub-column count for out-on-shift — scales with committee count
-  var totalCommittees = outAll.length > 0 ? (function(){
-    var seen = {};
-    outAll.forEach(function(r){
-      var c = r.j.assignment || 'Unassigned';
-      seen[c] = true;
-    });
-    return Object.keys(seen).length;
-  })() : 0;
-  var outSubCols = totalCommittees >= 20 ? 'cols4' : totalCommittees >= 12 ? 'cols3' : totalCommittees >= 6 ? 'cols2' : 'cols1';
-  // Pass to buildOut via closure
-  window._boardSubCols = outSubCols;
-
   var html = '<div class="board-wrap">' +
     '<div class="board-header">' +
       '<div>' +
@@ -5697,21 +4687,13 @@ function renderBoard(){
       '</div>' +
       '<div style="text-align:right">' +
         '<div id="board-clock" style="font-size:22px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums"></div>' +
-        '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' active &bull; ' + ciAll.filter(function(r){return !r.pending;}).length + ' in &bull; ' + assAll.length + ' assigned &bull; ' + outAll.length + ' out' +
-        ' <span onclick="pollForUpdates();renderBoard();" style="cursor:pointer;opacity:.5;font-size:10px;margin-left:6px" title="Refresh">&#8635;</span>' +
-        '</div>' +
+        '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' juniors active</div>' +
       '</div>' +
     '</div>' +
-    '<div class="board-body" id="board-body-el">' +
-      // Left: Checked In only (full height)
-      '<div class="board-waiting-col">' +
-        '<div class="board-ci-section">' + buildCI() + '</div>' +
-      '</div>' +
-      // Right: Assigned (top, hidden when empty) + Out on Shift (fills rest)
-      '<div class="board-right-col">' +
-        (assAll.length > 0 ? '<div class="board-ass-section">' + buildAssigned() + '</div>' : '') +
-        buildOut() +
-      '</div>' +
+    '<div class="board-body">' +
+      buildCI() +
+      buildAssigned() +
+      buildOut() +
     '</div>' +
   '</div>';
 
@@ -5721,29 +4703,6 @@ function renderBoard(){
   updateBoardClock();
   if(boardTimer) clearInterval(boardTimer);
   boardTimer = setInterval(updateBoardClock, 1000);
-
-  // Auto-scroll CI + Assigned sections (slow ping-pong when content overflows)
-  startBoardAutoScroll();
-}
-
-var _boardScrollTimer = null;
-function startBoardAutoScroll(){
-  if(_boardScrollTimer) clearInterval(_boardScrollTimer);
-  var dirs = {}; // per-element scroll direction: 1 down, -1 up
-  var pause = {}; // per-element pause counter (ticks to wait at each end)
-  _boardScrollTimer = setInterval(function(){
-    ['.board-ci-section', '.board-ass-section'].forEach(function(sel){
-      var el = document.querySelector(sel);
-      if(!el) return;
-      var max = el.scrollHeight - el.clientHeight;
-      if(max <= 4) return; // nothing to scroll
-      if(pause[sel] > 0){ pause[sel]--; return; }
-      if(dirs[sel] === undefined) dirs[sel] = 1;
-      el.scrollTop += dirs[sel];
-      if(el.scrollTop >= max - 1){ dirs[sel] = -1; pause[sel] = 40; } // ~3s pause at bottom
-      else if(el.scrollTop <= 0){ dirs[sel] = 1; pause[sel] = 40; }  // ~3s pause at top
-    });
-  }, 75); // ~13px/sec — slow, readable crawl
 }
 
 function updateBoardClock(){
@@ -5792,7 +4751,7 @@ function _stateHash(){
       activeSlots.length,
       activeSlots.map(function(s){ return s.id + ':' + s.assigned.length + ':' + (s.sent?1:0); }).join('|'),
       juniors.filter(function(j){ return j.checkedIn || j.assignment || (j.noteLog && j.noteLog.length) || dirtyJuniors.has(j.id); }).map(function(j){
-        return j.id + ':' + (j.checkedIn?1:0) + ':' + (clockedOut[j.id]?1:0) + ':' + (j.assignment||'') + ':' + j.order + ':' + (j.noteLog ? j.noteLog.length : 0) + ':' + (j.checkInDate||'');
+        return j.id + ':' + (j.checkedIn?1:0) + ':' + (j.assignment||'') + ':' + j.order + ':' + (j.noteLog ? j.noteLog.length : 0) + ':' + (j.checkInDate||'');
       }).join('|'),
       committeeRequests.map(function(r){ return r.id + ':' + r.status; }).join('|'),
       currentDate, currentShift
@@ -5850,7 +4809,7 @@ function _doSave(){
         isSaving = false;
       });
     }
-    console.log('[JRC] State saved to Neon — juniors sent:', activeJuniors.length, 'checkedIn:', juniors.filter(function(j){return j.checkedIn;}).length);
+    console.log('State saved to Neon');
     lastSyncTime = Date.now();
     _lastSavedHash = _stateHash();
     hideSyncError();
@@ -5863,7 +4822,7 @@ function _doSave(){
 
   // Save committeeRequests separately in batch mode (upsert only) to avoid size limits
   // Only when something changed — check against a hash
-  var reqHash = committeeRequests.length + ':' + (committeeRequests[0] ? committeeRequests[0].id : '') + ':' + (committeeRequests[committeeRequests.length-1] ? committeeRequests[committeeRequests.length-1].id : '');
+  var reqHash = committeeRequests.length + ':' + (committeeRequests[0] ? committeeRequests[0].id : '');
   if(reqHash !== (_lastReqHash || '')){
     _lastReqHash = reqHash;
     var CREQ_CHUNK = 200;
@@ -5873,7 +4832,7 @@ function _doSave(){
       fetch('/.netlify/functions/state', {
         method: 'POST',
         headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
-        body: JSON.stringify({committeeRequests: chunk, batchMode: true}) // always upsert — never delete
+        body: JSON.stringify({committeeRequests: chunk, batchMode: start > 0})
       }).then(function(r){
         if(r.ok && start + CREQ_CHUNK < committeeRequests.length){
           _saveReqChunk(start + CREQ_CHUNK);
@@ -5904,37 +4863,19 @@ function hideSyncError(){
 
 // Roster save — sends ALL juniors to Neon (used only on import)
 function saveRosterToNeon(callback){
-  // Send adults first, then juniors in chunks of 150 to avoid 502 timeouts
-  var CHUNK = 150;
-  var chunks = [];
-  for(var i = 0; i < juniors.length; i += CHUNK){
-    chunks.push(juniors.slice(i, i + CHUNK));
-  }
-  console.log('Saving roster to Neon: ' + juniors.length + ' juniors in ' + chunks.length + ' chunks + adults');
-
-  // Send adults + first chunk together
-  function sendChunk(idx){
-    if(idx >= chunks.length){
-      console.log('Roster fully saved to Neon');
-      if(callback) callback(null);
-      return;
-    }
-    var body = { juniors: chunks[idx] };
-    if(idx === 0) body.adults = adults; // send adults with first chunk only
-    fetch('/.netlify/functions/state', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json', 'x-api-token': API_TOKEN},
-      body: JSON.stringify(body)
-    }).then(function(r){
-      if(!r.ok) return r.text().then(function(b){ throw new Error(r.status + ': ' + b); });
-      console.log('Roster chunk ' + (idx+1) + '/' + chunks.length + ' saved');
-      sendChunk(idx + 1);
-    }).catch(function(e){
-      console.error('Roster chunk ' + (idx+1) + ' failed:', e.message);
-      if(callback) callback(e);
-    });
-  }
-  sendChunk(0);
+  console.log('Saving full roster to Neon (' + juniors.length + ' juniors)...');
+  fetch('/.netlify/functions/state', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json', 'x-api-token': API_TOKEN},
+    body: JSON.stringify({ juniors: juniors, adults: adults })
+  }).then(function(r){
+    if(!r.ok) return r.text().then(function(b){ throw new Error(r.status + ': ' + b); });
+    console.log('Roster saved to Neon');
+    if(callback) callback(null);
+  }).catch(function(e){
+    console.error('Roster save failed:', e.message);
+    if(callback) callback(e);
+  });
 }
 
 function loadState(){
@@ -5943,13 +4884,10 @@ function loadState(){
     .then(function(r){ return r.json(); })
     .then(function(data){
       _applyState(data);
-      // Re-apply sim state from localStorage — only on non-TV (TV trusts Neon completely)
-      if(!document.documentElement.classList.contains('tv-mode')){
-        _restoreSimFromLocalStorage();
-      }
+      // Re-apply sim state from localStorage — always wins over Neon
+      _restoreSimFromLocalStorage();
       console.log('State loaded from Neon');
       renderOfficer(); renderRoster(); renderSetup(); updateHeaderDate();
-      if(document.documentElement.classList.contains('tv-mode')) renderBoard();
     })
     .catch(function(e){
       console.warn('Neon load failed, using localStorage:', e.message);
@@ -5965,13 +4903,11 @@ function _restoreSimFromLocalStorage(){
     var sim = JSON.parse(simRaw);
     simTimeEnabled = sim.simTimeEnabled || false;
     simDateSet     = sim.simDateSet     || false;
-    if(!_simCIRunning && !_simCORunning){
-      if(sim.simTargetEpoch){
-        simTargetEpoch = sim.simTargetEpoch;
-        simTimeOffset  = sim.simTargetEpoch - Date.now();
-      } else {
-        simTimeOffset  = sim.simTimeOffset || 0;
-      }
+    if(sim.simTargetEpoch){
+      simTargetEpoch = sim.simTargetEpoch;
+      simTimeOffset  = sim.simTargetEpoch - Date.now();
+    } else {
+      simTimeOffset  = sim.simTimeOffset || 0;
     }
     if(sim.currentDate)  currentDate  = sim.currentDate;
     if(sim.currentShift) currentShift = sim.currentShift;
@@ -5993,7 +4929,6 @@ function _applyState(data){
   var jRows = data.juniors;
 
   // Rebuild juniors array from Neon — Neon is the authoritative source
-  console.log('[JRC] _applyState: jRows=', jRows ? jRows.length : 0, 'checkedIn=', jRows ? jRows.filter(function(r){return r.checked_in;}).length : 0);
   if(jRows && Array.isArray(jRows) && jRows.length > 0){
     juniors = jRows.map(function(row){
       return {
@@ -6058,9 +4993,6 @@ function _applyState(data){
   if(state.loginLog)  loginLog  = state.loginLog;
   if(data.committeeRequests && data.committeeRequests.length){
     committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
-    // Seed counter above highest existing ID so new requests never collide
-    var maxId = committeeRequests.reduce(function(m,r){ return Math.max(m, r.id||0); }, 0);
-    if(maxId >= requestIdCounter) requestIdCounter = maxId + 1;
   }
   if(state.clockedOut)    clockedOut    = state.clockedOut;
   if(state.onShiftJuniors) onShiftJuniors = new Set(state.onShiftJuniors);
@@ -6073,14 +5005,11 @@ function _applyState(data){
   if(state.simDateSet     !== undefined) simDateSet      = state.simDateSet;
   // Recompute simTimeOffset from absolute target epoch so TV/other devices show correct sim time
   if(state.prioritySlots) prioritySlots = state.prioritySlots;
-  // Don't overwrite sim time if simulator is actively running
-  if(!_simCIRunning && !_simCORunning){
-    if(state.simTargetEpoch){
-      simTargetEpoch = state.simTargetEpoch;
-      simTimeOffset  = state.simTargetEpoch - Date.now();
-    } else if(state.simTimeOffset !== undefined){
-      simTimeOffset  = state.simTimeOffset;
-    }
+  if(state.simTargetEpoch){
+    simTargetEpoch = state.simTargetEpoch;
+    simTimeOffset  = state.simTargetEpoch - Date.now();
+  } else if(state.simTimeOffset !== undefined){
+    simTimeOffset  = state.simTimeOffset;
   }
 }
 
@@ -6139,13 +5068,10 @@ var headerClockTimer = null;
 
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
-  // TV mode polls every 15 seconds — it needs live updates
-  // Normal mode polls every 15 minutes to conserve Netlify credits
-  var pollInterval = document.documentElement.classList.contains('tv-mode') ? 15000 : 900000;
   pollTimer = setInterval(function(){
     // Only poll when tab is visible — saves ~70% of idle function calls
     if(!document.hidden) pollForUpdates();
-  }, pollInterval); // tv: 15s | normal: 15 min
+  }, 180000);
   if(headerClockTimer) clearInterval(headerClockTimer);
   headerClockTimer = setInterval(function(){ updateHeaderClock(); updateBoardClock(); }, 30000);
 
@@ -6166,14 +5092,8 @@ function stopPolling(){
 function pollForUpdates(){
   if(!DB_AVAILABLE) return;
   if(isSaving) return;
-  // Never apply remote state mid-simulation on the ADMIN device — the sim is mutating juniors locally
-  // TV mode is never running the sim so it always polls
-  var isTVMode = document.documentElement.classList.contains('tv-mode');
-  if(!isTVMode && typeof _simCIRunning !== 'undefined' && (_simCIRunning || _simCORunning)) return;
   // Don't poll if we saved very recently — our local state is newer than Neon
-  // Exception: TV mode always polls (it never saves, so grace period doesn't apply)
-  var isTV = document.documentElement.classList.contains('tv-mode');
-  if(!isTV && Date.now() - lastSaveTime < 60000) return; // 60s grace after any save
+  if(Date.now() - lastSaveTime < 60000) return; // 60s grace after any save — prevents poll from overwriting recent changes
   fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
     .then(function(r){ return r.json(); })
     .then(function(data){
@@ -6196,21 +5116,17 @@ function pollForUpdates(){
         }
       });
       _applyState(data);
-      // TV mode: trust Neon completely — never override with local state
-      var isTV = document.documentElement.classList.contains('tv-mode');
-      if(!isTV){
-        // Non-TV: restore sim time from localStorage (local always wins)
-        _restoreSimFromLocalStorage();
-        if(!simDateSet && (localSimDateSet || localSimEnabled)){
-          simTimeEnabled = localSimEnabled;
-          simTimeOffset  = localSimOffset;
-          simDateSet     = localSimDateSet;
-          if(localCurrentDate)  currentDate  = localCurrentDate;
-          if(localCurrentShift) currentShift = localCurrentShift;
-        }
-        // Always restore date/shift if user explicitly set them locally
-        if(simDateSet){ currentDate = localCurrentDate; currentShift = localCurrentShift; }
+      // Restore sim time — localStorage always wins
+      _restoreSimFromLocalStorage();
+      if(!simDateSet && (localSimDateSet || localSimEnabled)){
+        simTimeEnabled = localSimEnabled;
+        simTimeOffset  = localSimOffset;
+        simDateSet     = localSimDateSet;
+        if(localCurrentDate)  currentDate  = localCurrentDate;
+        if(localCurrentShift) currentShift = localCurrentShift;
       }
+      // Always restore date/shift if user explicitly set them
+      if(simDateSet){ currentDate = localCurrentDate; currentShift = localCurrentShift; }
       // Restore junior active state — local state wins for checked-in juniors
       juniors.forEach(function(j){
         var local = localJuniorState[j.id];
@@ -6231,9 +5147,6 @@ function pollForUpdates(){
         if(id === 'panel-roster') renderRoster();
         if(id === 'panel-board') renderBoard();
         if(id === 'panel-kiosk') renderKiosk();
-        if(id === 'panel-requests') renderRequests();
-        if(id === 'panel-checkins') renderCheckins();
-        if(id === 'panel-board' || document.documentElement.classList.contains('tv-mode')) renderBoard();
       }
       updateHeaderDate();
     })
@@ -6800,10 +5713,11 @@ function _autoAssignRolesFromRoster(){
 }
 
 function _preloadAdults(){
-  // Silently pre-load state so login works immediately — no visible loading state
-  // (the "Connecting..." message was showing as an error on the login screen)
+  // Show loading state on login form
   var btn = document.querySelector('#personal-login .btn-primary');
+  var errEl = document.getElementById('pl-err');
   if(btn) btn.disabled = true;
+  if(errEl){ errEl.style.color = '#667788'; errEl.textContent = 'Connecting...'; }
 
   fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
     .then(function(r){ return r.json(); })
@@ -6813,11 +5727,11 @@ function _preloadAdults(){
       }
     })
     .catch(function(){
-      // Silently fail — user will see a normal login form; Neon will be tried again on submit
-      DB_AVAILABLE = false;
+      if(errEl){ errEl.style.color = '#CC0000'; errEl.textContent = 'Could not connect to server. Check your connection.'; }
     })
     .finally(function(){
       if(btn) btn.disabled = false;
+      if(errEl && errEl.textContent === 'Connecting...') errEl.textContent = '';
     });
 }
 
@@ -6845,28 +5759,6 @@ function _restoreLogin(){
   } catch(e){}
   return false;
 }
-
-// Handle browser back/forward navigation between tabs
-window.addEventListener('popstate', function(e){
-  if(e.state && e.state.tab){
-    // Switch to the tab without pushing another history entry
-    var t = e.state.tab;
-    currentTab = t;
-    renderTabs(t);
-    document.querySelectorAll('.panel').forEach(function(p){ p.style.display='none'; p.classList.remove('active'); });
-    var panel = document.getElementById('panel-' + t);
-    if(panel){ panel.style.display='block'; panel.classList.add('active'); }
-    // Re-render the target panel
-    if(t==='officer') renderOfficer();
-    if(t==='roster') renderRoster();
-    if(t==='requests') refreshRequests();
-    if(t==='checkins') renderCheckins();
-    if(t==='board') renderBoard();
-    if(t==='hours') renderHours();
-    if(t==='simulate') { renderUserMgmt(); renderStrandedPanel(); renderSimulateMigrationStatus(); }
-    if(t==='setup') renderSetup();
-  }
-});
 
 function initApp(){
   // Set version display
