@@ -368,21 +368,17 @@ if(window.location.search.indexOf('partner=1') >= 0){
 <div id="panel-setup" class="panel">
   <div class="setup-section">
     <div class="section-lbl">Select show date</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <div>
-        <div style="font-size:12px;color:#667788;margin-bottom:4px">Show date</div>
-        <select class="finput" id="setup-date" onchange="onSetupDateChange()">
-          <option value="">-- Select a date --</option>
-        </select>
-      </div>
-      <div>
-        <div style="font-size:12px;color:#667788;margin-bottom:4px">Active shift for dashboard</div>
-        <select class="finput" id="setup-shift">
-          <option value="8am" selected>8:00am &ndash; 12:00pm</option>
-          <option value="12pm">12:00pm &ndash; 4:00pm</option>
-          <option value="4pm">4:00pm &ndash; 8:00pm</option>
-        </select>
-      </div>
+    <div style="margin-bottom:10px;max-width:320px">
+      <div style="font-size:12px;color:#667788;margin-bottom:4px">Show date</div>
+      <select class="finput" id="setup-date" onchange="onSetupDateChange()">
+        <option value="">-- Select a date --</option>
+      </select>
+      <!-- Hidden shift selector kept for JS compatibility -->
+      <select id="setup-shift" style="display:none">
+        <option value="8am" selected>8am</option>
+        <option value="12pm">12pm</option>
+        <option value="4pm">4pm</option>
+      </select>
     </div>
     <div id="setup-date-slots-preview" style="display:none;margin-top:8px;padding:10px 12px;background:var(--navy-lt);border-radius:8px;font-size:12px;color:var(--navy)"></div>
   </div>
@@ -403,6 +399,13 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- SETTINGS / DATE SIMULATOR -->
 <div id="panel-simulate" class="panel">
+
+  <!-- ONE-TIME MIGRATION -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="section-lbl" style="margin-bottom:4px">&#128257; 2026 Schedule Migration</div>
+    <div style="font-size:12px;color:#667788;margin-bottom:10px">One-time operation: converts all hardcoded 2026 schedule slots into proper request records so they show up in the Requests tab. Run this once only.</div>
+    <div id="migration-status"><div style="font-size:12px;color:var(--gray-400);font-style:italic">Loading...</div></div>
+  </div>
 
   <!-- BULK CHECK-IN / CLOCK-OUT TOOL -->
   <div class="card" style="margin-bottom:16px;border:2px solid #5C6BC0">
