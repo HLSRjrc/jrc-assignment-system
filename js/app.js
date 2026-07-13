@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2358,6 +2358,58 @@ function onSetupDateChange(){
     '</div>' +
   '</div>';
 
+  // Pre-compute distribution estimates for all shifts using no-solo-aware logic
+  window._nbpEstimates = {};
+  ['8am','12pm','4pm'].forEach(function(sh){
+    var list = groups[sh];
+    var planned = parseInt((window._plannedJuniors||{})[sh])||0;
+    if(!planned || !list.length){ window._nbpEstimates[sh] = {}; return; }
+    // Simulate distribution: assign minimum 2 to each slot first, then fill remaining
+    var slots = list.map(function(s){ return {name:s.name, cap:s.cap, assigned:0}; });
+    var remaining = planned;
+    // Pass 1: give each slot min(2, cap) — guarantees no solo
+    slots.forEach(function(sl){
+      if(remaining <= 0) return;
+      var give = Math.min(2, sl.cap, remaining);
+      // Don't put 1 person in a cap-2 slot if that's all we can spare and others need filling
+      sl.assigned += give;
+      remaining -= give;
+    });
+    // Pass 2: fill remaining capacity round-robin style (everyone gets 2 before anyone gets 3rd etc)
+    var pass = 3;
+    while(remaining > 0 && pass <= 100){
+      var placed = false;
+      slots.forEach(function(sl){
+        if(remaining <= 0) return;
+        if(sl.assigned < pass && sl.assigned < sl.cap){
+          sl.assigned++;
+          remaining--;
+          placed = true;
+        }
+      });
+      if(!placed) break;
+      pass++;
+    }
+    // No-solo rule: any slot with exactly 1 gets zeroed out.
+    // That freed junior goes to the slot with the most room (closest to full).
+    slots.forEach(function(sl){
+      if(sl.assigned === 1){
+        sl.assigned = 0; // can't send 1 alone
+        // Give the freed junior to the slot with highest current fill that isn't at cap
+        var best = null;
+        slots.forEach(function(s){
+          if(s.assigned < s.cap && s.assigned > 0 && (!best || s.assigned > best.assigned)) best = s;
+        });
+        // If no partially-filled slot, give to any slot under cap
+        if(!best) slots.forEach(function(s){ if(!best && s.assigned < s.cap) best = s; });
+        if(best) best.assigned++;
+      }
+    });
+    var est = {};
+    slots.forEach(function(sl){ est[sl.name] = sl.assigned; });
+    window._nbpEstimates[sh] = est;
+  });
+
   ['8am','12pm','4pm'].forEach(function(sh){
     var list = groups[sh];
     if(!list.length) return;
@@ -2379,13 +2431,14 @@ function onSetupDateChange(){
       var isAdded = activeSlots.some(function(a){ return a.name===s.name && a.shift===sh; });
       var rowKey = 'prev-' + sh + '-' + si;
       var cd = CD[s.name] || {};
-      // Fill ratio when planned count set
+      // Fill ratio when planned count set — simulate actual distribution with no-solo rule
       var fillRatio = '';
       if(planned > 0){
-        // Simple proportional estimate: each committee gets cap/totalCap * planned
-        var est = Math.round(s.cap / shJuniors * planned);
-        var fillColor = est >= s.cap ? '#155724' : est === 0 ? '#CC0000' : '#856404';
-        fillRatio = '<span style="font-size:11px;font-weight:700;color:' + fillColor + ';margin-left:8px">' + est + '/' + s.cap + '</span>';
+        var est = window._nbpEstimates && window._nbpEstimates[sh] ? (window._nbpEstimates[sh][s.name] || 0) : 0;
+        var fillColor = est >= s.cap ? '#155724' : est === 0 ? '#CC0000' : est === 1 ? '#CC0000' : '#856404';
+        var fillLabel = est + '/' + s.cap;
+        if(est === 1) fillLabel += ' ⚠solo';
+        fillRatio = '<span style="font-size:11px;font-weight:700;color:' + fillColor + ';margin-left:8px">' + fillLabel + '</span>';
       }
       // Editable cap
       var capKey = 'prevcap_' + sh + '_' + si;
