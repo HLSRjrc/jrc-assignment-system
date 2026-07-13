@@ -273,29 +273,16 @@ if(window.location.search.indexOf('partner=1') >= 0){
         <div class="confirm-name" id="kco-name" style="color:#fff"></div>
         <div style="font-size:13px;opacity:.85;margin-top:4px" id="kco-assignment"></div>
       </div>
-      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:20px" id="kco-question">Are you done with your current shift?</div>
+      <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:8px">Are you done with your current shift?</div>
+      <div style="font-size:13px;color:#667788;margin-bottom:12px">Clocking out will remove you from your current assignment.</div>
+      <div id="kco-next-shift" style="font-size:13px;color:#2A3DB5;font-weight:600;margin-bottom:20px"></div>
       <div style="display:flex;gap:10px">
         <button class="kiosk-btn" style="background:var(--red);flex:1" onclick="kClockOut()">Yes, Clock Out</button>
         <button class="kiosk-btn" style="background:#667788;flex:1" onclick="kCancelClockOut()">Cancel</button>
       </div>
     </div>
 
-    <!-- AGE-OUT NEXT SHIFT CONFIRMATION -->
-    <div id="k-ao-next" style="display:none">
-      <div class="confirm-box" style="background:linear-gradient(135deg,#1a3a6b,#2A3DB5);color:#fff;border:none">
-        <div style="font-size:13px;opacity:.8;margin-bottom:4px">Next Assignment</div>
-        <div class="confirm-name" id="kaon-name" style="color:#fff"></div>
-        <div style="font-size:14px;opacity:.9;margin-top:6px;font-weight:600" id="kaon-committee"></div>
-      </div>
-      <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:20px" id="kaon-question"></div>
-      <div style="display:flex;gap:10px">
-        <button class="kiosk-btn" style="background:var(--navy);flex:1" onclick="kAgeOutReturn()">Yes, Check In</button>
-        <button class="kiosk-btn" style="background:#667788;flex:1" onclick="kReset()">Done for Now</button>
-      </div>
-    </div>
-
     <!-- CLOCK-OUT DONE SCREEN -->
-
     <div id="k-clockout-done" style="display:none;padding:1rem 0">
       <div class="check-icon" style="background:var(--red)">&#10003;</div>
       <div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px" id="kdo-name"></div>
@@ -337,11 +324,6 @@ if(window.location.search.indexOf('partner=1') >= 0){
 </div>
 
 <!-- ROSTER -->
-<div id="panel-checkins" class="panel">
-  <div class="section-lbl" style="margin-bottom:12px">Active Check-ins</div>
-  <div id="checkins-content"></div>
-</div>
-
 <div id="panel-roster" class="panel">
   <div class="action-row">
     <input class="finput" style="max-width:210px" id="r-search" placeholder="Search name or ID..." oninput="renderRoster()">
@@ -408,98 +390,6 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- SETTINGS / DATE SIMULATOR -->
 <div id="panel-simulate" class="panel">
-
-  <!-- SHOW DAY SIMULATOR -->
-  <div class="card" style="margin-bottom:16px;border:2px solid #2E7D32">
-    <div class="section-lbl" style="margin-bottom:4px;color:#2E7D32">&#9654; Show Day Simulator</div>
-    <div style="font-size:12px;color:#667788;margin-bottom:12px">Simulates a real show day. Set the app time to 7:30am and click Start — juniors trickle in over 5 minutes. Change sim time to 11:20am and clock-outs begin. You handle assignments manually.</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div>
-        <div style="font-size:11px;color:#667788;margin-bottom:3px">Juniors to check in</div>
-        <input type="number" class="finput" id="sim-junior-count" value="30" min="5" max="650" style="font-size:12px">
-      </div>
-      <div>
-        <div style="font-size:11px;color:#667788;margin-bottom:3px">Shift</div>
-        <select class="finput" id="sim-shift-sel" style="font-size:12px">
-          <option value="8am">8:00 AM</option>
-          <option value="12pm">12:00 PM</option>
-          <option value="4pm">4:00 PM</option>
-        </select>
-      </div>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
-      <button class="btn btn-sm" style="background:#2E7D32;color:#fff;border-color:#2E7D32;flex:1" onclick="simStartCheckIns()">&#9654; Start Check-ins</button>
-      <button class="btn btn-sm" style="background:#1565C0;color:#fff;border-color:#1565C0;flex:1" onclick="simStartClockOuts()">&#9650; Start Clock-outs</button>
-      <button class="btn btn-sm btn-danger" onclick="simStopAll()">&#9646;&#9646; Stop All</button>
-    </div>
-    <!-- Check-in progress -->
-    <div style="margin-bottom:6px">
-      <div id="sim-status-ci" style="font-size:11px;color:#2E7D32;min-height:14px"></div>
-      <div id="sim-progress-ci" style="height:3px;background:#E0E0E0;border-radius:2px;display:none;margin-top:2px">
-        <div id="sim-progress-bar-ci" style="height:100%;background:#2E7D32;border-radius:2px;width:0%;transition:width .3s"></div>
-      </div>
-    </div>
-    <!-- Clock-out progress -->
-    <div>
-      <div id="sim-status-co" style="font-size:11px;color:#1565C0;min-height:14px"></div>
-      <div id="sim-progress-co" style="height:3px;background:#E0E0E0;border-radius:2px;display:none;margin-top:2px">
-        <div id="sim-progress-bar-co" style="height:100%;background:#1565C0;border-radius:2px;width:0%;transition:width .3s"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- TEST DATA GENERATOR -->
-  <div class="card" style="margin-bottom:16px;border:2px solid #5C6BC0">
-    <div class="section-lbl" style="margin-bottom:4px;color:#5C6BC0">&#9881; Test Data Generator</div>
-    <div style="font-size:12px;color:#667788;margin-bottom:14px">Quickly generate fake data for testing. All generated data is real and syncs to Neon — use Clear buttons to clean up after.</div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <!-- Bulk check-in -->
-      <div style="background:#F8F9FA;border-radius:8px;padding:12px">
-        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">&#10003; Bulk Check-in Juniors</div>
-        <div style="margin-bottom:8px">
-          <div style="font-size:11px;color:#667788;margin-bottom:3px">Shift</div>
-          <select class="finput" id="tgen-shift" style="font-size:12px">
-            <option value="8am">8:00 AM</option>
-            <option value="12pm">12:00 PM</option>
-            <option value="4pm">4:00 PM</option>
-          </select>
-        </div>
-        <div style="margin-bottom:10px">
-          <div style="font-size:11px;color:#667788;margin-bottom:3px">How many juniors</div>
-          <input type="number" class="finput" id="tgen-count" value="10" min="1" max="100" style="font-size:12px;max-width:80px">
-        </div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-sm" style="background:#5C6BC0;color:#fff;border-color:#5C6BC0;flex:1" onclick="tgenCheckIn()">&#9654; Check In</button>
-          <button class="btn btn-sm btn-danger" onclick="tgenClearCheckIns()">Clear</button>
-        </div>
-        <div id="tgen-checkin-result" style="font-size:11px;color:#667788;margin-top:6px"></div>
-      </div>
-
-      <!-- Fake requests -->
-      <div style="background:#F8F9FA;border-radius:8px;padding:12px">
-        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">&#128196; Generate Fake Requests</div>
-        <div style="margin-bottom:8px">
-          <div style="font-size:11px;color:#667788;margin-bottom:3px">Number of requests</div>
-          <input type="number" class="finput" id="tgen-req-count" value="5" min="1" max="50" style="font-size:12px;max-width:80px">
-        </div>
-        <div style="margin-bottom:10px">
-          <div style="font-size:11px;color:#667788;margin-bottom:3px">Status</div>
-          <select class="finput" id="tgen-req-status" style="font-size:12px">
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="mixed">Mixed (random)</option>
-          </select>
-        </div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-sm" style="background:#5C6BC0;color:#fff;border-color:#5C6BC0;flex:1" onclick="tgenRequests()">&#9654; Generate</button>
-          <button class="btn btn-sm btn-danger" onclick="tgenClearRequests()">Clear</button>
-        </div>
-        <div id="tgen-req-result" style="font-size:11px;color:#667788;margin-top:6px"></div>
-      </div>
-    </div>
-  </div>
-
   <div class="card">
     <div class="section-lbl" style="margin-bottom:8px">Set Date &amp; Time</div>
     <div style="font-size:13px;color:#667788;margin-bottom:16px">Set the current date and time for the app. The clock advances normally from whatever you set.</div>
@@ -510,22 +400,17 @@ if(window.location.search.indexOf('partner=1') >= 0){
       </div>
       <div>
         <div style="font-size:12px;color:#667788;margin-bottom:4px">Time</div>
-        <select class="finput" id="sim-hour" style="width:120px">
-          <option value="5">5:00 AM</option><option value="6">6:00 AM</option>
-          <option value="7">7:00 AM</option><option value="8" selected>8:00 AM</option>
-          <option value="9">9:00 AM</option><option value="10">10:00 AM</option>
-          <option value="11">11:00 AM</option><option value="12">12:00 PM</option>
-          <option value="13">1:00 PM</option><option value="14">2:00 PM</option>
-          <option value="15">3:00 PM</option><option value="16">4:00 PM</option>
-          <option value="17">5:00 PM</option><option value="18">6:00 PM</option>
-          <option value="19">7:00 PM</option><option value="20">8:00 PM</option>
-        </select>
+        <input type="number" class="finput" id="sim-hour" value="8" min="1" max="12" style="width:70px">
       </div>
       <div>
         <div style="font-size:12px;color:#667788;margin-bottom:4px">Minute</div>
-        <select class="finput" id="sim-min" style="width:75px">
-          <option value="0">:00</option><option value="15">:15</option>
-          <option value="30">:30</option><option value="45">:45</option>
+        <input type="number" class="finput" id="sim-min" value="0" min="0" max="59" style="width:70px">
+      </div>
+      <div>
+        <div style="font-size:12px;color:#667788;margin-bottom:4px">AM/PM</div>
+        <select class="finput" id="sim-ampm" style="width:80px">
+          <option value="am">AM</option>
+          <option value="pm">PM</option>
         </select>
       </div>
     </div>
@@ -600,48 +485,16 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- REQUESTS APPROVAL PANEL -->
 <div id="panel-requests" class="panel">
-
-  <!-- Filter bar -->
-  <div style="margin-bottom:14px">
-    <!-- Status chips -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px" id="req-status-chips">
-      <button class="req-chip active" data-status="all"    onclick="reqChipClick(this)">All</button>
-      <button class="req-chip"        data-status="pending" onclick="reqChipClick(this)">Pending</button>
-      <button class="req-chip"        data-status="approved" onclick="reqChipClick(this)">Approved</button>
-      <button class="req-chip"        data-status="rejected" onclick="reqChipClick(this)">Rejected</button>
-      <button class="req-chip"        data-status="virtual" onclick="reqChipClick(this)">Virtual</button>
-      <button id="req-refresh-btn" class="btn btn-sm" style="border-color:var(--navy);color:var(--navy);margin-left:auto" onclick="refreshRequests()">⟳ Refresh</button>
-    </div>
-    <!-- Search row -->
-    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;margin-bottom:8px">
-      <!-- Committee multiselect -->
-      <div style="position:relative" id="req-name-wrap">
-        <div id="req-name-display" onclick="toggleReqNameDropdown()" style="min-height:36px;padding:6px 10px;border:1.5px solid var(--gray-200);border-radius:6px;font-size:13px;cursor:pointer;background:#fff;display:flex;flex-wrap:wrap;gap:4px;align-items:center">
-          <span id="req-name-placeholder" style="color:#999">Filter by committee...</span>
-        </div>
-        <div id="req-name-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid var(--gray-200);border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.12);z-index:200;margin-top:2px">
-          <div style="padding:6px 8px;border-bottom:1px solid var(--gray-100)">
-            <input type="text" id="req-name-search" placeholder="Type to search..." oninput="reqNameSearchFilter()" style="width:100%;padding:5px 8px;border:1px solid var(--gray-200);border-radius:4px;font-size:13px;font-family:var(--font)" autocomplete="off">
-          </div>
-          <div id="req-name-options" style="max-height:220px;overflow-y:auto;padding:4px 0"></div>
-        </div>
-      </div>
-      <!-- Date picker -->
-      <input type="date" id="req-search-date" class="finput" oninput="reqFilterUpdate()" style="font-size:13px;width:160px" title="Filter by date">
-    </div>
-    <!-- Active filter summary + clear -->
-    <div id="req-filter-summary" style="display:none;margin-top:8px;font-size:12px;color:#667788;display:flex;align-items:center;gap:8px">
-      <span id="req-filter-summary-text"></span>
-      <button onclick="reqClearFilters()" style="background:none;border:none;cursor:pointer;color:var(--navy);font-size:12px;font-weight:600;padding:0">✕ Clear filters</button>
-    </div>
+  <div class="action-row">
+    <div style="font-size:13px;color:#667788;flex:1">Review and approve committee shift requests. Approved requests appear in the officer&apos;s approved list for shift setup.</div>
+    <select class="finput" style="max-width:160px" id="req-filter" onchange="renderRequests()">
+      <option value="all" selected>All requests</option>
+      <option value="pending">Pending only</option>
+      <option value="approved">Approved</option>
+      <option value="rejected">Rejected</option>
+    </select>
   </div>
-
   <div id="req-list"></div>
-
-  <!-- Hidden select kept for legacy renderRequests filter reads -->
-  <select id="req-filter" style="display:none">
-    <option value="all" selected>All</option>
-  </select>
 </div>
 
 <!-- COMMITTEE REQUEST FORM PANEL -->
@@ -669,7 +522,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
   <div class="card" style="max-width:700px;margin:0 auto">
     <div style="margin-bottom:4px;padding-right:110px;position:relative">
       <div style="font-size:16px;font-weight:700;color:var(--navy)">Junior Rodeo Committee &mdash; Opportunity Request</div>
-      <img src="/assets/all blue solid.png" style="position:absolute;top:-4px;right:0;width:100px;height:auto" alt="JRC">
+      <img src="/assets/jrc-logo-navy.png" style="position:absolute;top:-4px;right:0;width:100px;height:auto" alt="JRC">
     </div>
     <div style="font-size:13px;color:#667788;margin-bottom:20px">Houston Livestock Show and Rodeo&trade; 2027 &bull; Show dates: March 2&ndash;20</div>
 
@@ -686,20 +539,29 @@ if(window.location.search.indexOf('partner=1') >= 0){
       <div style="grid-column:1/-1"><div class="form-lbl">Liaison Email *</div><input class="finput" id="rf-liaison-email" type="email"></div>
     </div>
 
-    <!-- Pre-show / Showtime / Virtual Toggle -->
+    <div class="section-lbl" style="margin-bottom:10px">Event Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div style="grid-column:1/-1"><div class="form-lbl">Exact Location / Where juniors should report *</div><input class="finput" id="rf-location" placeholder="Building, room, gate number, etc."></div>
+      <div style="grid-column:1/-1"><div class="form-lbl">What will juniors be doing? *</div><textarea class="finput" id="rf-duties" rows="3" style="resize:none" placeholder="Please be as detailed as possible"></textarea></div>
+      <div style="grid-column:1/-1"><div class="form-lbl">Anything else we need to know? (attire, heavy lifting, outdoor, where to meet, etc.)</div><textarea class="finput" id="rf-notes" rows="3" style="resize:none"></textarea></div>
+      <div style="grid-column:1/-1">
+        <div class="form-lbl">Are cowboy hats required for this assignment?</div>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:4px">
+          <input type="checkbox" id="rf-hat" style="width:18px;height:18px;accent-color:var(--navy)"> Yes, hats are required
+        </label>
+      </div>
+    </div>
+
+    <!-- Pre-show / Showtime Toggle -->
     <div class="section-lbl" style="margin-bottom:10px">When is this?</div>
     <div style="display:flex;gap:10px;margin-bottom:20px" id="rf-when-toggle">
       <button type="button" id="rf-btn-showtime" onclick="setReqType('showtime')"
         style="flex:1;padding:12px;border-radius:8px;border:2px solid var(--navy);background:var(--navy);color:#fff;font-size:13px;font-weight:700;cursor:pointer">
-        Showtime<br><span style="font-size:11px;font-weight:400;opacity:.8">March 2–20, 2027</span>
+        🎡 Showtime<br><span style="font-size:11px;font-weight:400;opacity:.8">March 2–20, 2027</span>
       </button>
       <button type="button" id="rf-btn-preshow" onclick="setReqType('preshow')"
         style="flex:1;padding:12px;border-radius:8px;border:2px solid var(--gray-200);background:#fff;color:var(--navy);font-size:13px;font-weight:700;cursor:pointer">
-        Pre-Show<br><span style="font-size:11px;font-weight:400;color:#667788">Any date &amp; time before the show</span>
-      </button>
-      <button type="button" id="rf-btn-virtual" onclick="setReqType('virtual')"
-        style="flex:1;padding:12px;border-radius:8px;border:2px solid var(--gray-200);background:#fff;color:var(--navy);font-size:13px;font-weight:700;cursor:pointer">
-        Virtual<br><span style="font-size:11px;font-weight:400;color:#667788">Remote work opportunity</span>
+        📅 Pre-Show<br><span style="font-size:11px;font-weight:400;color:#667788">Any date &amp; time before the show</span>
       </button>
     </div>
 
@@ -740,20 +602,6 @@ if(window.location.search.indexOf('partner=1') >= 0){
       <button class="btn" style="width:100%;margin-top:8px" onclick="addSpecificShift()">+ Add a shift date</button>
     </div>
 
-    <div style="margin-top:20px">
-    <div class="section-lbl" style="margin-bottom:10px">Event Details</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div style="grid-column:1/-1"><div class="form-lbl">Exact Location / Where juniors should report *</div><input class="finput" id="rf-location" placeholder="Building, room, gate number, etc."></div>
-      <div style="grid-column:1/-1"><div class="form-lbl">What will juniors be doing? *</div><textarea class="finput" id="rf-duties" rows="3" style="resize:none" placeholder="Please be as detailed as possible"></textarea></div>
-      <div style="grid-column:1/-1"><div class="form-lbl">Anything else we need to know? (attire, heavy lifting, outdoor, where to meet, etc.)</div><textarea class="finput" id="rf-notes" rows="3" style="resize:none"></textarea></div>
-      <div style="grid-column:1/-1">
-        <div class="form-lbl">Are cowboy hats required for this assignment?</div>
-        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:4px">
-          <input type="checkbox" id="rf-hat" style="width:18px;height:18px;accent-color:var(--navy)"> Yes, hats are required
-        </label>
-      </div>
-    </div>
-    </div>
     </div><!-- /rf-showtime-section -->
 
     <!-- PRE-SHOW SECTION -->
@@ -777,49 +625,10 @@ if(window.location.search.indexOf('partner=1') >= 0){
         </div>
       </div>
       <button type="button" class="btn" style="font-size:12px;margin-bottom:16px" onclick="addPsRow()">&#43; Add another date</button>
-      <div style="margin-top:4px">
-      <div class="section-lbl" style="margin-bottom:10px">Event Details</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-        <div style="grid-column:1/-1"><div class="form-lbl">Exact Location / Where juniors should report *</div><input class="finput" id="rf-location-ps" placeholder="Building, room, gate number, etc."></div>
-        <div style="grid-column:1/-1"><div class="form-lbl">What will juniors be doing? *</div><textarea class="finput" id="rf-duties-ps" rows="3" style="resize:none" placeholder="Please be as detailed as possible"></textarea></div>
-        <div style="grid-column:1/-1"><div class="form-lbl">Anything else we need to know? (attire, heavy lifting, outdoor, where to meet, etc.)</div><textarea class="finput" id="rf-notes-ps" rows="3" style="resize:none"></textarea></div>
-        <div style="grid-column:1/-1">
-          <div class="form-lbl">Are cowboy hats required for this assignment?</div>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;margin-top:4px">
-            <input type="checkbox" id="rf-hat-ps" style="width:18px;height:18px;accent-color:var(--navy)"> Yes, hats are required
-          </label>
-        </div>
-      </div>
-      </div>
     </div><!-- /rf-preshow-section -->
 
-    <!-- VIRTUAL SECTION -->
-    <div id="rf-virtual-section" style="display:none">
-      <div class="section-lbl" style="margin-bottom:10px">Virtual Assignment Details</div>
-      <div style="font-size:12px;color:#667788;margin-bottom:14px">Virtual assignments are remote opportunities. Approved requests are tracked here but juniors will <strong>not</strong> check in through the kiosk — this tracks the request only.</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        <div><div class="form-lbl">Start Date *</div><input class="finput" type="date" id="rf-virt-start"></div>
-        <div><div class="form-lbl">End Date *</div><input class="finput" type="date" id="rf-virt-end"></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        <div>
-          <div class="form-lbl">Number of Juniors Needed *</div>
-          <input class="finput" type="number" id="rf-virt-cap" min="1" max="40" value="2" style="max-width:100px">
-        </div>
-        <div>
-          <div class="form-lbl">Estimated Hours per Junior</div>
-          <input class="finput" type="number" id="rf-virt-hours" min="0.5" max="40" step="0.5" value="2" style="max-width:100px">
-          <div style="font-size:11px;color:#667788;margin-top:3px">For hours tracking</div>
-        </div>
-      </div>
-      <div style="margin-bottom:12px">
-        <div class="form-lbl">Description of Remote Work *</div>
-        <textarea class="finput" id="rf-virt-desc" rows="3" placeholder="Describe in as much detail as possible, what juniors will be doing on this remote assignment. A member of JRC will contact you for further clarification and coordination." style="width:100%;resize:vertical;font-family:var(--font)"></textarea>
-      </div>
-    </div><!-- /rf-virtual-section -->
-
     <div id="rf-submit-msg" style="min-height:20px;margin-bottom:10px"></div>
-    <button id="rf-submit-btn" class="btn btn-orange" style="width:100%;padding:12px;font-size:14px" onclick="submitRequest()">Submit Request</button>
+    <button class="btn btn-orange"  style="width:100%;padding:12px;font-size:14px" onclick="submitRequest()">Submit Request</button>
   </div>
 </div>
 
