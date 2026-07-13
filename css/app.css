@@ -345,6 +345,20 @@ select.finput{cursor:pointer}
 .board-committee-label.late{color:#FF6B6B}
 .board-shift-divider{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#99BBDD;margin:4px 0 2px;padding-bottom:1px;border-bottom:1px solid rgba(255,255,255,.12);break-after:avoid}
 
+
+/* Hide scrollbars on board — content scrolls via JS, no visible bar */
+.board-ci-section::-webkit-scrollbar,
+.board-ass-section::-webkit-scrollbar,
+.board-out-col::-webkit-scrollbar{display:none}
+.board-ci-section,
+.board-ass-section,
+.board-out-col{-ms-overflow-style:none;scrollbar-width:none}
+
+/* Board header sticks — content scrolls underneath but header stays on top */
+.board-wrap{position:relative}
+.board-header{position:sticky;top:0;z-index:10;flex-shrink:0}
+.board-body{overflow:hidden} /* prevents content bleeding into header */
+
 /* ── TV MODE (?tv=1) ── */
 .tv-mode *{pointer-events:none !important;cursor:none !important;user-select:none !important}
 .tv-mode body,.tv-mode html{overflow:hidden;height:100%}
