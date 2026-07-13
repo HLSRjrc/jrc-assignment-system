@@ -10,14 +10,14 @@ var SHOW_START = new Date('2027-03-02');
 var SHOW_END = new Date('2027-03-20');
 
 var currentShift = '8am';
-var currentDate = new Date().toISOString().slice(0,10); // always starts as today
+var currentDate = ''; // set by admin via Shift Setup — never defaults to real today
 var activePick = null;
 var activePickShift = null;
 var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -86,7 +86,7 @@ function clearSimTime(){
   simTimeOffset = 0;
   simTimeEnabled = false;
   simDateSet = false;
-  currentDate = new Date().toISOString().slice(0,10);
+  // Don't reset currentDate to real today — keep whatever was set
   currentShift = getShiftFromTime(new Date()) || '8am'; // default to 8am outside check-in windows
   try { localStorage.removeItem(('jrc_simstate_v' + APP_VERSION)); } catch(e){}
   try { localStorage.removeItem('jrc_simstate'); } catch(e){}
@@ -237,8 +237,20 @@ document.addEventListener('DOMContentLoaded', function(){
   // TV mode — add ?tv=1 to URL to activate full-screen board layout
   if(window.location.search.indexOf('tv=1') >= 0){
     document.documentElement.classList.add('tv-mode');
-    // Auto-login to status board role so the TV goes straight to the board
-    setTimeout(function(){ loginAs('board'); }, 150);
+    // Hide login, show app shell immediately
+    var ls = document.getElementById('login-screen'); if(ls) ls.style.display='none';
+    var ma = document.getElementById('main-app'); if(ma) ma.style.display='block';
+    // Load state from Neon first — board renders after currentDate arrives
+    loadState();
+    startPolling();
+    // Login as board after brief delay (Neon usually responds in ~500ms)
+    var _tvDone = false;
+    function _doTVLogin(){
+      if(_tvDone) return; _tvDone = true;
+      loginAs('board');
+    }
+    setTimeout(_doTVLogin, 600);
+    setTimeout(_doTVLogin, 2500); // retry if Neon slow
     return;
   }
 
@@ -4955,7 +4967,13 @@ function markSent(slotId){
   var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!sl) return;
   onShiftSlots.add(String(slotId));
-  var date = (document.getElementById('setup-date') ? document.getElementById('setup-date').value : '') || currentDate;
+  var isTV = document.documentElement.classList.contains('tv-mode');
+  var date = isTV ? currentDate : ((document.getElementById('setup-date') ? document.getElementById('setup-date').value : '') || currentDate);
+  // If no date set yet, show loading state on TV
+  if(isTV && !date){
+    el.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:60vh;color:rgba(255,255,255,.4);font-size:20px">Loading...</div>';
+    return;
+  }
   onShiftSlots.add(slotId);
   sl.assigned.forEach(function(jid){
     onShiftJuniors.add(String(jid));
@@ -5396,6 +5414,7 @@ function loadState(){
       _restoreSimFromLocalStorage();
       console.log('State loaded from Neon');
       renderOfficer(); renderRoster(); renderSetup(); updateHeaderDate();
+      if(document.documentElement.classList.contains('tv-mode')){ updateHeaderDate(); renderBoard(); }
     })
     .catch(function(e){
       console.warn('Neon load failed, using localStorage:', e.message);
@@ -5662,6 +5681,11 @@ function pollForUpdates(){
         if(id === 'panel-kiosk') renderKiosk();
       }
       updateHeaderDate();
+      // TV mode always re-renders board on every poll
+      if(document.documentElement.classList.contains('tv-mode')){
+        updateHeaderDate();
+        renderBoard();
+      }
     })
     .catch(function(){});
 }
