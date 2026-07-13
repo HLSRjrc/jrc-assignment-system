@@ -157,11 +157,12 @@ body{font-family:var(--font);font-weight:400;color:var(--ink);min-height:100vh;
 
 /* SLOT CARDS */
 .slot-card{background:var(--surface);border:1px solid var(--gray-150);border-left:4px solid var(--navy);border-radius:var(--r-lg);padding:14px 16px;box-shadow:0 2px 6px rgba(0,0,0,.07);transition:box-shadow .2s,transform .2s}
-.slot-card.sent{background:#F7FDF9;border:1px solid #97C459;border-left:3px solid #27AE60}
-.slot-card.sent .slot-name{color:#155724}
+.slot-card.sent{background:#F0FBF3;border:3px solid #27AE60 !important;box-shadow:0 0 0 2px rgba(39,174,96,.25)}
+.slot-card.sent .slot-name{color:#155724;font-weight:700}
+.slot-card.sent .slot-status-tag{font-weight:800;letter-spacing:.04em}
 .slot-card:hover{box-shadow:var(--sh-3);transform:translateY(-2px)}
 .slot-card.full{border-left-color:var(--green);background:linear-gradient(to right,rgba(39,174,96,.04),var(--surface) 30%)}
-.slot-card.sent{background:linear-gradient(to right,rgba(39,174,96,.05),var(--surface) 30%)}
+.slot-card.sent{background:linear-gradient(to right,rgba(39,174,96,.08),#F0FBF3 30%)}
 .slot-name{font-size:14px;font-weight:700;color:var(--navy);font-family:'DM Sans',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.03em}
 .slot-meta{font-size:12px;color:#667788;margin:4px 0 6px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .prog-bar{height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden;margin-bottom:7px}
@@ -308,11 +309,11 @@ select.finput{cursor:pointer}
 
 /* Left: checked-in panel */
 .board-waiting-col{border-right:2px solid rgba(255,255,255,.15);display:flex;flex-direction:column;overflow:hidden;min-height:0}
-.board-ci-section{flex:1 1 0;overflow-y:auto;padding:8px 10px 4px;min-height:0;scroll-behavior:auto}
+.board-ci-section{flex:0 0 50%;overflow-y:auto;overflow-x:hidden;padding:8px 10px 4px;min-height:0}
 
 /* Right panel: assigned stacked above out-on-shift */
 .board-right-col{display:flex;flex-direction:column;overflow:hidden;min-height:0;flex:1}
-.board-ass-section{flex:1 1 0;overflow-y:auto;padding:4px 10px 8px;border-top:1px solid rgba(255,255,255,.15);min-height:0;scroll-behavior:auto}
+.board-ass-section{flex:0 0 50%;overflow-y:auto;overflow-x:hidden;padding:4px 10px 8px;border-top:1px solid rgba(255,255,255,.15);min-height:0}
 .board-out-col{flex:1;overflow-y:auto;padding:8px 14px;min-height:0;scroll-behavior:auto}
 
 /* Column headers */
