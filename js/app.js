@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -5114,27 +5114,7 @@ function renderBoard(){
       else if(status === 'assigned') assAll.push(rec);
       else if(status === 'on-shift') outAll.push(rec);
     });
-    // Also include clocked-out juniors who were sent out — show strikethrough on board
-    juniors.forEach(function(j){
-      if(!(clockedOut[j.id] || clockedOut[String(j.id)])) return;
-      if(!j.checkedIn) return;
-      var jShift = j.checkInShift || sh;
-      if(jShift !== sh) return;
-      // Only show if they were actually sent out (had an assignment)
-      var hadAssignment = j.assignment ||
-        activeSlots.some(function(s){
-          return s.shift === sh && (s.assigned.indexOf(j.id)>=0 || s.assigned.indexOf(String(j.id))>=0);
-        });
-      if(!hadAssignment) return;
-      // Find their committee from slot data since assignment may be cleared
-      var committee = j.assignment || (function(){
-        var sl = activeSlots.find(function(s){
-          return s.shift===sh && (s.assigned.indexOf(j.id)>=0 || s.assigned.indexOf(String(j.id))>=0);
-        });
-        return sl ? sl.name : null;
-      })();
-      if(committee) outAll.push({j:j, sh:sh, clockedOut:true, committee:committee});
-    });
+    // Clocked-out juniors not shown on board (strikethrough is dashboard-only)
 
     // Age-out pending (future shifts) — bucket into CI column with pending style
     var isFuture = shiftOrder[sh] > shiftOrder[currentShift];
@@ -5230,9 +5210,9 @@ function renderBoard(){
     shifts.forEach(function(sh){ byShift[sh] = {}; });
     outAll.forEach(function(r){
       var sh = r.sh;
-      var committee = r.committee || r.j.assignment || (r.j.shiftAssignments && r.j.shiftAssignments[sh]) || 'Unassigned';
+      var committee = r.j.assignment || (r.j.shiftAssignments && r.j.shiftAssignments[sh]) || 'Unassigned';
       if(!byShift[sh][committee]) byShift[sh][committee] = [];
-      byShift[sh][committee].push({j:r.j, clockedOut:r.clockedOut});
+      byShift[sh][committee].push(r.j);
     });
 
     // Total committee groups across all shifts — drives sub-column count
@@ -5241,9 +5221,7 @@ function renderBoard(){
     var subCols = totalGroups >= 35 ? 'cols5' : totalGroups >= 10 ? 'cols4' : totalGroups >= 6 ? 'cols3' : totalGroups >= 3 ? 'cols2' : 'cols1';
 
     var h = '<div class="board-out-col">';
-    var activeOut = outAll.filter(function(r){return !r.clockedOut;}).length;
-    var coOut = outAll.filter(function(r){return r.clockedOut;}).length;
-    h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + activeOut + (coOut?' <span style="font-size:9px;opacity:.5">+'+coOut+' done</span>':'') + ')</div>';
+    h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + outAll.length + ')</div>';
 
     if(outAll.length === 0){
       h += '<div class="board-empty">None sent yet</div>';
@@ -5265,12 +5243,8 @@ function renderBoard(){
           h += '<div class="board-committee-label' + (isLate ? ' late' : '') + '">' + committee +
             ' <span style="font-size:8px;font-weight:700;padding:1px 5px;border-radius:4px;background:' + shBadgeColor + ';color:#001F40">' + shBadgeText + '</span>' +
           '</div>';
-          byShift[sh][committee].forEach(function(entry){
-            var j = entry.j || entry; // handle both {j, clockedOut} and plain junior
-            var co = entry.clockedOut;
-            h += '<div class="board-name out' + (isLate && !co ? ' late' : '') + '"' +
-              (co ? ' style="opacity:.45;text-decoration:line-through"' : '') + '>' +
-              fmtNameShort(j.name) + '</div>';
+          byShift[sh][committee].forEach(function(j){
+            h += '<div class="board-name out' + (isLate ? ' late' : '') + '">' + fmtNameShort(j.name) + '</div>';
           });
           h += '</div>';
         });
@@ -5323,38 +5297,18 @@ function renderBoard(){
 var _boardScrollTimer = null;
 function startBoardAutoScroll(){
   if(_boardScrollTimer) clearInterval(_boardScrollTimer);
-  var dirs = {}, pause = {};
   _boardScrollTimer = setInterval(function(){
-    // Dynamically split left panel between CI and Assigned
-    var ciEl  = document.getElementById('brd-ci');
-    var assEl = document.getElementById('brd-ass');
-    var col   = ciEl ? ciEl.closest('.board-waiting-col') : null;
-    if(ciEl && col){
-      var colH = col.clientHeight;
-      var ciContent  = ciEl.scrollHeight;
-      var assContent = assEl ? assEl.scrollHeight : 0;
-      var total = ciContent + assContent;
-      if(total > 0 && assEl){
-        // Each section gets proportional share, capped at 50% of column
-        var ciPct  = Math.min(0.5, ciContent / total);
-        var assPct = Math.min(0.5, assContent / total);
-        // Normalize so they sum to 1
-        var sum = ciPct + assPct;
-        ciEl.style.flex  = (ciPct / sum).toFixed(3) + ' 1 0';
-        assEl.style.flex = (assPct / sum).toFixed(3) + ' 1 0';
-      }
-    }
-    // Ping-pong scroll all three sections
+    // Continuous loop scroll — silently resets to top when reaching bottom
     ['#brd-ci','#brd-ass','.board-out-col'].forEach(function(sel){
-      var el = sel.startsWith('#') ? document.querySelector(sel) : document.querySelector(sel);
+      var el = document.querySelector(sel);
       if(!el) return;
       var max = el.scrollHeight - el.clientHeight;
       if(max <= 4) return;
-      if(pause[sel] > 0){ pause[sel]--; return; }
-      if(dirs[sel] === undefined) dirs[sel] = 1;
-      el.scrollTop += dirs[sel];
-      if(el.scrollTop >= max - 1){ dirs[sel] = -1; pause[sel] = 40; }
-      else if(el.scrollTop <= 0){ dirs[sel] = 1; pause[sel] = 40; }
+      el.scrollTop += 1;
+      if(el.scrollTop >= max - 1){
+        // Jump silently to top — no bounce
+        el.scrollTop = 0;
+      }
     });
   }, 75);
 }
