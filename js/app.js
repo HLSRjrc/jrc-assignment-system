@@ -3150,14 +3150,13 @@ function renderSimulateMigrationStatus(){
   var el = document.getElementById('migration-status');
   if(!el) return;
   var done = hasMigratedSchedule();
-  var count = committeeRequests.filter(function(r){ return r.source === 'schedule_2026'; }).length;
+  // Hide the entire card once migration is done
+  var card = el.closest('.card');
   if(done){
-    el.innerHTML =
-      '<div style="padding:12px 14px;background:#D4EDDA;border:1px solid #97C459;border-radius:8px;font-size:13px;color:#155724">' +
-        '&#10003; Schedule migration complete — <strong>' + count + '</strong> slots are now in the requests system. ' +
-        'The "Migrate" button has been disabled.' +
-      '</div>';
+    if(card) card.style.display = 'none';
+    return;
   } else {
+    if(card) card.style.display = 'block';
     el.innerHTML =
       '<div style="padding:12px 14px;background:#FFF3CD;border:1px solid #FFEAA7;border-radius:8px;font-size:13px;color:#856404;margin-bottom:10px">' +
         '&#9888; The 2026 hardcoded schedule has <strong>not yet been migrated</strong>. ' +
