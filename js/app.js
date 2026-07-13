@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3265,8 +3265,9 @@ function simCheckIn(){
         jr.plannedShifts = [shift];
       }
 
-      // Notes: ~12% chance
-      jr.notes = Math.random() < 0.12 ? _SIM_NOTES[Math.floor(Math.random() * _SIM_NOTES.length)] : '';
+      // Notes: only assign to the last junior in each shift batch (1 per shift total)
+      // Using index to find the last one: track via simulated slot
+      jr.notes = '';
 
       dirtyJuniors.add(jr.id);
       done++;
@@ -3274,6 +3275,15 @@ function simCheckIn(){
       if(stat) stat.textContent = done + ' / ' + count + ' checked in...';
       renderOfficer(); renderBoard();
       if(done % 5 === 0){ _lastSavedHash=''; saveStateNow(); }
+      // Assign exactly 2 notes per shift run — medical and wants-to-be-with-mom
+      if(done === Math.floor(count * 0.3)){
+        jr.notes = 'Medical issue — indoor assignment needed';
+        dirtyJuniors.add(jr.id);
+      }
+      if(done === Math.floor(count * 0.7)){
+        jr.notes = 'Would like to work with mom at Tours';
+        dirtyJuniors.add(jr.id);
+      }
       if(done === count){
         _simCIRunning = false;
         _lastSavedHash=''; saveStateNow();
@@ -5107,7 +5117,6 @@ function renderBoard(){
 
   // Build Checked-In column HTML
   function buildCI(){
-    var pending = ciAll.filter(function(r){ return r.pending; });
     var normal  = ciAll.filter(function(r){ return !r.pending; });
     var h = '<div class="board-col-hdr ci">&#9679; Checked In (' + normal.length + ')</div>';
     if(normal.length === 0){
@@ -5121,19 +5130,24 @@ function renderBoard(){
         });
       h += '</div>';
     }
-    // Pending age-outs at bottom
-    if(pending.length > 0){
-      h += '<div class="board-col-gap"></div>';
-      h += '<div class="board-col-hdr pending">&#9711; Later Shifts (' + pending.length + ')</div>';
-      pending.slice().sort(function(a,b){ return a.j.name.localeCompare(b.j.name); })
-        .forEach(function(r){
-          var late = r.lateBreak;
-          h += '<div class="board-name ' + (late ? 'late' : 'pending') + '">' +
-            shiftPill(r.sh) + fmtNameShort(r.j.name) +
-            (late ? ' <span style="font-size:8px;background:#FF6B6B;color:#fff;padding:0 4px;border-radius:3px">LATE</span>' : '') +
-            '</div>';
-        });
-    }
+    return h;
+  }
+
+  // Pending age-outs — bottom strip across full width
+  function buildPendingStrip(){
+    var pending = ciAll.filter(function(r){ return r.pending; });
+    if(!pending.length) return '';
+    var h = '<div style="border-top:1px solid rgba(255,255,255,.15);padding:4px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0">';
+    h += '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#F5A623;white-space:nowrap">&#9711; Later Shifts (' + pending.length + '):</span>';
+    pending.slice().sort(function(a,b){ return a.j.name.localeCompare(b.j.name); })
+      .forEach(function(r){
+        var late = r.lateBreak;
+        h += '<span style="font-size:13px;color:' + (late?'#FF6B6B':'#F5A623') + ';white-space:nowrap">' +
+          shiftPill(r.sh) + fmtNameShort(r.j.name) +
+          (late ? ' <span style="font-size:8px;background:#FF6B6B;color:#fff;padding:0 3px;border-radius:3px">LATE</span>' : '') +
+          '</span>';
+      });
+    h += '</div>';
     return h;
   }
 
@@ -5167,7 +5181,7 @@ function renderBoard(){
     // Total committee groups across all shifts — drives sub-column count
     var totalGroups = 0;
     shifts.forEach(function(sh){ totalGroups += Object.keys(byShift[sh]).length; });
-    var subCols = totalGroups >= 35 ? 'cols5' : totalGroups >= 20 ? 'cols4' : totalGroups >= 12 ? 'cols3' : totalGroups >= 6 ? 'cols2' : 'cols1';
+    var subCols = totalGroups >= 35 ? 'cols5' : totalGroups >= 14 ? 'cols4' : totalGroups >= 8 ? 'cols3' : totalGroups >= 4 ? 'cols2' : 'cols1';
 
     var h = '<div class="board-out-col">';
     h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + outAll.length + ')</div>';
@@ -5207,14 +5221,7 @@ function renderBoard(){
   // Total active across all shifts for header
   var totalActive = ciAll.filter(function(r){ return !r.pending; }).length + assAll.length + outAll.length;
 
-  // Dynamic left panel width based on waiting vs out ratio
-  var waitingCount = ciAll.filter(function(r){return !r.pending;}).length + assAll.length;
-  var outCount = outAll.length;
-  var total = waitingCount + outCount;
-  var leftPct;
-  if(total === 0){ leftPct = 25; }
-  else if(waitingCount === 0){ leftPct = 10; }
-  else { leftPct = Math.max(10, Math.min(65, Math.round(10 + (waitingCount/total)*55))); }
+  // CI column is fixed width via CSS (180px) — no dynamic calculation needed
 
   var html = '<div class="board-wrap">' +
     '<div class="board-header">' +
@@ -5227,9 +5234,12 @@ function renderBoard(){
         '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' juniors active</div>' +
       '</div>' +
     '</div>' +
-    '<div class="board-body" id="board-body-el" style="grid-template-columns:' + leftPct + 'vw 1fr">' +
-      '<div class="board-waiting-col"><div class="board-ci-section">' + buildCI() + '</div></div>' +
-      '<div class="board-right-col">' + buildAssigned() + buildOut() + '</div>' +
+    '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">' +
+      '<div class="board-body" id="board-body-el">' +
+        '<div class="board-waiting-col"><div class="board-ci-section">' + buildCI() + '</div></div>' +
+        '<div class="board-right-col">' + buildAssigned() + buildOut() + '</div>' +
+      '</div>' +
+      buildPendingStrip() +
     '</div>' +
   '</div>';
 
