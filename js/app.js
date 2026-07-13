@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -392,7 +392,7 @@ function switchTab(t, el){
   if(t === 'officer') renderOfficer();
   if(t === 'roster') renderRoster();
   if(t === 'setup') renderSetup();
-  if(t === 'requests') renderRequests();
+  if(t === 'requests') refreshRequests();
   if(t === 'reqform') renderReqForm();
   if(t === 'board') renderBoard();
   if(t === 'checkins') renderCheckins();
@@ -724,10 +724,17 @@ function renderNotesQueue(){
   var ci = juniors.filter(function(j){
     return j.checkedIn && j.notes && j.notes.length > 0 && !j.ageout;
   });
-  if(ci.length === 0){ el.innerHTML = ''; return; }
+  if(ci.length === 0){ el.style.display='none'; el.innerHTML=''; return; }
+  el.style.display='block';
 
   var pending   = ci.filter(function(j){ return !notesState[j.id] || notesState[j.id] === 'pending'; });
   var handled   = ci.filter(function(j){ return notesState[j.id] && notesState[j.id] !== 'pending'; });
+  // Auto-collapse card when all items are handled
+  if(pending.length === 0 && handled.length > 0 && !notesCollapsed) notesCollapsed = true;
+  // If all dismissed, hide entirely
+  if(pending.length === 0 && handled.every(function(j){ return notesState[j.id]==='dismissed'; })){
+    el.style.display='none'; el.innerHTML=''; return;
+  }
   var doneCount = handled.length;
 
   var html = '<div class="notes-card">' +
@@ -1191,6 +1198,8 @@ function removeFromAoQueue(jid){
 function openPickForShift(jid, shift){
   activePick = jid + '_' + shift;
   activePickShift = shift;
+  // Switch to correct shift tab so that shift's slots are visible for picking
+  currentShift = shift;
   renderOfficer();
 }
 function closePick(){ activePick = null; activePickShift = null; renderOfficer(); }
@@ -3268,12 +3277,16 @@ function simCheckIn(){
 function simClockOut(){
   if(_simCORunning){ showAlert('Clock-out already running — stop it first.', 'warn'); return; }
   var mins = Math.min(60, Math.max(1, parseInt(document.getElementById('sim-co-mins').value)||5));
+  var coShift = (document.getElementById('sim-co-shift')||{}).value || '';
   var totalMs = mins * 60 * 1000;
 
   var onShift = juniors.filter(function(j){
-    return j.checkedIn && !clockedOut[j.id] && (onShiftJuniors.has(j.id) || onShiftJuniors.has(String(j.id)));
+    if(!j.checkedIn || clockedOut[j.id]) return false;
+    if(!(onShiftJuniors.has(j.id) || onShiftJuniors.has(String(j.id)))) return false;
+    if(coShift && j.checkInShift !== coShift) return false; // filter by shift
+    return true;
   });
-  if(!onShift.length){ showAlert('No juniors currently out on shift.', 'warn'); return; }
+  if(!onShift.length){ showAlert('No juniors out on shift' + (coShift ? ' for ' + coShift : '') + '.', 'warn'); return; }
 
   var delays = _simStaggeredDelays(onShift.length, totalMs);
   var shuffled = onShift.slice().sort(function(){ return Math.random()-.5; });
@@ -4278,10 +4291,174 @@ function toggleReqRow(key){
 }
 
 
+// ============================================================
+// REQUESTS FILTER SYSTEM
+// ============================================================
+var _reqFilterStatus = 'all';
+var _reqFilterNames  = [];
+var _reqFilterDate   = '';
+
+function reqChipClick(btn){
+  var status = btn.getAttribute('data-status');
+  _reqFilterStatus = (btn.classList.contains('active') && status !== 'all') ? 'all' : status;
+  document.querySelectorAll('.req-chip[data-status]').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-status') === _reqFilterStatus);
+  });
+  renderRequests();
+}
+
+function toggleReqNameDropdown(){
+  var dd = document.getElementById('req-name-dropdown');
+  if(!dd) return;
+  if(dd.style.display !== 'none'){ dd.style.display='none'; return; }
+  var names = {};
+  committeeRequests.forEach(function(r){ if(r.name) names[r.name]=true; });
+  renderReqNameOptions(Object.keys(names).sort(), '');
+  dd.style.display = 'block';
+  var inp = document.getElementById('req-name-search');
+  if(inp){ inp.value=''; inp.focus(); }
+  setTimeout(function(){
+    document.addEventListener('click', _closeReqNameDropdown, {once:true, capture:true});
+  }, 0);
+}
+
+function _closeReqNameDropdown(e){
+  var wrap = document.getElementById('req-name-wrap');
+  if(wrap && wrap.contains(e.target)) return;
+  var dd = document.getElementById('req-name-dropdown');
+  if(dd) dd.style.display='none';
+}
+
+function reqNameSearchFilter(){
+  var q = (document.getElementById('req-name-search').value||'').toLowerCase();
+  var names = {};
+  committeeRequests.forEach(function(r){ if(r.name) names[r.name]=true; });
+  var sorted = Object.keys(names).sort().filter(function(n){ return !q || n.toLowerCase().indexOf(q) >= 0; });
+  renderReqNameOptions(sorted, q);
+}
+
+function renderReqNameOptions(names, q){
+  var el = document.getElementById('req-name-options');
+  if(!el) return;
+  if(!names.length){
+    el.innerHTML = '<div style="padding:10px 12px;font-size:12px;color:#999;font-style:italic">No matches</div>';
+    return;
+  }
+  el.innerHTML = names.map(function(name){
+    var checked = _reqFilterNames.indexOf(name) >= 0;
+    var safeId = 'rno-' + name.replace(/[^a-z0-9]/gi,'_');
+    var display = q ? (function(){
+      var lo=name.toLowerCase(), qi=lo.indexOf(q);
+      if(qi<0) return name;
+      return name.slice(0,qi)+'<strong>'+name.slice(qi,qi+q.length)+'</strong>'+name.slice(qi+q.length);
+    })() : name;
+    return '<label class="req-name-option">' +
+      '<input type="checkbox" id="'+safeId+'"'+(checked?' checked':'')+' data-rname="'+encodeURIComponent(name)+'" onchange="reqNameToggleEl(this)">' +
+      '<span>'+display+'</span>' +
+    '</label>';
+  }).join('');
+}
+
+function reqNameToggleEl(el){
+  var name = decodeURIComponent(el.getAttribute('data-rname')||'');
+  if(!name) return;
+  reqNameToggle(name, !!el.checked);
+}
+
+function reqNameToggle(name, checked){
+  if(checked){ if(_reqFilterNames.indexOf(name)<0) _reqFilterNames.push(name); }
+  else { _reqFilterNames = _reqFilterNames.filter(function(n){ return n!==name; }); }
+  updateReqNameDisplay();
+  renderRequests();
+}
+
+function updateReqNameDisplay(){
+  var display = document.getElementById('req-name-display');
+  var placeholder = document.getElementById('req-name-placeholder');
+  if(!display) return;
+  Array.from(display.querySelectorAll('.req-name-tag')).forEach(function(t){ t.remove(); });
+  if(!_reqFilterNames.length){
+    if(placeholder) placeholder.style.display='inline';
+  } else {
+    if(placeholder) placeholder.style.display='none';
+    _reqFilterNames.forEach(function(name){
+      var tag = document.createElement('span');
+      tag.className = 'req-name-tag';
+      tag.innerHTML = name + '<button data-rname="'+encodeURIComponent(name)+'" onclick="event.stopPropagation();reqNameToggleEl(this)" title="Remove">&#x2715;</button>';
+      display.insertBefore(tag, placeholder);
+    });
+  }
+}
+
+function reqFilterUpdate(){
+  _reqFilterDate = (document.getElementById('req-search-date')||{}).value||'';
+  renderRequests();
+  updateReqFilterSummary();
+}
+
+function updateReqFilterSummary(){
+  var el = document.getElementById('req-filter-summary');
+  var txt = document.getElementById('req-filter-summary-text');
+  if(!el||!txt) return;
+  var parts = [];
+  if(_reqFilterStatus!=='all') parts.push('Status: '+_reqFilterStatus);
+  if(_reqFilterNames.length) parts.push(_reqFilterNames.length+' committee'+(+_reqFilterNames.length!==1?'s':'')+' selected');
+  if(_reqFilterDate) parts.push('Date: '+_reqFilterDate);
+  if(parts.length){ el.style.display='flex'; txt.textContent=parts.join(' · '); }
+  else { el.style.display='none'; }
+}
+
+function reqClearFilters(){
+  _reqFilterStatus='all'; _reqFilterNames=[]; _reqFilterDate='';
+  document.querySelectorAll('.req-chip[data-status]').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-status')==='all');
+  });
+  var sd=document.getElementById('req-search-date'); if(sd) sd.value='';
+  var si=document.getElementById('req-name-search'); if(si) si.value='';
+  updateReqNameDisplay(); updateReqFilterSummary(); renderRequests();
+}
+
+function refreshRequests(){
+  if(!DB_AVAILABLE){ renderRequests(); return; }
+  var btn=document.getElementById('req-refresh-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Loading...'; }
+  fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(data && data.committeeRequests !== undefined){
+        committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
+        var maxId = committeeRequests.reduce(function(m,r){ return Math.max(m,r.id||0);},0);
+        if(maxId >= requestIdCounter) requestIdCounter = maxId+1;
+      }
+      renderRequests(); updateReqFilterSummary();
+      if(btn){ btn.disabled=false; btn.textContent='↻ Refresh'; }
+    })
+    .catch(function(){
+      if(btn){ btn.disabled=false; btn.textContent='↻ Refresh'; }
+    });
+}
+
+
 function renderRequests(){
-  var filter = (document.getElementById('req-filter') ? document.getElementById('req-filter').value : 'all');
   var list = committeeRequests.filter(function(r){
-    return filter === 'all' || r.status === filter;
+    // Status chip filter
+    if(_reqFilterStatus === 'virtual'){
+      if(!(r.virtual || (r.shifts && r.shifts.length && r.shifts[0].virtual))) return false;
+    } else if(_reqFilterStatus !== 'all'){
+      if(r.status !== _reqFilterStatus) return false;
+    }
+    // Committee name filter
+    if(_reqFilterNames.length && _reqFilterNames.indexOf(r.name) < 0) return false;
+    // Date filter
+    if(_reqFilterDate){
+      var dateMatch = r.shifts && r.shifts.some(function(s){
+        if(s.all20) return true;
+        if(s.virtual) return _reqFilterDate>=(s.date||'') && _reqFilterDate<=(s.endDate||s.date||'');
+        return s.date === _reqFilterDate;
+      });
+      if(!dateMatch) return false;
+    }
+    return true;
   });
 
   var el = document.getElementById('req-list');
@@ -5329,7 +5506,12 @@ function _applyState(data){
   if(state.clockedOut)    clockedOut    = state.clockedOut;
   if(state.onShiftJuniors) onShiftJuniors = new Set(state.onShiftJuniors);
   if(state.onShiftSlots)   onShiftSlots   = new Set(state.onShiftSlots);
-  if(state.currentDate)    currentDate    = state.currentDate;
+  if(state.currentDate){
+    currentDate = state.currentDate;
+    // Update setup-date picker so board/preview reflect correct date
+    var sdEl = document.getElementById('setup-date');
+    if(sdEl && state.currentDate) sdEl.value = state.currentDate;
+  }
   if(state.currentShift)   currentShift   = state.currentShift;
   if(state.checkInOrder)   checkInOrder   = state.checkInOrder;
   if(state.lockedJuniors)  lockedJuniors  = new Set(state.lockedJuniors);
