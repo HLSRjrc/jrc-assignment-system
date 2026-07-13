@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 51;  // Minor build — increments every small change
+var APP_BUILD   = 50;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -286,10 +286,14 @@ function updateHeaderDate(){
   var d = (document.getElementById('setup-date') ? document.getElementById('setup-date').value : '') || currentDate;
   var ds = showDayOfShow(d);
   var dow = d ? fmtDateLong(d).split(',')[0] : '';
-  document.getElementById('hdr-info').innerHTML =
-    (ds ? '<strong style="color:#fff">' + ds + '</strong> &bull; ' : '') +
-    (dow ? '<span style="color:#99BBDD">' + dow + '</span><br>' : '') +
-    fmtDate(d) + '<br><span id="hdr-clock"></span>';
+  var infoEl = document.getElementById('hdr-info');
+  if(infoEl){
+    infoEl.innerHTML =
+      (ds ? '<strong style="color:#fff;font-size:12px">' + ds + '</strong><br>' : '') +
+      (dow ? '<span style="color:#99BBDD">' + dow + ' &bull; ' + fmtDate(d) + '</span>' : fmtDate(d));
+  }
+  var subEl = document.getElementById('hdr-date-sub');
+  if(subEl) subEl.textContent = simTimeEnabled ? '⏱ Sim time active' : '';
   updateHeaderClock();
 }
 
@@ -297,10 +301,13 @@ function updateHeaderClock(){
   var el = document.getElementById('hdr-clock');
   if(!el) return;
   var now = getSimTime();
-  var h = now.getHours(), m = now.getMinutes();
+  var h = now.getHours(), m = now.getMinutes(), s = now.getSeconds();
   var ampm = h >= 12 ? 'PM' : 'AM';
   h = h % 12 || 12;
-  el.textContent = h + ':' + String(m).padStart(2,'0') + ' ' + ampm + (simTimeEnabled ? ' ⏱' : '');
+  el.textContent = h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0') + ' ' + ampm;
+  // Also update date sub-line in case sim flag changed
+  var subEl = document.getElementById('hdr-date-sub');
+  if(subEl) subEl.textContent = simTimeEnabled ? '⏱ Sim time active' : '';
 }
 function applySimTime(){
   var h = parseInt(document.getElementById('sim-hour').value) || 8;
@@ -5073,7 +5080,7 @@ function startPolling(){
     if(!document.hidden) pollForUpdates();
   }, 180000);
   if(headerClockTimer) clearInterval(headerClockTimer);
-  headerClockTimer = setInterval(function(){ updateHeaderClock(); updateBoardClock(); }, 30000);
+  headerClockTimer = setInterval(function(){ updateHeaderClock(); updateBoardClock(); }, 1000); // 1s for seconds display
 
   // When user returns to tab after being away, poll immediately
   document.addEventListener('visibilitychange', function(){
