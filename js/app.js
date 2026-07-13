@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -1743,9 +1743,16 @@ function renderCheckins(){
     '<div id="ci-roster-body" style="display:none">' +
       '<div style="padding:10px 14px;border-top:1px solid var(--gray-200)">' +
         windowWarn +
-        '<input type="text" id="ci-roster-search" placeholder="Search by name..." ' +
-        'style="width:100%;padding:7px 10px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;margin-bottom:10px;font-family:var(--font)" ' +
-        'oninput="renderCIRosterRows()" />' +
+        '<div style="display:flex;gap:8px;margin-bottom:10px;align-items:center">' +
+          '<input type="text" id="ci-roster-search" placeholder="Search by name..." ' +
+          'style="flex:1;padding:7px 10px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;font-family:var(--font)" ' +
+          'oninput="renderCIRosterRows()" />' +
+          '<select id="ci-roster-shift" style="padding:7px 10px;border:1px solid var(--gray-200);border-radius:6px;font-size:13px;font-family:var(--font);color:var(--gray-700)">' +
+            '<option value="8am"' + (currentShift==='8am'?' selected':'') + '>8:00 AM</option>' +
+            '<option value="12pm"' + (currentShift==='12pm'?' selected':'') + '>12:00 PM</option>' +
+            '<option value="4pm"' + (currentShift==='4pm'?' selected':'') + '>4:00 PM</option>' +
+          '</select>' +
+        '</div>' +
         '<div id="ci-roster-rows">' +
           (filtered.length === 0
             ? '<div style="text-align:center;color:var(--gray-400);font-style:italic;padding:12px">All juniors are already checked in.</div>'
@@ -1882,7 +1889,8 @@ function quickCheckIn(jid){
   jr.order            = checkInOrder;
   jr.hasHat           = false;
   jr.notes            = '';
-  jr.checkInShift     = getShiftFromTime(getSimTime()) || currentShift;
+  var ciShiftEl = document.getElementById('ci-roster-shift');
+  jr.checkInShift = (ciShiftEl ? ciShiftEl.value : null) || getShiftFromTime(getSimTime()) || currentShift;
   jr.checkInDate      = currentDate;
   jr.checkInTimestamp = getSimTime().getTime();
   // Clear any previous assignment/clock-out state
