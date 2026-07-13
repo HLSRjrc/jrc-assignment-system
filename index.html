@@ -177,11 +177,19 @@ if(window.location.search.indexOf('partner=1') >= 0){
 <div id="partner-header" class="no-print" style="display:none;background:var(--navy);padding:16px 20px;display:none;align-items:center;justify-content:space-between">
   <div style="color:#fff;font-weight:700;font-size:18px">&#128203; Partner Committee Shift Request</div>
 </div>
-<div id="main-header" class="header no-print">
-  <img id="hlsr-logo" style="max-width:260px;width:100%;height:auto;display:block" alt="Houston Livestock Show and Rodeo">
-  <img src="/assets/jrc-logo-color.png" style="height:28px;width:auto;display:block" alt="Jr. Rodeo Committee">
-  <div id="hdr-info" style="font-size:11px;color:#99BBDD"></div>
-  <div id="logout-wrap-inner" style="display:none;align-items:center;gap:10px;width:100%;justify-content:flex-end;margin-top:6px">
+<div id="main-header" class="header no-print" style="flex-direction:row;align-items:center;padding:6px 16px;gap:12px;margin-bottom:10px">
+  <!-- Left: logos -->
+  <img id="hlsr-logo" style="height:36px;width:auto;display:block;flex-shrink:0" alt="Houston Livestock Show and Rodeo">
+  <img src="/assets/jrc-logo-color.png" style="height:22px;width:auto;display:block;flex-shrink:0" alt="Jr. Rodeo Committee">
+  <!-- Middle: date/day info -->
+  <div id="hdr-info" style="font-size:11px;color:#99BBDD;flex:1;line-height:1.3"></div>
+  <!-- Right: live clock -->
+  <div style="text-align:right;flex-shrink:0">
+    <div id="hdr-clock" style="font-size:20px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums;letter-spacing:.02em"></div>
+    <div id="hdr-date-sub" style="font-size:10px;color:#99BBDD;margin-top:1px"></div>
+  </div>
+  <!-- User/logout -->
+  <div id="logout-wrap-inner" style="display:none;align-items:center;gap:8px;flex-shrink:0">
     <span id="user-badge" style="font-size:11px;color:rgba(255,255,255,.6)"></span>
     <button onclick="doLogout()" style="font-size:11px;padding:4px 10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.3);border-radius:4px;color:rgba(255,255,255,.8);cursor:pointer">&#x2715; Sign Out</button>
   </div>
