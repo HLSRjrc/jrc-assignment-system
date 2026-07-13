@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -406,7 +406,13 @@ function switchTab(t, el){
   if(t === 'setup') renderSetup();
   if(t === 'requests') refreshRequests();
   if(t === 'reqform') renderReqForm();
-  if(t === 'board') renderBoard();
+  if(t === 'board'){
+    // Board tab looks identical to TV page — apply tv-mode class to body
+    document.body.classList.add('board-tab-active');
+    renderBoard();
+  } else {
+    document.body.classList.remove('board-tab-active');
+  }
   if(t === 'checkins') renderCheckins();
   if(t === 'hours') renderHours();
   if(t === 'simulate'){ renderUserMgmt(); renderStrandedPanel(); renderSimulateMigrationStatus(); }
@@ -5168,7 +5174,7 @@ function renderBoard(){
     if(assAll.length === 0) return '';
     var h = '<div class="board-ass-section">';
     h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')</div>';
-    var assCols = assAll.length > 30 ? 3 : assAll.length > 15 ? 2 : 1;
+    var assCols = assAll.length > 40 ? 4 : assAll.length > 20 ? 3 : assAll.length > 10 ? 2 : 1;
     h += '<div style="column-count:' + assCols + ';column-gap:6px">';
     assAll.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
       .forEach(function(r){
@@ -5193,7 +5199,7 @@ function renderBoard(){
     // Total committee groups across all shifts — drives sub-column count
     var totalGroups = 0;
     shifts.forEach(function(sh){ totalGroups += Object.keys(byShift[sh]).length; });
-    var subCols = totalGroups >= 35 ? 'cols5' : totalGroups >= 14 ? 'cols4' : totalGroups >= 8 ? 'cols3' : totalGroups >= 4 ? 'cols2' : 'cols1';
+    var subCols = totalGroups >= 35 ? 'cols5' : totalGroups >= 10 ? 'cols4' : totalGroups >= 6 ? 'cols3' : totalGroups >= 3 ? 'cols2' : 'cols1';
 
     var h = '<div class="board-out-col">';
     h += '<div class="board-col-hdr out">&#9650; Out on Shift (' + outAll.length + ')</div>';
