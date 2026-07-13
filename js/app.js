@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2322,11 +2322,31 @@ function onSetupDateChange(){
   var totalSlots = slots.length;
   var totalJuniors = slots.reduce(function(a,s){ return a + s.cap; }, 0);
 
+  // Night-before planning: get scheduled counts if set
+  var planned8 = parseInt((window._plannedJuniors||{})['8am'])||0;
+  var planned12 = parseInt((window._plannedJuniors||{})['12pm'])||0;
+  var planned4 = parseInt((window._plannedJuniors||{})['4pm'])||0;
+
   var html = '<div class="shift-preview">';
   html += '<div class="shift-preview-header">' +
     '<div>' +
       '<div class="shift-preview-title">' + fmtDateLong(date) + '</div>' +
       '<div class="shift-preview-count">' + totalSlots + ' committee slots &bull; ' + totalJuniors + ' junior spots requested</div>' +
+    '</div>' +
+    '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy);font-size:12px" onclick="loadAllPreviewSlotsForDate()">&#43; Load All to Dashboard</button>' +
+  '</div>';
+
+  // Night-before planner
+  html += '<div id="nbp-section" style="background:#F8F9FA;border-radius:8px;padding:12px;margin-bottom:12px">' +
+    '<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px">&#128196; Night-Before Planner — How many juniors scheduled?</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:flex-end">' +
+    ['8am','12pm','4pm'].map(function(sh){
+      var v = (window._plannedJuniors||{})[sh] || '';
+      return '<div><div style="font-size:11px;color:#667788;margin-bottom:3px">' + SL[sh] + '</div>' +
+        '<input type="number" class="finput" style="font-size:12px" placeholder="# juniors" value="' + v + '" ' +
+        'oninput="if(!window._plannedJuniors)window._plannedJuniors={};window._plannedJuniors[\'' + sh + '\']=this.value;onSetupDateChange()" min="0" max="500"></div>';
+    }).join('') +
+    '<button class="btn btn-sm" style="background:var(--navy);color:#fff;border-color:var(--navy)" onclick="onSetupDateChange()">&#9654; Preview Fill</button>' +
     '</div>' +
   '</div>';
 
@@ -2334,28 +2354,62 @@ function onSetupDateChange(){
     var list = groups[sh];
     if(!list.length) return;
     var shJuniors = list.reduce(function(a,s){ return a + s.cap; }, 0);
-    var allAdded = list.every(function(s){ return activeSlots.some(function(a){ return a.name===s.name && a.shift===sh; }); });
+    var planned = parseInt((window._plannedJuniors||{})[sh])||0;
 
     html += '<div class="shift-block">';
     html += '<div class="shift-block-header">' +
       '<div>' +
         '<span class="shift-block-title">' + SL[sh] + '</span>' +
-        '<span class="shift-block-meta" style="margin-left:8px">' + list.length + ' committees &bull; ' + shJuniors + ' juniors</span>' +
+        '<span class="shift-block-meta" style="margin-left:8px">' + list.length + ' committees &bull; ' + shJuniors + ' spots</span>' +
+        (planned > 0 ? '<span style="margin-left:8px;font-size:11px;font-weight:700;color:' + (planned >= shJuniors ? '#155724' : '#856404') + '">' +
+          planned + ' scheduled / ' + shJuniors + ' needed' +
+          (planned >= shJuniors ? ' &#10003;' : ' &#9888;') + '</span>' : '') +
       '</div>' +
-      '<div class="shift-block-actions"></div>' +
     '</div>';
 
-    list.forEach(function(s){
+    list.forEach(function(s, si){
       var isAdded = activeSlots.some(function(a){ return a.name===s.name && a.shift===sh; });
-      html += '<div class="preview-row' + (isAdded ? ' added' : '') + '">' +
-        '<div class="preview-name">' +
-          (s.hat ? '<span class="hat-icon"><img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"></span>' : '') +
-          s.name +
-          (s.isNew ? ' <span class="badge" style="background:#E8F4E8;color:#155724;font-size:9px">New</span>' : '') +
-        '</div>' +
-        '<div class="preview-cap">' + s.cap + '</div>' +
-        '<div class="preview-status"></div>' +
-      '</div>';
+      var rowKey = 'prev-' + sh + '-' + si;
+      var cd = CD[s.name] || {};
+      // Fill ratio when planned count set
+      var fillRatio = '';
+      if(planned > 0){
+        // Simple proportional estimate: each committee gets cap/totalCap * planned
+        var est = Math.round(s.cap / shJuniors * planned);
+        var fillColor = est >= s.cap ? '#155724' : est === 0 ? '#CC0000' : '#856404';
+        fillRatio = '<span style="font-size:11px;font-weight:700;color:' + fillColor + ';margin-left:8px">' + est + '/' + s.cap + '</span>';
+      }
+      // Editable cap
+      var capKey = 'prevcap_' + sh + '_' + si;
+      window._ps = window._ps || {};
+      window._ps[capKey] = {name:s.name, shift:sh, cap:s.cap, hat:s.hat||false};
+
+      html += '<div class="preview-row' + (isAdded ? ' added' : '') + '" style="display:block;padding:0">';
+      // Collapsed header row
+      html += '<div style="display:flex;align-items:center;padding:6px 10px;cursor:pointer;gap:8px" onclick="togglePreviewRow(\'' + rowKey + '\')">';
+      html += '<span id="' + rowKey + '-icon" style="font-size:10px;color:#99AABB;flex-shrink:0">&#9654;</span>';
+      html += '<div style="flex:1;font-weight:500;font-size:13px">' +
+        (s.hat ? '<img src="assets/hat.png" style="height:14px;vertical-align:middle;margin-right:4px">' : '') +
+        s.name + '</div>';
+      html += fillRatio;
+      html += '<input type="number" class="finput" style="width:60px;font-size:12px;padding:3px 6px" value="' + s.cap + '" ' +
+        'data-pskey="' + capKey + '" onclick="event.stopPropagation()" ' +
+        'oninput="event.stopPropagation();(window._ps[\'' + capKey + '\']).cap=parseInt(this.value)||2;onSetupDateChange()" min="1" max="40">';
+      html += '<span style="font-size:11px;color:#667788">juniors</span>';
+      html += (isAdded
+        ? '<span style="color:#155724;font-size:11px;font-weight:600">&#10003; Added</span>'
+        : '<button class="btn btn-sm" style="font-size:11px;padding:2px 8px" data-k="' + capKey + '" onclick="event.stopPropagation();addSinglePreviewSlotEl(this)">&#43; Add</button>');
+      html += '</div>';
+      // Expandable details
+      html += '<div id="' + rowKey + '-detail" style="display:none;padding:6px 14px 10px 32px;font-size:12px;color:#667788;line-height:1.8;background:#FAFBFC;border-top:1px solid #F0F0F0">';
+      if(cd.chair) html += '<div><strong>Chair:</strong> ' + cd.chair + (cd.cp ? ' &bull; ' + cd.cp : '') + '</div>';
+      if(cd.liaison) html += '<div><strong>Liaison:</strong> ' + cd.liaison + (cd.lp ? ' &bull; ' + cd.lp : '') + (cd.le ? ' &bull; ' + cd.le : '') + '</div>';
+      if(cd.loc) html += '<div><strong>Location:</strong> ' + cd.loc + '</div>';
+      if(cd.duties) html += '<div><strong>Duties:</strong> ' + cd.duties + '</div>';
+      if(cd.notes) html += '<div><strong>Notes:</strong> ' + cd.notes + '</div>';
+      if(!cd.chair && !cd.liaison && !cd.loc) html += '<div style="font-style:italic;color:#AAA">No contact info on file</div>';
+      html += '</div>';
+      html += '</div>';
     });
 
     html += '</div>';
@@ -2364,6 +2418,41 @@ function onSetupDateChange(){
   html += '</div>';
   prev.innerHTML = html;
   prev.style.display = 'block';
+}
+
+function togglePreviewRow(key){
+  var detail = document.getElementById(key + '-detail');
+  var icon = document.getElementById(key + '-icon');
+  if(!detail) return;
+  var open = detail.style.display !== 'none';
+  detail.style.display = open ? 'none' : 'block';
+  if(icon) icon.innerHTML = open ? '&#9654;' : '&#9660;';
+}
+
+function loadAllPreviewSlotsForDate(){
+  var date = (document.getElementById('setup-date')||{}).value || currentDate;
+  var added = 0;
+  var slots = SCHEDULE_2026[date] ? SCHEDULE_2026[date].slice() : [];
+  committeeRequests.filter(function(r){
+    return r.status==='approved' && !r.virtual &&
+      r.shifts && r.shifts.some(function(s){ return !s.virtual && (s.date===date||s.all20); });
+  }).forEach(function(r){
+    r.shifts.filter(function(s){ return !s.virtual && (s.date===date||s.all20); }).forEach(function(s){
+      var ex = slots.some(function(x){ return x.name===r.name && x.shift===(s.shift||'8am'); });
+      if(!ex) slots.push({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false});
+    });
+  });
+  slots.forEach(function(s){
+    var already = activeSlots.some(function(a){ return a.name===s.name && a.shift===s.shift; });
+    if(already) return;
+    // Check if cap was overridden in the preview
+    var capKey = 'prevcap_' + s.shift + '_0'; // approximate — use slot cap
+    activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
+    added++;
+  });
+  onSetupDateChange();
+  renderSetup();
+  showAlert('Loaded ' + added + ' slot' + (added!==1?'s':'') + ' to dashboard.', 'success');
 }
 
 function addSinglePreviewSlot(name, shift, cap, hat){
