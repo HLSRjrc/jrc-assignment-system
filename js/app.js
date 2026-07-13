@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -5188,18 +5188,17 @@ function renderBoard(){
     '</div>';
   }
 
-  // Build Assigned section HTML (no wrapper — goes inside board-right-col)
+  // Build Assigned section HTML — lives in left panel below CI
   function buildAssigned(){
     if(assAll.length === 0) return '';
-    var h = '<div class="board-ass-section">';
-    h += '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')</div>';
+    var h = '<div class="board-col-hdr assigned">&#9632; Assigned (' + assAll.length + ')</div>';
     var assCols = assAll.length > 40 ? 4 : assAll.length > 20 ? 3 : assAll.length > 10 ? 2 : 1;
     h += '<div style="column-count:' + assCols + ';column-gap:6px">';
     assAll.slice().sort(function(a,b){ return (a.j.order||0)-(b.j.order||0); })
       .forEach(function(r){
         h += '<div class="board-name">' + shiftPill(r.sh) + fmtNameShort(r.j.name) + '</div>';
       });
-    h += '</div></div>';
+    h += '</div>';
     return h;
   }
 
@@ -5273,8 +5272,11 @@ function renderBoard(){
     '</div>' +
     '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">' +
       '<div class="board-body" id="board-body-el">' +
-        '<div class="board-waiting-col"><div class="board-ci-section">' + buildCI() + '</div></div>' +
-        '<div class="board-right-col">' + buildAssigned() + buildOut() + '</div>' +
+        '<div class="board-waiting-col">' +
+          '<div class="board-ci-section" id="brd-ci">' + buildCI() + '</div>' +
+          (assAll.length > 0 ? '<div class="board-ass-section" id="brd-ass">' + buildAssigned() + '</div>' : '') +
+        '</div>' +
+        '<div class="board-right-col">' + buildOut() + '</div>' +
       '</div>' +
       buildPendingStrip() +
     '</div>' +
@@ -5296,8 +5298,28 @@ function startBoardAutoScroll(){
   if(_boardScrollTimer) clearInterval(_boardScrollTimer);
   var dirs = {}, pause = {};
   _boardScrollTimer = setInterval(function(){
-    ['.board-ci-section','.board-ass-section','.board-out-col'].forEach(function(sel){
-      var el = document.querySelector(sel);
+    // Dynamically split left panel between CI and Assigned
+    var ciEl  = document.getElementById('brd-ci');
+    var assEl = document.getElementById('brd-ass');
+    var col   = ciEl ? ciEl.closest('.board-waiting-col') : null;
+    if(ciEl && col){
+      var colH = col.clientHeight;
+      var ciContent  = ciEl.scrollHeight;
+      var assContent = assEl ? assEl.scrollHeight : 0;
+      var total = ciContent + assContent;
+      if(total > 0 && assEl){
+        // Each section gets proportional share, capped at 50% of column
+        var ciPct  = Math.min(0.5, ciContent / total);
+        var assPct = Math.min(0.5, assContent / total);
+        // Normalize so they sum to 1
+        var sum = ciPct + assPct;
+        ciEl.style.flex  = (ciPct / sum).toFixed(3) + ' 1 0';
+        assEl.style.flex = (assPct / sum).toFixed(3) + ' 1 0';
+      }
+    }
+    // Ping-pong scroll all three sections
+    ['#brd-ci','#brd-ass','.board-out-col'].forEach(function(sel){
+      var el = sel.startsWith('#') ? document.querySelector(sel) : document.querySelector(sel);
       if(!el) return;
       var max = el.scrollHeight - el.clientHeight;
       if(max <= 4) return;
