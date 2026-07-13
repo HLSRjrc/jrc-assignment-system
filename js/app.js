@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -907,10 +907,13 @@ function unlockNote(jid){
 
 
 function renderOfficer(search){
-  var ci = juniors.filter(function(j){ return j.checkedIn; });
-  var asgn = juniors.filter(function(j){ return j.assignment; });
-  var un = ci.filter(function(j){ return !j.assignment; });
-  var totalOpen = activeSlots.reduce(function(a, s){ return a + Math.max(0, s.capacity - s.assigned.length); }, 0);
+  // Stats filtered by currentShift so numbers match what you're looking at
+  var allCI = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id]; });
+  var ci   = allCI.filter(function(j){ return (j.checkInShift||currentShift) === currentShift; });
+  var asgn = juniors.filter(function(j){ return j.assignment && (j.checkInShift||currentShift) === currentShift; });
+  var un   = ci.filter(function(j){ return !j.assignment; });
+  var totalOpen = activeSlots.filter(function(s){ return s.shift === currentShift; })
+                   .reduce(function(a, s){ return a + Math.max(0, s.capacity - s.assigned.length); }, 0);
   document.getElementById('s-ci').textContent = ci.length;
   document.getElementById('s-asgn').textContent = asgn.length;
   document.getElementById('s-un').textContent = un.length;
@@ -5133,22 +5136,31 @@ function renderBoard(){
     return h;
   }
 
-  // Pending age-outs — bottom strip across full width
+  // Pending age-outs — news ticker strip at bottom
   function buildPendingStrip(){
     var pending = ciAll.filter(function(r){ return r.pending; });
     if(!pending.length) return '';
-    var h = '<div style="border-top:1px solid rgba(255,255,255,.15);padding:4px 14px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;flex-shrink:0">';
-    h += '<span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#F5A623;white-space:nowrap">&#9711; Later Shifts (' + pending.length + '):</span>';
-    pending.slice().sort(function(a,b){ return a.j.name.localeCompare(b.j.name); })
-      .forEach(function(r){
+    // Build ticker content — repeats so it scrolls continuously
+    var items = pending.slice().sort(function(a,b){ return a.j.name.localeCompare(b.j.name); })
+      .map(function(r){
         var late = r.lateBreak;
-        h += '<span style="font-size:13px;color:' + (late?'#FF6B6B':'#F5A623') + ';white-space:nowrap">' +
+        return '<span style="margin-right:32px;color:' + (late?'#FF6B6B':'#F5A623') + ';white-space:nowrap">' +
           shiftPill(r.sh) + fmtNameShort(r.j.name) +
-          (late ? ' <span style="font-size:8px;background:#FF6B6B;color:#fff;padding:0 3px;border-radius:3px">LATE</span>' : '') +
+          (late ? ' <span style="font-size:9px;background:#FF6B6B;color:#fff;padding:0 4px;border-radius:3px;margin-left:3px">LATE</span>' : '') +
           '</span>';
-      });
-    h += '</div>';
-    return h;
+      }).join('');
+    // Duplicate for seamless loop
+    var ticker = items + items;
+    return '<div style="border-top:1px solid rgba(255,255,255,.15);padding:5px 0;overflow:hidden;flex-shrink:0;background:rgba(0,0,0,.2)">' +
+      '<div style="display:flex;align-items:center">' +
+        '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#F5A623;white-space:nowrap;padding:0 12px;flex-shrink:0">&#9711; Later Shifts:</span>' +
+        '<div style="overflow:hidden;flex:1">' +
+          '<div id="board-ticker" style="display:inline-flex;animation:boardTicker 20s linear infinite;white-space:nowrap;font-size:15px">' +
+            ticker +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
   }
 
   // Build Assigned section HTML (no wrapper — goes inside board-right-col)
@@ -5259,7 +5271,7 @@ function startBoardAutoScroll(){
   if(_boardScrollTimer) clearInterval(_boardScrollTimer);
   var dirs = {}, pause = {};
   _boardScrollTimer = setInterval(function(){
-    ['.board-ci-section','.board-ass-section'].forEach(function(sel){
+    ['.board-ci-section','.board-ass-section','.board-out-col'].forEach(function(sel){
       var el = document.querySelector(sel);
       if(!el) return;
       var max = el.scrollHeight - el.clientHeight;
