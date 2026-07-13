@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 20;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3358,17 +3358,35 @@ function activateShift(){
   }
 
   var dateEl = document.getElementById('setup-date');
-  currentDate = (dateEl ? dateEl.value : '') || currentDate;
+  var selectedDate = (dateEl ? dateEl.value : '') || currentDate;
+  currentDate = selectedDate;
 
-  // Auto-detect active shift: use whichever shift has the most loaded slots
+  // If no slots loaded yet, auto-load all approved slots for this date
+  if(activeSlots.length === 0 && selectedDate){
+    var autoSlots = SCHEDULE_2026[selectedDate] ? SCHEDULE_2026[selectedDate].slice() : [];
+    committeeRequests.filter(function(r){
+      return r.status==='approved' && !r.virtual &&
+        r.shifts && r.shifts.some(function(s){ return !s.virtual && (s.date===selectedDate || s.all20); });
+    }).forEach(function(r){
+      r.shifts.filter(function(s){ return !s.virtual && (s.date===selectedDate || s.all20); }).forEach(function(s){
+        var exists = autoSlots.some(function(x){ return x.name===r.name && x.shift===(s.shift||'8am'); });
+        if(!exists) autoSlots.push({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false});
+      });
+    });
+    autoSlots.forEach(function(s){
+      activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
+    });
+  }
+
+  // Set active shift: always earliest shift that has slots
   var shiftCounts = {'8am':0, '12pm':0, '4pm':0};
   activeSlots.forEach(function(s){ if(shiftCounts[s.shift] !== undefined) shiftCounts[s.shift]++; });
-  var dominantShift = currentShift; // fallback to whatever is already active
-  var maxCount = 0;
-  Object.keys(shiftCounts).forEach(function(sh){
-    if(shiftCounts[sh] > maxCount){ maxCount = shiftCounts[sh]; dominantShift = sh; }
-  });
-  currentShift = dominantShift;
+  var shiftOrder = ['8am','12pm','4pm'];
+  var chosenShift = null;
+  for(var si = 0; si < shiftOrder.length; si++){
+    if(shiftCounts[shiftOrder[si]] > 0){ chosenShift = shiftOrder[si]; break; }
+  }
+  currentShift = chosenShift || '8am';
 
   updateHeaderDate();
   saveStateNow();
