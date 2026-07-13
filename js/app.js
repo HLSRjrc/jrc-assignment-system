@@ -3008,6 +3008,163 @@ function renderSimulateMigrationStatus(){
   }
 }
 
+// ============================================================
+// BULK CHECK-IN / CLOCK-OUT SIMULATOR
+// ============================================================
+var _simCITimers = [], _simCOTimers = [];
+var _simCIRunning = false, _simCORunning = false;
+
+var _SIM_NOTES = [
+  'Working with mom', 'Working with dad', 'Working with parent',
+  'Medical issue', 'Injury — light duty only', 'Needs bathroom break accommodation',
+  'First time volunteer', 'Requested indoor assignment',
+  'Working with sibling', 'Has equipment to carry'
+];
+
+function _simStaggeredDelays(count, totalMs){
+  var delays = [], used = 0;
+  for(var i = 0; i < count; i++){
+    var remaining = count - i;
+    var d = i === 0 ? Math.random() * (totalMs / remaining * 0.5)
+                    : Math.random() * ((totalMs - used) / remaining * 1.8);
+    used += d;
+    delays.push(Math.round(Math.min(used, totalMs - 100)));
+  }
+  return delays.sort(function(a,b){ return a-b; });
+}
+
+function simStopCI(){
+  _simCITimers.forEach(function(t){ clearTimeout(t); }); _simCITimers = []; _simCIRunning = false;
+  document.getElementById('sim-ci-status').textContent = 'Stopped.';
+}
+function simStopCO(){
+  _simCOTimers.forEach(function(t){ clearTimeout(t); }); _simCOTimers = []; _simCORunning = false;
+  document.getElementById('sim-co-status').textContent = 'Stopped.';
+}
+function simStopAll(){ simStopCI(); simStopCO(); }
+
+function simCheckIn(){
+  if(_simCIRunning){ showAlert('Check-in already running — stop it first.', 'warn'); return; }
+  var count = Math.min(650, Math.max(1, parseInt(document.getElementById('sim-ci-count').value)||30));
+  var mins  = Math.min(60, Math.max(1, parseInt(document.getElementById('sim-ci-mins').value)||5));
+  var shift = document.getElementById('sim-ci-shift').value || '8am';
+  var totalMs = mins * 60 * 1000;
+
+  var available = juniors.filter(function(j){ return !j.inactive && (!j.checkedIn || clockedOut[j.id]); });
+  if(!available.length){ showAlert('No juniors available to check in.', 'warn'); return; }
+  count = Math.min(count, available.length);
+
+  var selected = available.slice().sort(function(){ return Math.random()-.5; }).slice(0, count);
+  var delays = _simStaggeredDelays(count, totalMs);
+
+  _simCIRunning = true;
+  var wrap = document.getElementById('sim-ci-progress-wrap');
+  var bar  = document.getElementById('sim-ci-bar');
+  var stat = document.getElementById('sim-ci-status');
+  if(wrap) wrap.style.display = 'block';
+  if(stat) stat.textContent = 'Starting...';
+
+  var done = 0;
+  selected.forEach(function(jr, idx){
+    var t = setTimeout(function(){
+      if(!_simCIRunning) return;
+      checkInOrder++;
+      jr.checkedIn        = true;
+      jr.order            = checkInOrder;
+      jr.checkInShift     = shift;
+      jr.checkInDate      = currentDate;
+      jr.checkInTimestamp = Date.now();
+      jr.assignment       = null;
+      jr.onBreak          = false;
+      clockedOut[jr.id]   = false;
+      delete clockedOut[jr.id];
+      onShiftJuniors.delete(jr.id);
+      onShiftJuniors.delete(String(jr.id));
+
+      // Randomize hat — 75%
+      jr.hasHat = Math.random() < 0.75;
+
+      // Age-out: ~15% chance, gets 2-3 planned shifts randomly
+      if(jr.ageout && Math.random() < 0.7){
+        var allShifts = ['8am','12pm','4pm'];
+        var shiftIdx = allShifts.indexOf(shift);
+        var future = allShifts.filter(function(s, i){ return i >= shiftIdx; });
+        future = future.sort(function(){ return Math.random()-.5; }).slice(0, 1 + Math.floor(Math.random()*2));
+        jr.plannedShifts = future.indexOf(shift) < 0 ? [shift].concat(future) : future;
+      } else if(!jr.ageout){
+        jr.plannedShifts = [shift];
+      }
+
+      // Notes: ~12% chance
+      jr.notes = Math.random() < 0.12 ? _SIM_NOTES[Math.floor(Math.random() * _SIM_NOTES.length)] : '';
+
+      dirtyJuniors.add(jr.id);
+      done++;
+      if(bar) bar.style.width = Math.round(done/count*100) + '%';
+      if(stat) stat.textContent = done + ' / ' + count + ' checked in...';
+      renderOfficer(); renderBoard();
+      if(done % 5 === 0){ _lastSavedHash=''; saveStateNow(); }
+      if(done === count){
+        _simCIRunning = false;
+        _lastSavedHash=''; saveStateNow();
+        if(stat) stat.textContent = '&#10003; Done — ' + done + ' checked in for ' + shift;
+        showAlert(done + ' juniors checked in!', 'success');
+      }
+    }, delays[idx]);
+    _simCITimers.push(t);
+  });
+}
+
+function simClockOut(){
+  if(_simCORunning){ showAlert('Clock-out already running — stop it first.', 'warn'); return; }
+  var mins = Math.min(60, Math.max(1, parseInt(document.getElementById('sim-co-mins').value)||5));
+  var totalMs = mins * 60 * 1000;
+
+  var onShift = juniors.filter(function(j){
+    return j.checkedIn && !clockedOut[j.id] && (onShiftJuniors.has(j.id) || onShiftJuniors.has(String(j.id)));
+  });
+  if(!onShift.length){ showAlert('No juniors currently out on shift.', 'warn'); return; }
+
+  var delays = _simStaggeredDelays(onShift.length, totalMs);
+  var shuffled = onShift.slice().sort(function(){ return Math.random()-.5; });
+
+  _simCORunning = true;
+  var wrap = document.getElementById('sim-co-progress-wrap');
+  var bar  = document.getElementById('sim-co-bar');
+  var stat = document.getElementById('sim-co-status');
+  if(wrap) wrap.style.display = 'block';
+  if(stat) stat.textContent = 'Starting...';
+
+  var done = 0;
+  shuffled.forEach(function(jr, idx){
+    var t = setTimeout(function(){
+      if(!_simCORunning) return;
+      clockedOut[jr.id] = true;
+      jr.checkedIn = false;
+      jr.assignment = null;
+      activeSlots.forEach(function(s){
+        s.assigned = s.assigned.filter(function(id){ return String(id) !== String(jr.id); });
+      });
+      onShiftJuniors.delete(jr.id);
+      onShiftJuniors.delete(String(jr.id));
+      dirtyJuniors.add(jr.id);
+      done++;
+      if(bar) bar.style.width = Math.round(done/shuffled.length*100) + '%';
+      if(stat) stat.textContent = done + ' / ' + shuffled.length + ' clocked out...';
+      renderOfficer(); renderBoard();
+      if(done % 5 === 0){ _lastSavedHash=''; saveStateNow(); }
+      if(done === shuffled.length){
+        _simCORunning = false;
+        _lastSavedHash=''; saveStateNow();
+        if(stat) stat.textContent = '&#10003; Done — ' + done + ' clocked out';
+        showAlert(done + ' juniors clocked out!', 'success');
+      }
+    }, delays[idx]);
+    _simCOTimers.push(t);
+  });
+}
+
+
 function renderSetup(){
   // Initialize sim-date picker to today if not already set
   var sdEl = document.getElementById('sim-date');
