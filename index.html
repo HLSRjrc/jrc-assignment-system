@@ -398,6 +398,67 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- SETTINGS / DATE SIMULATOR -->
 <div id="panel-simulate" class="panel">
+
+  <!-- BULK CHECK-IN / CLOCK-OUT TOOL -->
+  <div class="card" style="margin-bottom:16px;border:2px solid #5C6BC0">
+    <div class="section-lbl" style="margin-bottom:4px;color:#5C6BC0">&#9881; Bulk Check-in / Clock-out</div>
+    <div style="font-size:12px;color:#667788;margin-bottom:12px">Simulates realistic arrivals and departures. Juniors get random hats, some age-outs, and a few with notes.</div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+
+      <!-- Check In -->
+      <div style="background:#F0F4FF;border-radius:8px;padding:12px">
+        <div style="font-size:12px;font-weight:700;color:#3949AB;margin-bottom:8px">&#10003; Check In</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <div style="font-size:11px;color:#667788;margin-bottom:3px"># of juniors</div>
+            <input type="number" class="finput" id="sim-ci-count" value="30" min="1" max="650" style="font-size:12px">
+          </div>
+          <div>
+            <div style="font-size:11px;color:#667788;margin-bottom:3px">Over (minutes)</div>
+            <input type="number" class="finput" id="sim-ci-mins" value="5" min="1" max="60" style="font-size:12px">
+          </div>
+        </div>
+        <div style="margin-bottom:8px">
+          <div style="font-size:11px;color:#667788;margin-bottom:3px">Shift</div>
+          <select class="finput" id="sim-ci-shift" style="font-size:12px">
+            <option value="8am">8:00 AM</option>
+            <option value="12pm">12:00 PM</option>
+            <option value="4pm">4:00 PM</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" style="background:#3949AB;color:#fff;border-color:#3949AB;flex:1" onclick="simCheckIn()">&#9654; Start</button>
+          <button class="btn btn-sm btn-danger" onclick="simStopCI()">&#9646;&#9646;</button>
+        </div>
+        <div id="sim-ci-status" style="font-size:11px;color:#3949AB;margin-top:6px;min-height:14px"></div>
+        <div id="sim-ci-progress-wrap" style="height:3px;background:#E0E0E0;border-radius:2px;display:none;margin-top:4px">
+          <div id="sim-ci-bar" style="height:100%;background:#3949AB;border-radius:2px;width:0%;transition:width .3s"></div>
+        </div>
+      </div>
+
+      <!-- Clock Out -->
+      <div style="background:#FFF0F0;border-radius:8px;padding:12px">
+        <div style="font-size:12px;font-weight:700;color:#C62828;margin-bottom:8px">&#9650; Clock Out</div>
+        <div style="margin-bottom:8px">
+          <div style="font-size:11px;color:#667788;margin-bottom:3px">Over (minutes)</div>
+          <input type="number" class="finput" id="sim-co-mins" value="5" min="1" max="60" style="font-size:12px">
+        </div>
+        <div style="font-size:11px;color:#667788;margin-bottom:8px">Clocks out all juniors currently out on shift</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm" style="background:#C62828;color:#fff;border-color:#C62828;flex:1" onclick="simClockOut()">&#9654; Start</button>
+          <button class="btn btn-sm btn-danger" onclick="simStopCO()">&#9646;&#9646;</button>
+        </div>
+        <div id="sim-co-status" style="font-size:11px;color:#C62828;margin-top:6px;min-height:14px"></div>
+        <div id="sim-co-progress-wrap" style="height:3px;background:#E0E0E0;border-radius:2px;display:none;margin-top:4px">
+          <div id="sim-co-bar" style="height:100%;background:#C62828;border-radius:2px;width:0%;transition:width .3s"></div>
+        </div>
+      </div>
+
+    </div>
+    <button class="btn btn-sm btn-danger" style="margin-top:10px;width:100%" onclick="simStopAll()">&#9646;&#9646; Stop All</button>
+  </div>
+
   <div class="card">
     <div class="section-lbl" style="margin-bottom:8px">Set Date &amp; Time</div>
     <div style="font-size:13px;color:#667788;margin-bottom:16px">Set the current date and time for the app. The clock advances normally from whatever you set.</div>
