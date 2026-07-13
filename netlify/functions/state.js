@@ -143,13 +143,8 @@ exports.handler = async (event) => {
   const sql = getDb();
 
   try {
-    // One-time migration: alter committee_requests.id from INTEGER to BIGINT
-    // Needed because request IDs are now epoch ms timestamps (13 digits, > INT max)
-    try {
-      await sql`ALTER TABLE committee_requests ALTER COLUMN id TYPE BIGINT USING id::BIGINT`;
-    } catch(e) {
-      // Ignore — already BIGINT or table doesn't exist
-    }
+    // One-time migration: ensure committee_requests.id is BIGINT
+    try { await sql`ALTER TABLE committee_requests ALTER COLUMN id TYPE BIGINT USING id::BIGINT`; } catch(e) {}
 
     // GET — load full state
     if (event.httpMethod === 'GET') {
@@ -355,8 +350,7 @@ exports.handler = async (event) => {
           const err = validateRequest(r);
           if (err) return { statusCode: 400, headers, body: JSON.stringify({ error: err }) };
         }
-        // batchMode: true = upsert only (no delete) — used for chunked saves and migrations
-        // batchMode: false/undefined = full replace (delete all then insert)
+        // batchMode: true = upsert only, no delete
         if (!body.batchMode) {
           await sql`DELETE FROM committee_requests`;
         }
