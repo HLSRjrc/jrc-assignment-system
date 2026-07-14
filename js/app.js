@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4558,7 +4558,7 @@ function renderRequests(){
     if(dfrom || dto){
       var dateMatch = !r.shifts || r.shifts.length === 0;
       if(r.shifts) dateMatch = r.shifts.some(function(s){
-        if(s.all20 || s.all_20) return true;
+        if(s.all20 || s.all_20 || s.all20==='true' || s.all_20==='true') return true;
         // Normalize date to YYYY-MM-DD for comparison
         var sd = (s.date||'').trim();
         // Handle M/D/YYYY format
