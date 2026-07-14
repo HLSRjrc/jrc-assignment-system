@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4129,7 +4129,7 @@ function submitRequest(){
   } } // end showtime; end preshow block
 
   var req = {
-    id: requestIdCounter++,
+    id: Date.now(),
     submittedAt: new Date().toISOString(),
     status: 'pending',
     name:name, chair:chair, chairPhone:chairPhone, chairEmail:chairEmail,
@@ -4141,11 +4141,24 @@ function submitRequest(){
   committeeRequests.unshift(req);
 
   // Save to Neon immediately
+  var reqMsg = document.getElementById('rf-submit-msg');
   fetch('/.netlify/functions/state', {
     method: 'POST',
     headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
     body: JSON.stringify({committeeRequests:[req], batchMode:true})
-  }).catch(function(e){ console.warn('Request save failed:', e.message); });
+  }).then(function(r){
+    if(!r.ok){
+      r.text().then(function(t){
+        console.error('[JRC] Request save HTTP error:', r.status, t);
+        if(reqMsg) reqMsg.innerHTML += '<div style="color:#CC0000;font-size:12px;margin-top:4px">Warning: save error ' + r.status + ' — ' + t.slice(0,80) + '</div>';
+      });
+    } else {
+      console.log('[JRC] Request saved to Neon ok, id:', req.id);
+    }
+  }).catch(function(e){
+    console.warn('[JRC] Request save failed:', e.message);
+    if(reqMsg) reqMsg.innerHTML += '<div style="color:#CC0000;font-size:12px;margin-top:4px">Warning: could not connect to save request.</div>';
+  });
 
   msg.innerHTML = '<div class="alert alert-success">Request submitted! The JRC scheduling team will review it shortly.</div>';
 
@@ -4356,6 +4369,28 @@ var _reqFilterStatus = 'all';
 var _reqFilterNames  = [];
 var _reqFilterDate   = '';
 
+
+function reqStatusChange(sel){
+  _reqFilterStatus = sel.value || 'all';
+  renderRequests();
+}
+
+function reqCommitteeChange(sel){
+  _reqFilterNames = sel.value ? [sel.value] : [];
+  renderRequests();
+}
+
+function _populateReqCommitteeDropdown(){
+  var sel = document.getElementById('req-committee-select');
+  if(!sel) return;
+  var current = sel.value;
+  var names = {};
+  committeeRequests.forEach(function(r){ if(r.name) names[r.name]=true; });
+  var sorted = Object.keys(names).sort();
+  sel.innerHTML = '<option value="">All Committees</option>' +
+    sorted.map(function(n){ return '<option value="'+n+'"'+(n===current?' selected':'')+'>'+n+'</option>'; }).join('');
+}
+
 function reqChipClick(btn){
   var status = btn.getAttribute('data-status');
   _reqFilterStatus = (btn.classList.contains('active') && status !== 'all') ? 'all' : status;
@@ -4468,12 +4503,10 @@ function updateReqFilterSummary(){
 
 function reqClearFilters(){
   _reqFilterStatus='all'; _reqFilterNames=[]; _reqFilterDate='';
-  document.querySelectorAll('.req-chip[data-status]').forEach(function(b){
-    b.classList.toggle('active', b.getAttribute('data-status')==='all');
-  });
+  var ss=document.getElementById('req-status-select'); if(ss) ss.value='all';
+  var sc=document.getElementById('req-committee-select'); if(sc) sc.value='';
   var sd=document.getElementById('req-search-date'); if(sd) sd.value='';
-  var si=document.getElementById('req-name-search'); if(si) si.value='';
-  updateReqNameDisplay(); updateReqFilterSummary(); renderRequests();
+  updateReqFilterSummary(); renderRequests();
 }
 
 function refreshRequests(){
@@ -4493,7 +4526,7 @@ function refreshRequests(){
         var maxId = committeeRequests.reduce(function(m,r){ return Math.max(m,r.id||0);},0);
         if(maxId >= requestIdCounter) requestIdCounter = maxId+1;
       }
-      renderRequests(); updateReqFilterSummary();
+      _populateReqCommitteeDropdown(); renderRequests(); updateReqFilterSummary();
       if(btn){ btn.disabled=false; btn.textContent='↻ Refresh'; }
     })
     .catch(function(){
