@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 22;  // Major version — milestone releases
-var APP_BUILD   = 2;  // Minor build — increments every small change
+var APP_BUILD   = 1;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -383,8 +383,10 @@ function applySimDate(){
   var label = h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
   document.getElementById('sim-status').innerHTML = 'Set to <strong>' + fmtDate(d) + ' at ' + label + '</strong> &mdash; advancing from this point';
   updateHeaderDate();
-  onSetupDateChange();
+  // Auto-load slots for the new date into dashboard
+  _loadSlotsForDate(d);
   renderOfficer();
+  renderSetup();
   updateBoardClock();
   saveStateNow();
 }
@@ -3572,18 +3574,17 @@ function editCustomSlot(slotId){
 
 function _loadSlotsForDate(date){
   if(!date) return;
-  // Determine what date the current slots belong to
-  var loadedDate = window._activeSlotsDate || currentDate || '';
-  // If slots exist but from a different date — clear them
-  if(activeSlots.length > 0 && loadedDate && loadedDate !== date){
+  console.log('[JRC] _loadSlotsForDate:', date, 'activeSlots:', activeSlots.length, 'committeeRequests:', committeeRequests.length, '_activeSlotsDate:', window._activeSlotsDate);
+  // If already loaded for this date, skip
+  if(window._activeSlotsDate === date && activeSlots.length > 0){ console.log('[JRC] already loaded, skipping'); return; }
+  // Clear any existing slots (different date)
+  if(activeSlots.length > 0){
     activeSlots = [];
     onShiftSlots = new Set();
     onShiftJuniors = new Set();
     juniors.forEach(function(j){ j.assignment = null; });
-    window._activeSlotsDate = '';
   }
-  // Skip if already loaded for this exact date
-  if(window._activeSlotsDate === date && activeSlots.length > 0) return;
+  window._activeSlotsDate = '';
   var slots = SCHEDULE_2026[date] ? SCHEDULE_2026[date].slice() : [];
   committeeRequests.filter(function(r){
     return r.status==='approved' && !r.virtual &&
@@ -3599,7 +3600,9 @@ function _loadSlotsForDate(date){
     if(already) return;
     activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap||s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
   });
-  window._activeSlotsDate = date; // track which date is currently loaded
+  if(activeSlots.length > 0){
+    window._activeSlotsDate = date; // only stamp if slots actually loaded
+  }
 }
 
 function activateShift(){
