@@ -16,8 +16,8 @@ var activePickShift = null;
 var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
-var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_VERSION = 22;  // Major version — milestone releases
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3569,10 +3569,18 @@ function editCustomSlot(slotId){
 
 
 function _loadSlotsForDate(date){
-  // Load all approved slots for a date into activeSlots (skip if already loaded for this date)
   if(!date) return;
-  var alreadyLoaded = activeSlots.some(function(s){ return s.shift; });
-  if(alreadyLoaded) return; // don't overwrite existing slots
+  // If slots exist but they're from a different date, clear them first
+  var loadedDate = window._activeSlotsDate || '';
+  if(loadedDate && loadedDate !== date && activeSlots.length > 0){
+    // Different day — wipe old slots and assignments
+    activeSlots = [];
+    onShiftSlots = new Set();
+    onShiftJuniors = new Set();
+    juniors.forEach(function(j){ j.assignment = null; });
+  }
+  // Skip if already loaded for this exact date
+  if(window._activeSlotsDate === date && activeSlots.length > 0) return;
   var slots = SCHEDULE_2026[date] ? SCHEDULE_2026[date].slice() : [];
   committeeRequests.filter(function(r){
     return r.status==='approved' && !r.virtual &&
@@ -3588,6 +3596,7 @@ function _loadSlotsForDate(date){
     if(already) return;
     activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap||s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
   });
+  window._activeSlotsDate = date; // track which date is currently loaded
 }
 
 function activateShift(){
@@ -3771,7 +3780,7 @@ function doPersonalLogin(){
       return;
     }
     // Default: give basic access (kiosk + status board)
-    role = 'mentor';
+    role = 'junior'; // default: kiosk only if no role assigned
   }
 
   // Success — store who logged in
@@ -3779,18 +3788,12 @@ function doPersonalLogin(){
   try { localStorage.setItem('jrc_logged_adult', JSON.stringify({id:adult.id, name:adult.name, role:role})); } catch(e){}
 
   if(role === 'admin'){
-    // Admin sees full role picker
+    // Admin only: sees role picker to choose which hat to wear
     document.getElementById('personal-login').style.display = 'none';
     document.getElementById('role-select').style.display = 'block';
-  } else if(role === 'mentor'){
-    // Mentor goes straight to kiosk
-    loggedInAdult = adult;
-    try { localStorage.setItem('jrc_logged_adult', JSON.stringify({id:adult.id, name:adult.name, role:role})); } catch(e){}
-    document.getElementById('personal-login').style.display = 'none';
-    loginAs('mentor');
-    return;
   } else {
-    // Everyone else goes straight to their dashboard
+    // Everyone else — straight to their assigned tabs, no role picker
+    document.getElementById('personal-login').style.display = 'none';
     loginAs(role);
   }
 }
@@ -6426,9 +6429,10 @@ function _titleToRole(title){
   if(!title) return null;
   var t = title.toLowerCase().trim();
   if(t.indexOf('admin') >= 0 || t.indexOf('president') >= 0 || t.indexOf('chairman') >= 0 || t.indexOf('chair') >= 0) return 'admin';
-  if(t.indexOf('shift officer') >= 0 || t.indexOf('shift ofcr') >= 0) return 'officer';
+  if(t.indexOf('vice') >= 0 || t.indexOf('slt') >= 0 || t.indexOf(' vc') >= 0) return 'slt';
+  if(t.indexOf('shift officer') >= 0 || t.indexOf('shift ofcr') >= 0 || t.indexOf('officer') >= 0) return 'officer';
   if(t.indexOf('schedul') >= 0) return 'scheduling';
-  if(t.indexOf('mentor') >= 0) return 'mentor';
+  if(t.indexOf('junior') >= 0 || t.indexOf('committeeman') >= 0) return 'junior';
   return null;
 }
 
