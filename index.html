@@ -63,7 +63,20 @@ if(window.location.search.indexOf('partner=1') >= 0){
         <div class="role-icon" style="background:transparent;padding:4px"><img src="/assets/icon-shift-officer.png" style="width:40px;height:40px;object-fit:contain"></div>
         <div>
           <div class="role-name">Administrator</div>
-          <div class="role-desc">Full access &mdash; all tabs, roster, committee library, settings</div>
+          <div class="role-desc">Full access &mdash; all tabs including settings</div>
+        </div>
+      </button>
+      <button class="role-btn" onclick="selectRole('slt')">
+        <div class="role-icon" style="background:transparent;padding:4px">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="34" height="34" fill="none" stroke="var(--navy)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="24" cy="14" r="8" fill="none"/>
+            <path d="M8 40c0-8.8 7.2-16 16-16s16 7.2 16 16"/>
+            <line x1="32" y1="8" x2="40" y2="4"/><line x1="36" y1="14" x2="44" y2="14"/>
+          </svg>
+        </div>
+        <div>
+          <div class="role-name">VC / SLT</div>
+          <div class="role-desc">All tabs except settings &mdash; can modify shift setup</div>
         </div>
       </button>
       <button class="role-btn" onclick="selectRole('officer')">
@@ -81,7 +94,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
         </div>
         <div>
           <div class="role-name">Shift Officer</div>
-          <div class="role-desc">Kiosk, officer dashboard &amp; shift setup only</div>
+          <div class="role-desc">Dashboard, checkins, roster, status board, hours &amp; submit request</div>
         </div>
       </button>
       <button class="role-btn" onclick="selectRole('scheduling')">
@@ -102,8 +115,15 @@ if(window.location.search.indexOf('partner=1') >= 0){
           </svg>
         </div>
         <div>
-          <div class="role-name">Scheduling</div>
-          <div class="role-desc">Committee requests &amp; approvals</div>
+          <div class="role-name">Scheduling Team</div>
+          <div class="role-desc">Submit requests &amp; review approvals</div>
+        </div>
+      </button>
+      <button class="role-btn" onclick="selectRole('junior')">
+        <div class="role-icon" style="background:transparent;padding:2px;width:44px;height:44px;display:flex;align-items:center;justify-content:center"><img src="/assets/jrc-logo-navy.png" style="width:36px;height:auto" alt="JRC"></div>
+        <div>
+          <div class="role-name">Junior Committeeman</div>
+          <div class="role-desc">Kiosk check-in only</div>
         </div>
       </button>
       <button class="role-btn" onclick="selectRole('board')">
@@ -590,7 +610,11 @@ if(window.location.search.indexOf('partner=1') >= 0){
       <option value="">All Committees</option>
     </select>
 
-    <input type="date" id="req-search-date" class="finput" oninput="reqFilterUpdate()" style="font-size:13px;width:150px" title="Filter by date">
+    <div style="display:flex;align-items:center;gap:4px">
+      <input type="date" id="req-date-from" class="finput" oninput="reqFilterUpdate()" style="font-size:13px;width:140px" title="From date">
+      <span style="color:#667788;font-size:12px">to</span>
+      <input type="date" id="req-date-to" class="finput" oninput="reqFilterUpdate()" style="font-size:13px;width:140px" title="To date">
+    </div>
 
     <button id="req-refresh-btn" class="btn btn-sm" style="border-color:var(--navy);color:var(--navy);white-space:nowrap" onclick="refreshRequests()">&#8635; Refresh</button>
     <button onclick="reqClearFilters()" class="btn btn-sm" style="color:#667788;white-space:nowrap">&#x2715; Clear</button>
@@ -603,6 +627,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
   <div id="req-name-wrap" style="display:none"></div>
   <div id="req-name-dropdown" style="display:none"></div>
   <input id="req-name-search" style="display:none">
+  <input id="req-search-date" style="display:none">
   <div id="req-name-options" style="display:none"></div>
   <div id="req-name-display" style="display:none"><span id="req-name-placeholder"></span></div>
   <div id="req-filter-summary" style="display:none"><span id="req-filter-summary-text"></span></div>
