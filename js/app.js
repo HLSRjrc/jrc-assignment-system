@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3094,7 +3094,11 @@ function renderSetupApproved(){
 // SCHEDULE_2026 → committeeRequests ONE-TIME MIGRATION
 // ============================================================
 function hasMigratedSchedule(){
-  return committeeRequests.some(function(r){ return r.source === 'schedule_2026'; });
+  // Count expected records from SCHEDULE_2026
+  var expected = 0;
+  Object.keys(SCHEDULE_2026).forEach(function(d){ expected += SCHEDULE_2026[d].length; });
+  var actual = committeeRequests.filter(function(r){ return r.source === 'schedule_2026'; }).length;
+  return actual >= expected * 0.9; // 90% threshold to handle minor discrepancies
 }
 
 function migrateSchedule2026(){
