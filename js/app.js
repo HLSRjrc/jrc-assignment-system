@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 22;  // Major version — milestone releases
-var APP_BUILD   = 2;  // Minor build — increments every small change
+var APP_BUILD   = 1;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -743,7 +743,7 @@ function renderNotesQueue(){
   // Notes queue only shows NON-age-out juniors who left a note.
   // Age-outs with notes: their note is surfaced inside the age-out pick panel instead.
   var ci = juniors.filter(function(j){
-    return j.checkedIn && j.notes && j.notes.length > 0 && !j.ageout;
+    return j.checkedIn && !clockedOut[j.id] && j.notes && j.notes.length > 0 && !j.ageout;
   });
   if(ci.length === 0){ el.style.display='none'; el.innerHTML=''; return; }
   el.style.display='block';
@@ -759,7 +759,7 @@ function renderNotesQueue(){
   var doneCount = handled.length;
 
   var html = '<div class="notes-card">' +
-    '<div class="notes-card-title" style="cursor:pointer;user-select:none" onclick="toggleNotesCollapse()">' +
+    '<div class="notes-card-title" style="cursor:pointer;user-select:none;display:flex;align-items:center" onclick="toggleNotesCollapse()">' +
       '<span>&#9432; Additional Info Queue</span>' +
       '<span style="font-weight:400;color:#4A6CF7;text-transform:none;letter-spacing:0">' + doneCount + ' of ' + ci.length + ' reviewed</span>' +
       '<span style="margin-left:auto;font-size:11px;font-weight:400;color:#' + (pending.length === 0 ? '155724' : '2A3DB5') + '">' +
@@ -1219,14 +1219,20 @@ function removeFromAoQueue(jid){
   showAlert(jr.name.split(',')[0] + ' removed from queue.', 'info');
 }
 
+var _pickReturnShift = null; // shift to return to after age-out pick
 function openPickForShift(jid, shift){
+  _pickReturnShift = currentShift; // remember where we came from
   activePick = jid + '_' + shift;
   activePickShift = shift;
-  // Switch to correct shift tab so that shift's slots are visible for picking
   currentShift = shift;
   renderOfficer();
 }
-function closePick(){ activePick = null; activePickShift = null; renderOfficer(); }
+function closePick(){
+  activePick = null; activePickShift = null;
+  // Return to the shift we came from after picking for an age-out
+  if(_pickReturnShift){ currentShift = _pickReturnShift; _pickReturnShift = null; }
+  renderOfficer();
+}
 
 function pickSlot(jid, slotId){
   var realJid = jid.split('_')[0]; // strip shift suffix if present
@@ -1966,10 +1972,8 @@ function adminClockOut(jid){
   if(!confirm('Clock out ' + jr.name + '? This will remove them from the queue and any assignment.')) return;
   clockedOut[jr.id] = true;
   jr.assignment = null;
-  // Remove from any active slots (both numeric and string id forms)
-  activeSlots.forEach(function(s){
-    s.assigned = s.assigned.filter(function(id){ return String(id) !== String(jid); });
-  });
+  // Note: keep in slot.assigned so they show with strikethrough on dashboard
+  // Only remove from onShiftJuniors (tracking who is physically out)
   onShiftJuniors.delete(jr.id);
   onShiftJuniors.delete(String(jr.id));
   dirtyJuniors.add(jr.id);
@@ -5117,6 +5121,17 @@ function manualClockOut(jid, skipConfirm){
   saveStateNow();
 }
 
+function markAllSent(){
+  var toSend = activeSlots.filter(function(s){
+    return s.shift === currentShift &&
+           s.assigned.length > 0 &&
+           !onShiftSlots.has(String(s.id));
+  });
+  if(!toSend.length){ showAlert('No assigned committees to send.', 'info'); return; }
+  toSend.forEach(function(s){ markSent(s.id); });
+  showAlert(toSend.length + ' committee' + (toSend.length!==1?'s':'') + ' sent to assignments.', 'success');
+}
+
 function markSent(slotId){
   var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
   if(!sl) return;
@@ -5805,10 +5820,11 @@ var headerClockTimer = null;
 
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
+  var isTV = document.documentElement.classList.contains('tv-mode');
+  var interval = isTV ? 5000 : 180000; // TV: 5s, normal: 3min
   pollTimer = setInterval(function(){
-    // Only poll when tab is visible — saves ~70% of idle function calls
     if(!document.hidden) pollForUpdates();
-  }, 180000);
+  }, interval);
   if(headerClockTimer) clearInterval(headerClockTimer);
   headerClockTimer = setInterval(function(){ updateHeaderClock(); updateBoardClock(); }, 1000); // 1s for seconds display
 
