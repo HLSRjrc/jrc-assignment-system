@@ -4368,6 +4368,8 @@ function toggleReqRow(key){
 var _reqFilterStatus = 'all';
 var _reqFilterNames  = [];
 var _reqFilterDate   = '';
+var _reqFilterDateFrom = '';
+var _reqFilterDateTo   = '';
 
 
 function reqStatusChange(sel){
@@ -4484,7 +4486,9 @@ function updateReqNameDisplay(){
 }
 
 function reqFilterUpdate(){
-  _reqFilterDate = (document.getElementById('req-search-date')||{}).value||'';
+  _reqFilterDate     = (document.getElementById('req-search-date')||{}).value||'';
+  _reqFilterDateFrom = (document.getElementById('req-date-from')||{}).value||'';
+  _reqFilterDateTo   = (document.getElementById('req-date-to')||{}).value||'';
   renderRequests();
   updateReqFilterSummary();
 }
@@ -4506,6 +4510,9 @@ function reqClearFilters(){
   var ss=document.getElementById('req-status-select'); if(ss) ss.value='all';
   var sc=document.getElementById('req-committee-select'); if(sc) sc.value='';
   var sd=document.getElementById('req-search-date'); if(sd) sd.value='';
+  var df=document.getElementById('req-date-from'); if(df) df.value='';
+  var dt=document.getElementById('req-date-to'); if(dt) dt.value='';
+  _reqFilterDateFrom=''; _reqFilterDateTo='';
   updateReqFilterSummary(); renderRequests();
 }
 
@@ -4545,12 +4552,25 @@ function renderRequests(){
     }
     // Committee name filter
     if(_reqFilterNames.length && _reqFilterNames.indexOf(r.name) < 0) return false;
-    // Date filter
-    if(_reqFilterDate){
-      var dateMatch = r.shifts && r.shifts.some(function(s){
-        if(s.all20) return true;
-        if(s.virtual) return _reqFilterDate>=(s.date||'') && _reqFilterDate<=(s.endDate||s.date||'');
-        return s.date === _reqFilterDate;
+    // Date range filter
+    var dfrom = _reqFilterDateFrom || _reqFilterDate;
+    var dto   = _reqFilterDateTo   || _reqFilterDate;
+    if(dfrom || dto){
+      var dateMatch = !r.shifts || r.shifts.length === 0;
+      if(r.shifts) dateMatch = r.shifts.some(function(s){
+        if(s.all20 || s.all_20) return true;
+        // Normalize date to YYYY-MM-DD for comparison
+        var sd = (s.date||'').trim();
+        // Handle M/D/YYYY format
+        if(sd.indexOf('/') >= 0){
+          var parts = sd.split('/');
+          if(parts.length === 3) sd = parts[2].padStart(4,'0')+'-'+parts[0].padStart(2,'0')+'-'+parts[1].padStart(2,'0');
+        }
+        if(s.virtual || s.preshow){
+          var se = (s.endDate||s.end_date||sd).trim();
+          return (!dto || sd <= dto) && (!dfrom || se >= dfrom);
+        }
+        return (!dfrom || sd >= dfrom) && (!dto || sd <= dto);
       });
       if(!dateMatch) return false;
     }
