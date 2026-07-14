@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 22;  // Major version — milestone releases
-var APP_BUILD   = 2;  // Minor build — increments every small change
+var APP_BUILD   = 1;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -3820,10 +3820,14 @@ function loginAs(role){
   currentRole = role;
 
   // Persist login so refresh doesn't log out
+  // Exception: TV/board/kiosk modes don't save to localStorage — they shouldn't
+  // override another user's session in the same browser
   try {
-    var sessionExpiry = Date.now() + (8 * 60 * 60 * 1000);
-    localStorage.setItem('jrc_saved_role', role);
-    localStorage.setItem('jrc_session_expiry', String(sessionExpiry));
+    if(role !== 'board' && role !== 'kiosk'){
+      var sessionExpiry = Date.now() + (8 * 60 * 60 * 1000);
+      localStorage.setItem('jrc_saved_role', role);
+      localStorage.setItem('jrc_session_expiry', String(sessionExpiry));
+    }
   } catch(e){{}}
 
   // Hide login, show app
