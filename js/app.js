@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2293,6 +2293,8 @@ function initSetupDatePicker(){
   });
   sel.appendChild(optgroup2027);
 
+  // Restore previously selected date
+  if(current) sel.value = current;
 }
 
 function isShow2026Date(d){ return !!SCHEDULE_2026[d]; }
@@ -2350,7 +2352,12 @@ function onSetupDateChange(){
     juniors.forEach(function(j){ j.assignment = null; });
     var brEl = document.getElementById('bulk-result'); if(brEl) brEl.textContent = '';
   }
-  // Note: we do NOT update currentDate or header here — only activateShift does that
+  // Auto-load slots for this date if none loaded yet
+  if(date && date !== prevSetupDate){
+    currentDate = date;
+    _loadSlotsForDate(date);
+  }
+  // Note: currentDate updated above; activateShift also updates it
   var prev = document.getElementById('setup-date-slots-preview');
   if(!prev) return;
   if(!date){ prev.style.display='none'; prev.innerHTML=''; return; }
@@ -3473,7 +3480,7 @@ function renderSetup(){
         ['8am','12pm','4pm'].map(function(sh){ return '<option value="' + sh + '"' + (s.shift === sh ? ' selected' : '') + '>' + SL[sh] + '</option>'; }).join('') +
       '</select>' +
       '<label style="font-size:12px;display:flex;align-items:center;gap:4px;color:#667788;justify-content:center"><input type="checkbox" id="cs-hat-' + sid + '" ' + (s.hat ? 'checked' : '') + ' onchange="activeSlots[' + i + '].hat=this.checked"> Hat</label>' +
-      '<button class="btn btn-sm btn-danger" onclick="activeSlots=activeSlots.filter(function(x){return String(x.id)!==String(' + sid + ')});renderSetup();saveState()">Remove</button>' +
+      (currentRole==='admin'||currentRole==='slt' ? '<button class="btn btn-sm btn-danger" onclick="activeSlots=activeSlots.filter(function(x){return String(x.id)!==String(' + sid + ')});renderSetup();saveState()">Remove</button>' : '') +
       '</div>' + contactSection +
     '</div>';
   }).join('');
@@ -3560,6 +3567,29 @@ function editCustomSlot(slotId){
   renderSetup();
 }
 
+
+function _loadSlotsForDate(date){
+  // Load all approved slots for a date into activeSlots (skip if already loaded for this date)
+  if(!date) return;
+  var alreadyLoaded = activeSlots.some(function(s){ return s.shift; });
+  if(alreadyLoaded) return; // don't overwrite existing slots
+  var slots = SCHEDULE_2026[date] ? SCHEDULE_2026[date].slice() : [];
+  committeeRequests.filter(function(r){
+    return r.status==='approved' && !r.virtual &&
+      r.shifts && r.shifts.some(function(s){ return !s.virtual && (s.date===date || s.all20); });
+  }).forEach(function(r){
+    r.shifts.filter(function(s){ return !s.virtual && (s.date===date || s.all20); }).forEach(function(s){
+      var exists = slots.some(function(x){ return x.name===r.name && x.shift===(s.shift||'8am'); });
+      if(!exists) slots.push({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false});
+    });
+  });
+  slots.forEach(function(s){
+    var already = activeSlots.some(function(a){ return a.name===s.name && a.shift===s.shift; });
+    if(already) return;
+    activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap||s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
+  });
+}
+
 function activateShift(){
   // Validate required fields on custom slots before activating
   var missing = [];
@@ -3624,17 +3654,23 @@ function activateShift(){
 //   kiosk:   0000  (no PIN needed — just tap Enter or the button)
 // ============================================================
 var API_TOKEN  = '__API_SECRET__'; // replaced at build time by netlify
-var ROLE_LABELS = { admin:'Administrator', officer:'Shift Officer', scheduling:'Scheduling', mentor:'Mentor', kiosk:'Kiosk Mode', board:'Status Board' };
+var ROLE_LABELS = { admin:'Administrator', slt:'VC / SLT', officer:'Shift Officer', scheduling:'Scheduling Team', junior:'Junior Committeeman', kiosk:'Kiosk Mode', board:'Status Board' };
 
 // Tabs each role can see
 var ROLE_TABS = {
-  admin:       ['officer','kiosk','checkins','roster','setup','requests','reqform','simulate','board','hours'],
-  slt:         ['officer','kiosk','checkins','roster','setup','board','hours'],
-  officer:     ['officer','setup','kiosk','checkins','roster','board'],
-  scheduling:  ['reqform','requests','setup'],
-  mentor:      ['kiosk','board'],
-  kiosk:       ['kiosk'],
-  board:       ['board']
+  // Admin — every tab
+  admin:      ['officer','kiosk','checkins','roster','setup','requests','reqform','simulate','board','hours'],
+  // SLT/VC — everything except settings (simulate)
+  slt:        ['officer','kiosk','checkins','roster','setup','requests','reqform','board','hours'],
+  // Shift Officer — dashboard, roster, checkins, status board, hours, submit request
+  officer:    ['officer','kiosk','checkins','roster','board','hours','reqform'],
+  // Scheduling Team — submit request + requests tab
+  scheduling: ['reqform','requests'],
+  // Junior Committeeman — kiosk only
+  junior:     ['kiosk'],
+  // System roles
+  kiosk:      ['kiosk'],
+  board:      ['board']
 };
 
 var currentRole = null;
@@ -5685,6 +5721,8 @@ function _applyState(data){
     // Update setup-date picker so board/preview reflect correct date
     var sdEl = document.getElementById('setup-date');
     if(sdEl && state.currentDate) sdEl.value = state.currentDate;
+    // Auto-load slots for this date if none in state
+    if(!activeSlots.length) _loadSlotsForDate(state.currentDate);
   }
   if(state.currentShift)   currentShift   = state.currentShift;
   if(state.checkInOrder)   checkInOrder   = state.checkInOrder;
@@ -5894,11 +5932,12 @@ function renderUserMgmt(){
   if(!adults.length){ el.innerHTML = '<div style="color:#999;font-size:13px">No adults loaded yet. Import a roster first.</div>'; return; }
 
   var roleOpts = [
-    {val:'', lbl:'-- No Access (uses title default if set) --'},
+    {val:'', lbl:'-- No Access --'},
     {val:'admin', lbl:'Administrator (all tabs)'},
-    {val:'slt', lbl:'SLT (dashboard, kiosk, check-ins, roster, setup, board, hours)'},
-    {val:'officer', lbl:'Shift Officer'},
-    {val:'scheduling', lbl:'Scheduler (requests + partner)'}
+    {val:'slt', lbl:'VC / SLT (all except settings)'},
+    {val:'officer', lbl:'Shift Officer (dashboard, checkins, roster, board, hours, submit request)'},
+    {val:'scheduling', lbl:'Scheduling Team (submit request + requests tab)'},
+    {val:'junior', lbl:'Junior Committeeman (kiosk only)'}
   ];
 
   var html = '<table style="width:100%;border-collapse:collapse;font-size:13px">' +
