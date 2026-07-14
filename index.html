@@ -3569,10 +3569,18 @@ function editCustomSlot(slotId){
 
 
 function _loadSlotsForDate(date){
-  // Load all approved slots for a date into activeSlots (skip if already loaded for this date)
   if(!date) return;
-  var alreadyLoaded = activeSlots.some(function(s){ return s.shift; });
-  if(alreadyLoaded) return; // don't overwrite existing slots
+  // If slots exist but they're from a different date, clear them first
+  var loadedDate = window._activeSlotsDate || '';
+  if(loadedDate && loadedDate !== date && activeSlots.length > 0){
+    // Different day — wipe old slots and assignments
+    activeSlots = [];
+    onShiftSlots = new Set();
+    onShiftJuniors = new Set();
+    juniors.forEach(function(j){ j.assignment = null; });
+  }
+  // Skip if already loaded for this exact date
+  if(window._activeSlotsDate === date && activeSlots.length > 0) return;
   var slots = SCHEDULE_2026[date] ? SCHEDULE_2026[date].slice() : [];
   committeeRequests.filter(function(r){
     return r.status==='approved' && !r.virtual &&
@@ -3588,6 +3596,7 @@ function _loadSlotsForDate(date){
     if(already) return;
     activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap||s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
   });
+  window._activeSlotsDate = date; // track which date is currently loaded
 }
 
 function activateShift(){
