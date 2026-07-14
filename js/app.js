@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 22;  // Major version — milestone releases
-var APP_BUILD   = 2;  // Minor build — increments every small change
+var APP_BUILD   = 1;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -2352,10 +2352,12 @@ function onSetupDateChange(){
     juniors.forEach(function(j){ j.assignment = null; });
     var brEl = document.getElementById('bulk-result'); if(brEl) brEl.textContent = '';
   }
-  // Auto-load slots for this date if none loaded yet
+  // Auto-load slots for this date — clears stale slots from other dates
   if(date && date !== prevSetupDate){
     currentDate = date;
     _loadSlotsForDate(date);
+    _lastSavedHash = '';
+    saveState();
   }
   // Note: currentDate updated above; activateShift also updates it
   var prev = document.getElementById('setup-date-slots-preview');
@@ -3570,14 +3572,15 @@ function editCustomSlot(slotId){
 
 function _loadSlotsForDate(date){
   if(!date) return;
-  // If slots exist but they're from a different date, clear them first
-  var loadedDate = window._activeSlotsDate || '';
-  if(loadedDate && loadedDate !== date && activeSlots.length > 0){
-    // Different day — wipe old slots and assignments
+  // Determine what date the current slots belong to
+  var loadedDate = window._activeSlotsDate || currentDate || '';
+  // If slots exist but from a different date — clear them
+  if(activeSlots.length > 0 && loadedDate && loadedDate !== date){
     activeSlots = [];
     onShiftSlots = new Set();
     onShiftJuniors = new Set();
     juniors.forEach(function(j){ j.assignment = null; });
+    window._activeSlotsDate = '';
   }
   // Skip if already loaded for this exact date
   if(window._activeSlotsDate === date && activeSlots.length > 0) return;
@@ -5693,6 +5696,8 @@ function _applyState(data){
         highPriority: s.high_priority||s.highPriority||false,
       };
     });
+    // Stamp which date these slots belong to so date-change detection works
+    window._activeSlotsDate = state.currentDate || currentDate || '';
   } else {
     // Neon has no slots — try to recover from localStorage backup
     try {
