@@ -324,8 +324,8 @@ select.finput{cursor:pointer}
 .board-col-hdr.pending{color:#F5A623}
 
 /* Names */
-.board-name{font-size:16px;padding:2px 2px;color:#fff;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.board-name.out{color:#5CDB95;font-weight:600}
+.board-name{font-size:15px;padding:1px 2px;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.board-name.out{color:#5CDB95;font-weight:600;line-height:1.15}
 .board-name.pending{color:#F5A623;font-style:italic}
 .board-name.late{color:#FF6B6B;font-weight:700}
 .board-empty{font-size:12px;color:rgba(255,255,255,.3);font-style:italic;padding:2px 0}
@@ -341,7 +341,7 @@ select.finput{cursor:pointer}
 .board-out-inner.cols3{column-count:3}
 .board-out-inner.cols4{column-count:4}
 .board-out-inner.cols5{column-count:5}
-.board-committee-group{break-inside:avoid;margin-bottom:4px}
+.board-committee-group{break-inside:avoid;margin-bottom:3px}
 .board-committee-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--orange);margin-bottom:0;display:flex;align-items:center;gap:4px}
 .board-committee-label.late{color:#FF6B6B}
 .board-shift-divider{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#99BBDD;margin:4px 0 2px;padding-bottom:1px;border-bottom:1px solid rgba(255,255,255,.12);break-after:avoid}
@@ -373,7 +373,7 @@ select.finput{cursor:pointer}
 .tv-mode #board-date-lbl{font-size:clamp(12px,1.1vw,16px)}
 .tv-mode #board-clock{font-size:clamp(28px,3vw,48px)!important;font-weight:700}
 .tv-mode .board-body{height:calc(100vh - 62px) !important;overflow:hidden;grid-template-columns:200px 1fr !important}
-.tv-mode .board-name{font-size:clamp(20px,1.8vw,26px);padding:clamp(1px,.15vh,3px) 2px;line-height:1.2}
+.tv-mode .board-name{font-size:clamp(15px,1.4vw,20px);padding:clamp(1px,.12vh,2px) 2px;line-height:1.2}
 .tv-mode .board-col-hdr{font-size:clamp(10px,.9vw,14px)}
 .tv-mode .board-committee-label{font-size:clamp(9px,.85vw,12px)}
 .tv-mode .board-shift-pill{font-size:clamp(9px,.8vw,11px)}
@@ -765,7 +765,7 @@ body.board-tab-active #panel-board{
 }
 body.board-tab-active .board-wrap{height:100vh;overflow:hidden}
 body.board-tab-active .board-body{height:calc(100vh - 62px) !important;grid-template-columns:200px 1fr !important}
-body.board-tab-active .board-name{font-size:clamp(20px,1.8vw,26px);padding:clamp(1px,.15vh,3px) 2px;line-height:1.2}
+body.board-tab-active .board-name{font-size:clamp(15px,1.4vw,20px);padding:clamp(1px,.12vh,2px) 2px;line-height:1.2}
 body.board-tab-active .board-col-hdr{font-size:clamp(10px,.9vw,14px)}
 body.board-tab-active .board-committee-label{font-size:clamp(9px,.85vw,12px)}
 body.board-tab-active .board-shift-pill{font-size:clamp(9px,.8vw,11px)}
