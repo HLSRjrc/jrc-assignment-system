@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -70,14 +70,15 @@ function setSimTime(h, m, dateStr){
   var now = new Date();
   var target = dateStr ? new Date(dateStr + 'T00:00:00') : new Date();
   target.setHours(h, m, 0, 0);
-  simTimeOffset = target - now;
+  // Offset = how far ahead/behind sim time is from real time — stays constant forever
+  simTimeOffset = target.getTime() - now.getTime();
   simTimeEnabled = true;
   simDateSet = true;
-  // Store the absolute target epoch so other devices (TV) can reconstruct the offset correctly
-  simTargetEpoch = target.getTime();
-  // Persist sim settings to localStorage immediately — independent of Neon
+  simTargetEpoch = target.getTime(); // stored for reference only
+  // Persist the offset itself — never recalculate from simTargetEpoch on load
   try { localStorage.setItem('jrc_simstate', JSON.stringify({
-    simTimeEnabled: true, simTimeOffset: simTimeOffset,
+    simTimeEnabled: true,
+    simTimeOffset: simTimeOffset, // THIS is what we use — constant forever
     simTargetEpoch: simTargetEpoch,
     simDateSet: true, currentDate: currentDate, currentShift: currentShift
   })); } catch(e){}
@@ -5514,7 +5515,7 @@ function _restoreSimFromLocalStorage(){
     simDateSet     = sim.simDateSet     || false;
     if(sim.simTargetEpoch){
       simTargetEpoch = sim.simTargetEpoch;
-      simTimeOffset  = sim.simTargetEpoch - Date.now();
+      simTimeOffset  = sim.simTimeOffset !== undefined ? sim.simTimeOffset : (sim.simTargetEpoch - Date.now());
     } else {
       simTimeOffset  = sim.simTimeOffset || 0;
     }
@@ -5621,7 +5622,7 @@ function _applyState(data){
   if(state.prioritySlots) prioritySlots = state.prioritySlots;
   if(state.simTargetEpoch){
     simTargetEpoch = state.simTargetEpoch;
-    simTimeOffset  = state.simTargetEpoch - Date.now();
+      simTimeOffset  = state.simTimeOffset !== undefined ? state.simTimeOffset : (state.simTargetEpoch - Date.now());
   } else if(state.simTimeOffset !== undefined){
     simTimeOffset  = state.simTimeOffset;
   }
@@ -5730,17 +5731,16 @@ function pollForUpdates(){
         }
       });
       _applyState(data);
-      // Restore sim time — localStorage always wins
+      // Restore sim time — always use the offset that was set, never recalculate
       _restoreSimFromLocalStorage();
-      if(!simDateSet && (localSimDateSet || localSimEnabled)){
+      // Local sim state always wins over Neon (Neon just syncs it to other devices)
+      if(localSimEnabled || localSimDateSet){
         simTimeEnabled = localSimEnabled;
-        simTimeOffset  = localSimOffset;
+        simTimeOffset  = localSimOffset; // preserve the original offset
         simDateSet     = localSimDateSet;
         if(localCurrentDate)  currentDate  = localCurrentDate;
         if(localCurrentShift) currentShift = localCurrentShift;
       }
-      // Always restore date/shift if user explicitly set them
-      if(simDateSet){ currentDate = localCurrentDate; currentShift = localCurrentShift; }
       // Restore junior active state — local state wins for checked-in juniors
       juniors.forEach(function(j){
         var local = localJuniorState[j.id];
