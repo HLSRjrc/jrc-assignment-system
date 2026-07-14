@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4139,6 +4139,13 @@ function submitRequest(){
     schedulingNotes: ''
   };
   committeeRequests.unshift(req);
+
+  // Save to Neon immediately
+  fetch('/.netlify/functions/state', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
+    body: JSON.stringify({committeeRequests:[req], batchMode:true})
+  }).catch(function(e){ console.warn('Request save failed:', e.message); });
 
   msg.innerHTML = '<div class="alert alert-success">Request submitted! The JRC scheduling team will review it shortly.</div>';
 
