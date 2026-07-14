@@ -17,7 +17,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 21;  // Major version — milestone releases
-var APP_BUILD   = 52;  // Minor build — increments every small change
+var APP_BUILD   = 51;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -4477,7 +4477,12 @@ function refreshRequests(){
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(data && data.committeeRequests !== undefined){
-        committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
+        committeeRequests = data.committeeRequests.map(function(r){
+          // data column may be a string or already parsed object
+          if(r.data && typeof r.data === 'string'){ try{ return JSON.parse(r.data); }catch(e){ return r; } }
+          if(r.data && typeof r.data === 'object') return r.data;
+          return r;
+        });
         var maxId = committeeRequests.reduce(function(m,r){ return Math.max(m,r.id||0);},0);
         if(maxId >= requestIdCounter) requestIdCounter = maxId+1;
       }
@@ -4517,7 +4522,7 @@ function renderRequests(){
 
   if(!list.length){
     el.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--gray-400);font-size:14px">' +
-      (filter === 'pending' ? 'No pending requests. All caught up!' : 'No requests found.') +
+      (_reqFilterStatus === 'pending' ? 'No pending requests. All caught up!' : 'No requests match your filters.') +
     '</div>';
     return;
   }
@@ -5602,7 +5607,11 @@ function _applyState(data){
   if(state.userRoles) userRoles = state.userRoles;
   if(state.loginLog)  loginLog  = state.loginLog;
   if(data.committeeRequests && data.committeeRequests.length){
-    committeeRequests = data.committeeRequests.map(function(r){ return r.data||r; });
+    committeeRequests = data.committeeRequests.map(function(r){
+      if(r.data && typeof r.data === 'string'){ try{ return JSON.parse(r.data); }catch(e){ return r; } }
+      if(r.data && typeof r.data === 'object') return r.data;
+      return r;
+    });
   }
   if(state.clockedOut)    clockedOut    = state.clockedOut;
   if(state.onShiftJuniors) onShiftJuniors = new Set(state.onShiftJuniors);
