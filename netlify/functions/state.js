@@ -59,42 +59,71 @@ function validateRequest(r) {
   if (r.name.length > 300)     return 'request name too long';
   const validStatuses = ['pending', 'approved', 'rejected'];
   if (!validStatuses.includes(r.status)) return `request has invalid status: ${r.status}`;
+
+  // ── Security hardening: validate contact fields ───────────────────────────
+  // Email format check (basic — not a full RFC validator)
+  const EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
+  if (r.chairEmail && !EMAIL_RE.test(String(r.chairEmail))) return 'invalid chair email format';
+  if (r.liaisonEmail && !EMAIL_RE.test(String(r.liaisonEmail))) return 'invalid liaison email format';
+
+  // Phone: digits only, must be 10 (if provided)
+  if (r.chairPhone) {
+    const digits = String(r.chairPhone).replace(/\D/g, '');
+    if (digits.length !== 0 && digits.length !== 10) return 'chair phone must be 10 digits';
+  }
+  if (r.liaisonPhone) {
+    const digits = String(r.liaisonPhone).replace(/\D/g, '');
+    if (digits.length !== 0 && digits.length !== 10) return 'liaison phone must be 10 digits';
+  }
+
+  // Shifts array (if present)
+  if (r.shifts !== undefined) {
+    if (!isArray(r.shifts)) return 'request shifts must be an array';
+    if (r.shifts.length > 60) return 'too many shifts in one request';
+    const validShifts = ['8am', '12pm', '4pm'];
+    for (const s of r.shifts) {
+      if (!isObject(s)) return 'each shift must be an object';
+      if (!s.preshow && s.shift && !validShifts.includes(s.shift)) return `invalid shift value: ${s.shift}`;
+      if (s.cap !== undefined && (!isNumber(s.cap) || s.cap < 1 || s.cap > 100)) return 'shift cap out of range (1–100)';
+    }
+  }
+
   return null;
 }
 
 function validateStateKey(key, value) {
   if (!isString(key) || key.length === 0 || key.length > 100) return 'invalid state key';
-  // Value can be any JSON-serializable type — just check it's not enormous
   const serialized = JSON.stringify(value);
   if (serialized.length > 500000) return `state key "${key}" value too large`;
   return null;
 }
 
+// ── HONEYPOT CHECK ────────────────────────────────────────────────────────────
+// Partner form submissions include a honeypot field (website). Bots fill it; humans don't.
+// The field is checked here server-side for belt-and-suspenders protection.
+function isHoneypotTriggered(body) {
+  // If the partner honeypot field is present and non-empty, reject silently
+  if (body && body._hp_website && String(body._hp_website).length > 0) return true;
+  return false;
+}
 
 // ── RATE LIMITING ────────────────────────────────────────────────────────────
-// In-memory store — resets when the function cold-starts (fine for our use case)
-// Limits: 60 requests per IP per minute for normal use
-//         stricter 10 per minute for DELETE (destructive)
 const rateLimitStore = {};
 
 function isRateLimited(ip, method) {
   const now = Date.now();
-  const windowMs = 60 * 1000; // 1 minute window
+  const windowMs = 60 * 1000;
   const limits = { GET: 60, POST: 60, DELETE: 10 };
   const limit = limits[method] || 60;
 
   if (!rateLimitStore[ip]) rateLimitStore[ip] = [];
-
-  // Remove entries outside the current window
   rateLimitStore[ip] = rateLimitStore[ip].filter(t => now - t < windowMs);
 
   if (rateLimitStore[ip].length >= limit) return true;
-
   rateLimitStore[ip].push(now);
   return false;
 }
 
-// Clean up old IPs every 5 minutes to prevent memory leak
 setInterval(() => {
   const now = Date.now();
   const windowMs = 60 * 1000;
@@ -113,14 +142,14 @@ exports.handler = async (event) => {
     return { statusCode: 403, headers, body: JSON.stringify({ error: 'Forbidden' }) };
   }
 
-  // API token validation — reject requests without valid token
+  // API token validation
   const clientToken = event.headers && (event.headers['x-api-token'] || event.headers['X-Api-Token']);
   const validToken = process.env.API_SECRET;
   if (validToken && clientToken !== validToken) {
     return { statusCode: 401, headers, body: JSON.stringify({ error: 'Unauthorized' }) };
   }
 
-  // Rate limiting — get client IP from Netlify headers
+  // Rate limiting
   const clientIp = (event.headers && (
     event.headers['x-nf-client-connection-ip'] ||
     event.headers['x-forwarded-for'] ||
@@ -146,7 +175,7 @@ exports.handler = async (event) => {
     // One-time migration: ensure committee_requests.id is BIGINT
     try { await sql`ALTER TABLE committee_requests ALTER COLUMN id TYPE BIGINT USING id::BIGINT`; } catch(e) {}
 
-    // GET — load full state
+    // ── GET — load full state ─────────────────────────────────────────────────
     if (event.httpMethod === 'GET') {
       const [stateRows, juniorRows, adultRows, slotRows, reqRows] = await Promise.all([
         sql`SELECT key, value FROM app_state`,
@@ -159,6 +188,11 @@ exports.handler = async (event) => {
       const state = {};
       stateRows.forEach(r => { state[r.key] = r.value; });
 
+      // ── SECURITY: boardPin is NOT returned to clients ─────────────────────
+      // The board PIN lives only in BOARD_ACCESS_CODE env var and is validated
+      // server-side. Clients never need to read it; they send it for verification.
+      // Removed: config: { boardPin: process.env.BOARD_ACCESS_CODE || '' }
+
       return {
         statusCode: 200,
         headers,
@@ -167,15 +201,13 @@ exports.handler = async (event) => {
           juniors: juniorRows,
           adults: adultRows,
           activeSlots: slotRows,
-          committeeRequests: reqRows,
-          config: {
-            boardPin: process.env.BOARD_ACCESS_CODE || ''
-          }
+          committeeRequests: reqRows
+          // config intentionally omitted — no sensitive env vars to clients
         })
       };
     }
 
-    // POST — save state
+    // ── POST — save state ─────────────────────────────────────────────────────
     if (event.httpMethod === 'POST') {
       let body;
       try {
@@ -188,6 +220,12 @@ exports.handler = async (event) => {
         return { statusCode: 400, headers, body: JSON.stringify({ error: 'Body must be an object' }) };
       }
 
+      // ── SECURITY: Honeypot check for partner form submissions ─────────────
+      if (isHoneypotTriggered(body)) {
+        // Return 200 to fool bots — don't save anything
+        return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
+      }
+
       // Validate state keys
       if (body.state !== undefined) {
         if (!isObject(body.state)) {
@@ -197,6 +235,12 @@ exports.handler = async (event) => {
           const err = validateStateKey(key, value);
           if (err) return { statusCode: 400, headers, body: JSON.stringify({ error: err }) };
         }
+
+        // ── SECURITY: Trim loginLog server-side (cap at 500 entries) ─────────
+        if (body.state.loginLog && isArray(body.state.loginLog)) {
+          body.state.loginLog = body.state.loginLog.slice(0, 500);
+        }
+
         if (Object.keys(body.state).length > 0) {
           await Promise.all(Object.entries(body.state).map(([key, value]) =>
             sql`INSERT INTO app_state (key, value, updated_at)
@@ -328,7 +372,6 @@ exports.handler = async (event) => {
         }
       }
 
-      // Validate and replace committee requests
       // Handle delete-by-id (runs regardless of whether committeeRequests is present)
       if (body.deleteIds && Array.isArray(body.deleteIds) && body.deleteIds.length) {
         await Promise.all(body.deleteIds.map(did =>
@@ -339,6 +382,7 @@ exports.handler = async (event) => {
         }
       }
 
+      // Validate and replace committee requests
       if (body.committeeRequests !== undefined) {
         if (!isArray(body.committeeRequests)) {
           return { statusCode: 400, headers, body: JSON.stringify({ error: 'committeeRequests must be an array' }) };
@@ -350,7 +394,6 @@ exports.handler = async (event) => {
           const err = validateRequest(r);
           if (err) return { statusCode: 400, headers, body: JSON.stringify({ error: err }) };
         }
-        // batchMode: true = upsert only, no delete
         if (!body.batchMode) {
           await sql`DELETE FROM committee_requests`;
         }
@@ -367,7 +410,7 @@ exports.handler = async (event) => {
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
 
-    // DELETE — clear session state, preserve roster
+    // ── DELETE — clear session state, preserve roster ─────────────────────────
     if (event.httpMethod === 'DELETE') {
       await Promise.all([
         sql`DELETE FROM app_state`,
