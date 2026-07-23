@@ -1508,7 +1508,7 @@ function renderRoster(){
 
     return '<tr class="' + (j.ageout ? 'ao-row' : '') + '">' +
       '<td style="font-size:11px;color:var(--gray-400)">' + j.id + '</td>' +
-      '<td style="font-weight:600;color:var(--navy);cursor:pointer" title="View activity log" onclick="openNoteLog(' + ri + ')">' + j.name + ' <span style="font-size:10px;color:var(--orange)"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"></span>' + '</td>' +
+      '<td style="font-weight:600;color:var(--navy);cursor:pointer" title="View activity log" onclick="openNoteLog(' + ri + ')">' + (j.ageout ? '<span style="color:#F5A623;margin-right:3px">&#11088;</span>' : '') + j.name + ' <span style="font-size:10px;color:var(--orange)"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"></span>' + '</td>' +
       '<td><span class="badge b-title" style="font-size:9px">' + j.title.replace('Junior ', '') + '</span></td>' +
       '<td>' + contact + '</td>' +
       '<td style="font-size:12px">' + j.last + '</td>' +
