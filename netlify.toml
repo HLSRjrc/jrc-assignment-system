@@ -53,3 +53,14 @@
   for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=604800, immutable"
+    [[redirects]]
+  from = "https://jrcpartner.hlsr.app/"
+  to = "https://jrcpartner.hlsr.app/?partner=1"
+  status = 302
+  force = false
+
+[[redirects]]
+  from = "https://jrcpartner.hlsr.app"
+  to = "https://jrcpartner.hlsr.app/?partner=1"
+  status = 302
+  force = false
