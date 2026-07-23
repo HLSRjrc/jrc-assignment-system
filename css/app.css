@@ -227,8 +227,8 @@ select.finput{cursor:pointer}
 .tbl th{text-align:left;padding:8px 7px;color:var(--navy);font-weight:700;border-bottom:2px solid var(--navy);font-size:11px;text-transform:uppercase;letter-spacing:.04em}
 .tbl td{padding:7px 7px;border-bottom:1px solid var(--gray-100);vertical-align:middle}
 .tbl tr:hover td{background:var(--gray-50)}
-.tbl tr.ao-row td{background:#FFFBF0}
-.tbl tr.ao-row:hover td{background:#FFF3CD}
+.tbl tr.ao-row td{background:none}
+.tbl tr.ao-row:hover td{background:var(--surface-2,#F8F9FA)}
 
 /* HISTORY PILLS */
 .hist-pill{font-size:10px;padding:2px 7px;background:var(--gray-100);border:1px solid var(--gray-200);border-radius:20px;color:#667788;white-space:nowrap;display:inline-block;margin:1px}
