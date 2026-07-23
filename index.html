@@ -765,6 +765,11 @@ if(window.location.search.indexOf('partner=1') >= 0){
       <button type="button" class="btn" style="font-size:12px;margin-bottom:16px" onclick="addPsRow()">&#43; Add another date</button>
     </div><!-- /rf-preshow-section -->
 
+    <!-- Honeypot — hidden from real users, bots fill it in -->
+    <div style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true">
+      <label for="rf-website">Website</label>
+      <input type="text" id="rf-website" name="website" tabindex="-1" autocomplete="off">
+    </div>
     <div id="rf-submit-msg" style="min-height:20px;margin-bottom:10px"></div>
     <button class="btn btn-orange"  style="width:100%;padding:12px;font-size:14px" onclick="submitRequest()">Submit Request</button>
   </div>
