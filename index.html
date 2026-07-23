@@ -821,7 +821,13 @@ if(window.location.search.indexOf('partner=1') >= 0){
   </div>
 </div>
 
-<script src="/js/app.js"></script>
+<script src="/js/app-data.js"></script>
+<script src="/js/app-helpers.js"></script>
+<script src="/js/app-dashboard.js"></script>
+<script src="/js/app-auth.js"></script>
+<script src="/js/app-requests.js"></script>
+<script src="/js/app-board.js"></script>
+<script src="/js/app-db.js"></script>
 <!-- Pill action modal -->
 <div id="pill-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,16,40,.6);backdrop-filter:blur(6px);align-items:center;justify-content:center;animation:scrimIn var(--dur-base) var(--ease-out)">
   <div style="background:var(--surface);border-radius:var(--r-2xl);padding:24px 28px;max-width:340px;width:calc(100% - 32px);box-shadow:var(--sh-5);animation:modalScale var(--dur-base) var(--ease-spring)">
@@ -842,10 +848,6 @@ if(window.location.search.indexOf('partner=1') >= 0){
   </div>
 </div>
 
-<footer class="app-footer no-print"  id="app-footer" style="display:none">
-  <span class="footer-copy">&#169; 2026 Houston Livestock Show and Rodeo. All rights reserved.</span>
-  <span class="footer-ver" id="footer-version">v1</span>
-</footer>
 <footer class="app-footer no-print" id="app-footer" style="display:none">
   <span class="footer-copy">&#169; 2026 Houston Livestock Show and Rodeo. All rights reserved.</span>
   <span class="footer-ver" id="footer-version">v1</span>
@@ -853,21 +855,6 @@ if(window.location.search.indexOf('partner=1') >= 0){
 <!-- Request Edit Modal -->
 <div id="req-edit-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,16,40,.6);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0">
   <div style="background:var(--surface);border-radius:var(--r-xl);padding:24px 28px;max-width:640px;width:calc(100% - 32px);margin:auto;box-shadow:var(--sh-5);animation:modalScale var(--dur-base) var(--ease-spring)">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
-      <div style="font-size:16px;font-weight:700;color:var(--navy)">Edit Request</div>
-      <button onclick="closeReqEdit()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;line-height:1">&#x2715;</button>
-    </div>
-    <div id="req-edit-body"></div>
-    <div style="display:flex;gap:10px;margin-top:20px">
-      <button class="btn btn-primary" style="flex:1" onclick="saveReqEdit()">&#10003; Save Changes</button>
-      <button class="btn" style="flex:1" onclick="closeReqEdit()">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<!-- Request Edit Modal -->
-<div id="req-edit-modal" style="display:none;position:fixed;inset:0;z-index:10000;background:rgba(0,16,40,.6);backdrop-filter:blur(6px);align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px 0">
-  <div style="background:#fff;border-radius:16px;padding:24px 28px;max-width:640px;width:calc(100% - 32px);margin:auto;box-shadow:0 20px 60px rgba(0,0,0,.18)">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
       <div style="font-size:16px;font-weight:700;color:var(--navy)">Edit Request</div>
       <button onclick="closeReqEdit()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#999;line-height:1">&#x2715;</button>
