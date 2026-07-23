@@ -668,14 +668,37 @@ function exportHoursCSV(){
 
 
 // ============================================================
-// ROSTER IMPORT — reads HLSR .xlsx, writes to Neon
+// ROSTER IMPORT — Junior, Adult, Age-Out (separate uploads)
 // ============================================================
-var pendingRosterImport = null;
 
-function handleRosterUpload(event){
+// TITLE → PERMISSION MAPPING (adults)
+var ADULT_PERMISSION_TITLES = {
+  'admin':         'admin',
+  'vc/slt':        'vc-slt',
+  'shift officer': 'officer',
+  'scheduler':     'scheduling'
+};
+// Titles that get NO system permissions (hours tracking only)
+var ADULT_NO_PERM_TITLES = [
+  'ambassador','past committee chairman','committee member','coordinator',
+  'officer in charge','lifetime vice president','lifetime director',
+  'lifetime committeeman'
+];
+
+var pendingImports = { junior: null, adult: null, ageout: null };
+
+function _titleToPermission(title){
+  var t = String(title||'').toLowerCase().trim();
+  for(var k in ADULT_PERMISSION_TITLES){
+    if(t === k) return ADULT_PERMISSION_TITLES[k];
+  }
+  return null; // no system login
+}
+
+function handleRosterUpload(event, type){
   var file = event.target.files[0];
   if(!file) return;
-  var statusEl = document.getElementById('roster-upload-status');
+  var statusEl = document.getElementById(type + '-upload-status');
   statusEl.textContent = 'Reading file...';
 
   var reader = new FileReader();
@@ -683,90 +706,103 @@ function handleRosterUpload(event){
     try {
       var wb   = XLSX.read(new Uint8Array(e.target.result), {type:'array'});
       var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header:1});
-      var hdrs = rows[0];
-      var col  = {};
-      hdrs.forEach(function(h, i){
-        var k = String(h||'').toLowerCase().trim();
-        if(k.includes('customer') || k.includes('number')) col.id = i;
-        if(k.includes('first') && !k.includes('last'))     col.first = i;
-        if(k.includes('last') && !k.includes('assignment'))col.last = i;
-        if(k.includes('preferred'))                         col.preferred = i;
-        if(k.includes('title'))                             col.title = i;
-        if(k.includes('phone'))                             col.phone = i;
-        if(k.includes('email'))                             col.email = i;
-        if(k.includes('age out') || k === 'ageout')        col.ageout = i;
-        if(k.includes('permission'))                        col.permission = i;
-      });
 
       var members = [];
+
+      if(type === 'ageout'){
+        // Age-out sheet: col B (index 1) = member#, col G (index 6) = YES
+        for(var i = 1; i < rows.length; i++){
+          var row = rows[i];
+          if(!row || !row[1]) continue;
+          var id = String(Math.round(parseFloat(row[1]))).trim();
+          if(isNaN(parseInt(id))) continue;
+          var ao = String(row[6]||'').trim().toUpperCase();
+          members.push({id:id, ageout: (ao === 'YES' || ao === 'Y')});
+        }
+
+        if(!members.length){ statusEl.textContent = 'No members found in age-out file.'; return; }
+        pendingImports.ageout = members;
+
+        var aoCount = members.filter(function(m){ return m.ageout; }).length;
+        document.getElementById('ageout-preview-title').textContent =
+          members.length + ' members scanned — ' + aoCount + ' flagged as age-out';
+        document.getElementById('ageout-preview-list').innerHTML =
+          members.filter(function(m){ return m.ageout; }).slice(0,60).map(function(m){
+            var jr = juniors.find(function(j){ return j.id === m.id; });
+            return '<div style="padding:2px 0;border-bottom:1px solid #F0F0F0">' +
+              '&#11088; <strong>' + (jr ? jr.name : m.id) + '</strong> — ' + m.id + '</div>';
+          }).join('') + (aoCount > 60 ? '<div style="color:#888">…and ' + (aoCount-60) + ' more</div>' : '');
+        document.getElementById('ageout-roster-preview').style.display = 'block';
+        statusEl.textContent = '';
+        return;
+      }
+
+      // Junior and Adult share same column layout:
+      // A=title(0), B=member#(1), H=preferred(7), G=last(6), P=phone(15), R=email(17)
       for(var i = 1; i < rows.length; i++){
         var row = rows[i];
-        if(!row || row[col.id] === undefined || row[col.id] === '') continue;
-        var id = String(Math.round(parseFloat(row[col.id])));
+        if(!row || !row[1]) continue;
+        var id = String(Math.round(parseFloat(row[1]))).trim();
         if(isNaN(parseInt(id))) continue;
 
-        var first = String(col.preferred !== undefined && row[col.preferred] ? row[col.preferred] : (row[col.first]||'')).trim();
-        var last  = String(row[col.last]||'').trim();
-        var name  = (first + ' ' + last).trim();
+        var preferred = String(row[7]||'').trim();
+        var last      = String(row[6]||'').trim();
+        var first     = preferred || String(row[5]||'').trim(); // col F fallback
+        var name      = (first + ' ' + last).trim();
         if(!name) continue;
 
-        // Phone formatting
+        // Phone: col P (index 15)
         var phone = '';
-        if(col.phone !== undefined && row[col.phone]){
-          var digits = String(Math.round(parseFloat(row[col.phone]))).replace(/\D/g,'');
+        if(row[15]){
+          var digits = String(row[15]).replace(/\D/g,'');
           if(digits.length === 11 && digits[0] === '1') digits = digits.slice(1);
           if(digits.length === 10) phone = '(' + digits.slice(0,3) + ') ' + digits.slice(3,6) + '-' + digits.slice(6);
         }
 
-        var email = col.email !== undefined ? String(row[col.email]||'').trim() : '';
-        if(email.startsWith('=')) email = ''; // skip Excel formulas
+        // Email: col R (index 17)
+        var email = String(row[17]||'').trim();
+        if(email.startsWith('=')) email = '';
 
-        var ageout = false;
-        if(col.ageout !== undefined){
-          var av = String(row[col.ageout]||'').trim().toUpperCase();
-          ageout = (av === 'Y' || av === 'YES' || av === 'TRUE' || av === '1');
-        }
+        // Title: col A (index 0)
+        var title = String(row[0]||'').trim() || (type === 'junior' ? 'Junior Committeeman' : 'Committee Member');
 
-        var title = col.title !== undefined ? String(row[col.title]||'Committeeman').trim() : 'Committeeman';
-        var perm  = col.permission !== undefined ? String(row[col.permission]||'').toLowerCase() : '';
-        var isAdult = perm.includes('administrator') || perm.includes('chairman') ||
-                      perm.includes('vice president') || perm.includes('officer');
-
-        members.push({id:id, name:name, title:title, phone:phone, email:email, ageout:ageout, isAdult:isAdult});
+        members.push({id:id, name:name, title:title, phone:phone, email:email});
       }
 
-      if(!members.length){ statusEl.textContent = 'No members found — check column headers.'; return; }
+      if(!members.length){ statusEl.textContent = 'No members found — check file format.'; return; }
+      pendingImports[type] = members;
 
-      pendingRosterImport = members;
-
-      // Build preview counts
+      // Build preview
+      var existing = type === 'junior' ? juniors : adults;
       var importIds = {};
       members.forEach(function(m){ importIds[m.id] = true; });
-      var newCount = 0, updateCount = 0, adultCount = 0, inactiveCount = 0;
+      var newCount = 0, updateCount = 0, inactiveCount = 0;
       members.forEach(function(m){
-        if(m.isAdult){ adultCount++; return; }
-        var ex = juniors.find(function(j){ return j.id === m.id; });
+        var ex = existing.find(function(x){ return x.id === m.id; });
         if(ex) updateCount++; else newCount++;
       });
-      juniors.forEach(function(j){
-        if(!importIds[j.id] && !j.inactive) inactiveCount++;
+      existing.forEach(function(x){
+        if(!importIds[x.id] && !x.inactive) inactiveCount++;
       });
 
-      document.getElementById('roster-preview-title').textContent =
-        members.length + ' members found — ' + newCount + ' new, ' +
-        updateCount + ' updates, ' + adultCount + ' adults' +
-        (inactiveCount ? ', ' + inactiveCount + ' will be marked inactive' : '');
+      var permLabel = type === 'adult' ? ' (permissions auto-assigned by title)' : '';
+      document.getElementById(type + '-preview-title').textContent =
+        members.length + ' members — ' + newCount + ' new, ' + updateCount + ' updates' +
+        (inactiveCount ? ', ' + inactiveCount + ' will be marked inactive' : '') + permLabel;
 
-      document.getElementById('roster-preview-list').innerHTML =
-        members.slice(0, 60).map(function(m){
-          var ex = !m.isAdult && juniors.find(function(j){ return j.id === m.id; });
-          var tag = m.isAdult ? '<span style="background:#EEE;color:#555;font-size:10px;padding:1px 5px;border-radius:8px;margin-right:4px">Adult</span>' :
-                    m.ageout  ? '<span style="font-size:11px;color:#F5A623;margin-right:2px">⭐</span>' : '';
-          var action = m.isAdult ? '' : (ex ? '<span style="color:#2A7D2A;font-size:10px">update</span> ' : '<span style="color:#4A6CF7;font-size:10px">new</span> ');
-          return '<div style="padding:2px 0;border-bottom:1px solid #F0F0F0">' + action + tag + '<strong>' + m.name + '</strong> &mdash; ' + m.id + (m.phone ? ' &bull; ' + m.phone : '') + '</div>';
-        }).join('') + (members.length > 60 ? '<div style="color:#888;padding:4px 0">…and ' + (members.length-60) + ' more</div>' : '');
+      document.getElementById(type + '-preview-list').innerHTML =
+        members.slice(0,60).map(function(m){
+          var ex = existing.find(function(x){ return x.id === m.id; });
+          var perm = type === 'adult' ? _titleToPermission(m.title) : null;
+          var permBadge = perm ? '<span style="background:#D4EDDA;color:#155724;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px">' + perm + '</span>' : '';
+          var action = ex ? '<span style="color:#2A7D2A;font-size:10px">update</span> ' : '<span style="color:#4A6CF7;font-size:10px">new</span> ';
+          return '<div style="padding:2px 0;border-bottom:1px solid #F0F0F0">' + action +
+            '<strong>' + m.name + '</strong> — ' + m.id +
+            ' <span style="color:#888;font-size:10px">' + m.title + '</span>' + permBadge +
+            (m.phone ? ' &bull; ' + m.phone : '') + '</div>';
+        }).join('') + (members.length > 60 ? '<div style="color:#888">…and ' + (members.length-60) + ' more</div>' : '');
 
-      document.getElementById('roster-preview').style.display = 'block';
+      document.getElementById(type + '-roster-preview').style.display = 'block';
       statusEl.textContent = '';
     } catch(err){
       statusEl.textContent = 'Error reading file: ' + err.message;
@@ -776,75 +812,121 @@ function handleRosterUpload(event){
   reader.readAsArrayBuffer(file);
 }
 
-function applyRosterImport(){
-  if(!pendingRosterImport) return;
-  var statusEl = document.getElementById('roster-upload-status');
-  statusEl.textContent = 'Applying import…';
+function applyRosterImport(type){
+  var data = pendingImports[type];
+  if(!data) return;
+  var statusEl = document.getElementById(type + '-upload-status');
+  statusEl.textContent = 'Applying...';
 
-  // Build set of IDs in this import
-  var importIds = {};
-  pendingRosterImport.forEach(function(m){ importIds[m.id] = true; });
+  if(type === 'ageout'){
+    // Apply age-out flags to juniors only
+    var changed = 0;
+    data.forEach(function(m){
+      var jr = juniors.find(function(j){ return j.id === m.id; });
+      if(jr && jr.ageout !== m.ageout){ jr.ageout = m.ageout; changed++; }
+    });
+    // Clear age-out for juniors not in this list
+    juniors.forEach(function(j){
+      var found = data.find(function(m){ return m.id === j.id; });
+      if(!found && j.ageout){ j.ageout = false; changed++; }
+    });
+    cancelRosterImport('ageout');
+    saveRosterToNeon(function(err){
+      statusEl.innerHTML = err
+        ? '&#9888; Age-out list applied locally but save failed.'
+        : '&#10003; Age-out list applied: ' + changed + ' junior' + (changed!==1?'s':'') + ' updated.';
+    });
+    return;
+  }
 
-  // Update in-memory arrays
-  var added = 0, updated = 0, reactivated = 0, deactivated = 0, adultCount = 0;
+  if(type === 'junior'){
+    var importIds = {};
+    data.forEach(function(m){ importIds[m.id] = true; });
+    var added = 0, updated = 0, reactivated = 0, deactivated = 0;
 
-  pendingRosterImport.forEach(function(m){
-    if(m.isAdult){
+    data.forEach(function(m){
+      var ex = juniors.find(function(j){ return j.id === m.id; });
+      if(ex){
+        ex.name=m.name; ex.phone=m.phone; ex.email=m.email; ex.title=m.title;
+        if(ex.inactive){ ex.inactive=false; reactivated++; } else updated++;
+      } else {
+        juniors.push({
+          id:m.id, name:m.name, title:m.title, phone:m.phone, email:m.email,
+          ageout:false, hasHat:false, notes:'', checkedIn:false, assignment:null,
+          last:'None', order:0, checkInShift:'', shiftAssignments:{},
+          plannedShifts:[], shiftLog:[], history:[], noteLog:[], inactive:false
+        });
+        added++;
+      }
+    });
+    juniors.forEach(function(j){
+      if(!importIds[j.id] && !j.inactive){ j.inactive=true; deactivated++; }
+    });
+
+    renderRoster();
+    cancelRosterImport('junior');
+    statusEl.textContent = 'Saving...';
+    saveRosterToNeon(function(err){
+      if(err){ statusEl.innerHTML = '&#9888; Applied locally but save failed.'; return; }
+      _doSave();
+      var msg = '&#10003; Junior import: ' + added + ' new';
+      if(updated)     msg += ', ' + updated + ' updated';
+      if(reactivated) msg += ', ' + reactivated + ' reactivated';
+      if(deactivated) msg += ', ' + deactivated + ' marked inactive';
+      statusEl.innerHTML = msg;
+    });
+    document.getElementById('junior-roster-input').value = '';
+    return;
+  }
+
+  if(type === 'adult'){
+    var importIds = {};
+    data.forEach(function(m){ importIds[m.id] = true; });
+    var added = 0, updated = 0, reactivated = 0, deactivated = 0;
+
+    data.forEach(function(m){
+      var perm = _titleToPermission(m.title);
       var ex = adults.find(function(a){ return a.id === m.id; });
-      if(ex){ ex.name=m.name; ex.phone=m.phone; ex.email=m.email; ex.title=m.title; ex.inactive=false; }
-      else   adults.push({id:m.id, name:m.name, title:m.title, phone:m.phone, email:m.email, inactive:false});
-      adultCount++;
-      return;
-    }
-    var ex = juniors.find(function(j){ return j.id === m.id; });
-    if(ex){
-      ex.name=m.name; ex.phone=m.phone; ex.email=m.email; ex.title=m.title; ex.ageout=m.ageout;
-      if(ex.inactive){ ex.inactive=false; reactivated++; } else updated++;
-    } else {
-      juniors.push({
-        id:m.id, name:m.name, title:m.title, phone:m.phone, email:m.email,
-        ageout:m.ageout, hasHat:false, notes:'', checkedIn:false, assignment:null,
-        last:'None', order:0, checkInShift:'', shiftAssignments:{},
-        plannedShifts:[], shiftLog:[], history:[], noteLog:[], inactive:false
-      });
-      added++;
-    }
-  });
+      if(ex){
+        ex.name=m.name; ex.phone=m.phone; ex.email=m.email; ex.title=m.title;
+        if(perm) ex.permission = perm; // only update permission if title maps to one
+        if(ex.inactive){ ex.inactive=false; reactivated++; } else updated++;
+      } else {
+        var newAdult = {
+          id:m.id, name:m.name, title:m.title, phone:m.phone, email:m.email,
+          shiftLog:[], noteLog:[], inactive:false
+        };
+        if(perm) newAdult.permission = perm;
+        adults.push(newAdult);
+        added++;
+      }
+    });
+    adults.forEach(function(a){
+      if(!importIds[a.id] && !a.inactive){ a.inactive=true; deactivated++; }
+    });
 
-  // Mark anyone missing from the import as inactive
-  juniors.forEach(function(j){
-    if(!importIds[j.id] && !j.inactive){ j.inactive=true; deactivated++; }
-  });
-
-  // Save full roster to Neon (separate call — too large for regular save)
-  renderRoster();
-  cancelRosterImport();
-  var statusEl2 = document.getElementById('roster-upload-status');
-  statusEl2.textContent = 'Saving to database…';
-
-  saveRosterToNeon(function(err){
-    if(err){
-      document.getElementById('roster-upload-status').innerHTML = '&#9888; Import applied locally but database save failed. Try again.';
-      return;
-    }
-    // Also save session state so check-ins/assignments sync to other devices
-    _doSave();
-    var msg = '&#10003; Import complete: ' + added + ' new';
-    if(updated)     msg += ', ' + updated + ' updated';
-    if(reactivated) msg += ', ' + reactivated + ' reactivated';
-    if(adultCount)  msg += ', ' + adultCount + ' adults';
-    if(deactivated) msg += ', ' + deactivated + ' marked inactive';
-    document.getElementById('roster-upload-status').innerHTML = msg;
-  });
-
-  document.getElementById('roster-file-input').value = '';
+    renderRoster();
+    cancelRosterImport('adult');
+    statusEl.textContent = 'Saving...';
+    saveRosterToNeon(function(err){
+      if(err){ statusEl.innerHTML = '&#9888; Applied locally but save failed.'; return; }
+      _doSave();
+      var msg = '&#10003; Adult import: ' + added + ' new';
+      if(updated)     msg += ', ' + updated + ' updated';
+      if(reactivated) msg += ', ' + reactivated + ' reactivated';
+      if(deactivated) msg += ', ' + deactivated + ' marked inactive';
+      statusEl.innerHTML = msg;
+    });
+    document.getElementById('adult-roster-input').value = '';
+    return;
+  }
 }
 
-function cancelRosterImport(){
-  pendingRosterImport = null;
-  document.getElementById('roster-preview').style.display = 'none';
-  document.getElementById('roster-preview-title').textContent = '';
-  document.getElementById('roster-preview-list').innerHTML = '';
+function cancelRosterImport(type){
+  pendingImports[type] = null;
+  document.getElementById(type + '-roster-preview').style.display = 'none';
+  document.getElementById(type + '-preview-title').textContent = '';
+  document.getElementById(type + '-preview-list').innerHTML = '';
 }
 
 // ============================================================
