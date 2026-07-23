@@ -3,7 +3,7 @@
 // Environment variables required:
 //   RESEND_API_KEY  — from resend.com (free tier: 3,000 emails/month)
 //   NOTIFY_EMAIL    — JRC scheduling team inbox, e.g. scheduling@hlsr.app
-//   FROM_EMAIL      — sender address, e.g. noreply@hlsr.app
+//   FROM_EMAIL      — sender address, e.g. noreply@hlsr.app 
 //                     (use onboarding@resend.dev until custom domain is verified)
 //   API_SECRET      — same token used by state.js (prevents public access)
 
