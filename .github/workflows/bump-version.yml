@@ -3,7 +3,18 @@ name: Auto Bump Build Number
 on:
   push:
     branches: [ main ]
-    paths: [ 'js/app.js' ]
+    paths:
+      - 'js/app-data.js'
+      - 'js/app-helpers.js'
+      - 'js/app-dashboard.js'
+      - 'js/app-auth.js'
+      - 'js/app-requests.js'
+      - 'js/app-board.js'
+      - 'js/app-db.js'
+      - 'index.html'
+      - 'css/app.css'
+      - 'netlify/functions/state.js'
+      - 'netlify/functions/send-email.js'
 
 permissions:
   contents: write
@@ -19,24 +30,28 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Increment APP_BUILD in js/app.js
+      - name: Increment APP_BUILD in js/app-data.js
         run: |
-          CURRENT=$(grep -oP 'var APP_BUILD\s+=\s+\K[0-9]+' js/app.js | head -1)
+          CURRENT=$(grep -oP 'var APP_BUILD\s+=\s+\K[0-9]+' js/app-data.js | head -1)
           if [ -z "$CURRENT" ]; then
-            echo "Could not find APP_BUILD — skipping"
+            echo "Could not find APP_BUILD in app-data.js — skipping"
             exit 0
           fi
           NEW=$((CURRENT + 1))
-          MAJOR=$(grep -oP 'var APP_VERSION\s+=\s+\K[0-9]+' js/app.js | head -1)
+          MAJOR=$(grep -oP 'var APP_VERSION\s+=\s+\K[0-9]+' js/app-data.js | head -1)
           echo "Bumping build $MAJOR.$CURRENT → $MAJOR.$NEW"
-          sed -i "s/var APP_BUILD   = $CURRENT;/var APP_BUILD   = $NEW;/" js/app.js
+          sed -i "s/var APP_BUILD   = $CURRENT;/var APP_BUILD   = $NEW;/" js/app-data.js
+
+      - name: Inject API_SECRET into js/app-auth.js
+        run: |
+          sed -i "s/__API_SECRET__/${{ secrets.API_SECRET }}/g" js/app-auth.js
 
       - name: Commit new build number
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add js/app.js
-          MAJOR=$(grep -oP 'var APP_VERSION\s+=\s+\K[0-9]+' js/app.js | head -1)
-          BUILD=$(grep -oP 'var APP_BUILD\s+=\s+\K[0-9]+' js/app.js | head -1)
+          git add js/app-data.js
+          MAJOR=$(grep -oP 'var APP_VERSION\s+=\s+\K[0-9]+' js/app-data.js | head -1)
+          BUILD=$(grep -oP 'var APP_BUILD\s+=\s+\K[0-9]+' js/app-data.js | head -1)
           git commit -m "[version-bump] v$MAJOR.$BUILD" || echo "Nothing to commit"
           git push
