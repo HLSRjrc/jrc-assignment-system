@@ -18,7 +18,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 22;  // Major version — milestone releases
-var APP_BUILD   = 3;  // Minor build — increments every small change
+var APP_BUILD   = 2;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -262,14 +262,19 @@ document.addEventListener('DOMContentLoaded', function(){
   if(h) h.src = '/assets/hlsr-header.webp';
   var ll = document.getElementById('login-logo');
   if(ll) ll.src = '/assets/hlsr-logo-login.png';
-  if(window.location.search.indexOf('partner=1') < 0 && _restoreLogin()) return;
+  // Partner mode — triggered by hostname OR legacy ?partner=1 param
+  var isPartnerSite = window.location.hostname === 'jrcpartner.hlsr.app' ||
+                      window.location.search.indexOf('partner=1') >= 0;
+
+  if(!isPartnerSite && _restoreLogin()) return;
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeReqEdit(); });
 
   // Pre-load adults from Neon so login form works immediately
   _preloadAdults();
-  // Auto-enter partner mode if accessed via /partners redirect
-  if(window.location.search.indexOf('partner=1') >= 0){
-    setTimeout(function(){ enterPartnerMode(); }, 100);
+
+  if(isPartnerSite){
+    // Enter partner mode immediately — no timeout needed, DOM is ready
+    enterPartnerMode();
     return;
   }
 });
