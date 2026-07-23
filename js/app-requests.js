@@ -187,6 +187,10 @@ function renderReqForm(){
 }
 
 function submitRequest(){
+  // Honeypot check — bots fill this hidden field, humans don't
+  var _hp = document.getElementById('rf-website');
+  if(_hp && _hp.value.trim().length > 0){ return; } // silently reject
+
   var name = (document.getElementById('rf-name').value || '').trim();
   var chair = (document.getElementById('rf-chair').value || '').trim();
   var chairPhone = (document.getElementById('rf-chair-phone').value || '').trim();
