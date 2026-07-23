@@ -1,26 +1,55 @@
+# ============================================================
+# JRC Assignment System — Netlify Configuration
+# Security headers applied to all routes
+# ============================================================
+
 [build]
-  command = "npm install && npm run build"
-  functions = "netlify/functions"
   publish = "."
+  functions = "netlify/functions"
 
-[functions]
-  node_bundler = "esbuild"
-  external_node_modules = ["@neondatabase/serverless"]
+# ── Security Headers (all routes) ────────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Prevent clickjacking — our app never needs to be embedded
+    X-Frame-Options = "DENY"
 
-[[redirects]]
-  from = "/partners"
-  to = "/?partner=1"
-  status = 302
+    # Stop browsers from MIME-sniffing scripts
+    X-Content-Type-Options = "nosniff"
 
-[[redirects]]
-  from = "https://jrcpartner.hlsr.app/*"
-  to = "https://jrc.hlsr.app/?partner=1"
-  status = 302
-  force = true
+    # Referrer policy — don't leak URLs to third parties
+    Referrer-Policy = "strict-origin-when-cross-origin"
 
-[build.processing]
-  skip_processing = false
+    # Permissions policy — deny browser features we don't use
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), bluetooth=()"
 
-[secrets_scanning]
-  omit_paths = ["node_modules"]
-  omit_keys = ["BOARD_ACCESS_CODE"]
+    # Content Security Policy
+    # - default-src 'self': only load resources from our own domain by default
+    # - script-src: allow our own scripts + cdnjs (for xlsx.js) + inline scripts
+    # - style-src: allow our CSS + Google Fonts + inline styles
+    # - font-src: allow Google Fonts
+    # - img-src: allow our own images + data URIs (for embedded logo)
+    # - connect-src: allow our own API calls + Neon DB proxy + Resend
+    # - frame-ancestors 'none': nobody can embed us in a frame
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.netlify.app https://jrc.hlsr.app https://jrcpartner.hlsr.app; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
+    # HSTS — force HTTPS for 1 year (enable once you're confident HTTPS is solid)
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+
+# ── JS module files — no caching so updates deploy instantly ─────────────────
+[[headers]]
+  for = "/js/*.js"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+# ── CSS — short cache, revalidate ────────────────────────────────────────────
+[[headers]]
+  for = "/css/*.css"
+  [headers.values]
+    Cache-Control = "no-cache, must-revalidate"
+
+# ── Static assets — longer cache (logos, icons don't change often) ───────────
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800, immutable"
