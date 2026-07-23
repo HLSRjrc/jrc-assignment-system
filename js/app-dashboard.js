@@ -1419,10 +1419,21 @@ function renderRoster(){
   }
 
   var list = juniors.slice();
-  if(f === 'ageout') list = list.filter(function(j){ return j.ageout; });
+  if(f === 'inactive'){
+    list = list.filter(function(j){ return j.inactive; });
+  } else if(f === 'ageout'){
+    list = list.filter(function(j){ return j.ageout && !j.inactive; });
+  } else {
+    // Default: hide inactive members from all active views
+    list = list.filter(function(j){ return !j.inactive; });
+  }
   if(q) list = list.filter(function(j){ return j.name.toLowerCase().includes(q) || j.id.includes(q) || (j.phone && j.phone.includes(q)) || (j.email && j.email.toLowerCase().includes(q)); });
 
-  document.getElementById('r-count').textContent = list.length + ' junior' + (list.length !== 1 ? 's' : '') + (f === 'ageout' ? ' (age-outs)' : '') + ' &bull; ' + aoCount + ' age-outs total';
+  var countLabel = list.length + ' junior' + (list.length !== 1 ? 's' : '');
+  if(f === 'inactive') countLabel += ' (inactive)';
+  else if(f === 'ageout') countLabel += ' (age-outs)';
+  else countLabel += ' &bull; ' + aoCount + ' age-outs total';
+  document.getElementById('r-count').textContent = countLabel;
 
   document.getElementById('r-body').innerHTML = list.map(function(j){
     var ri = juniors.indexOf(j);
