@@ -364,9 +364,10 @@ exports.handler = async (event) => {
   const internalTpl = internalAlertTemplate(req);
 
   const chairEmail = String(req.chairEmail || '').trim();
+  const liaisonEmail = String(req.liaisonEmail || '').trim();
   const results = [];
 
-  // Send confirmation to submitter (chair email from form)
+  // Send confirmation to chairman
   if (chairEmail && EMAIL_REGEX.test(chairEmail)) {
     try {
       const res = await fetch('https://api.resend.com/emails', {
@@ -384,14 +385,43 @@ exports.handler = async (event) => {
       });
       const data = await res.json();
       if (!res.ok) {
-        console.error('[send-email] Resend submitter error:', data);
-        results.push({ to: 'submitter', ok: false, error: data.message || 'Send failed' });
+        console.error('[send-email] Resend chair error:', data);
+        results.push({ to: 'chair', ok: false, error: data.message || 'Send failed' });
       } else {
-        results.push({ to: 'submitter', ok: true, id: data.id });
+        results.push({ to: 'chair', ok: true, id: data.id });
       }
     } catch (e) {
-      console.error('[send-email] Submitter fetch error:', e.message);
-      results.push({ to: 'submitter', ok: false, error: e.message });
+      console.error('[send-email] Chair fetch error:', e.message);
+      results.push({ to: 'chair', ok: false, error: e.message });
+    }
+  }
+
+  // Send confirmation to liaison (same template, different recipient)
+  if (liaisonEmail && EMAIL_REGEX.test(liaisonEmail) && liaisonEmail !== chairEmail) {
+    try {
+      const res = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${resendKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: fromEmail,
+          to: [liaisonEmail],
+          subject: submitterTpl.subject,
+          html: submitterTpl.html
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        console.error('[send-email] Resend liaison error:', data);
+        results.push({ to: 'liaison', ok: false, error: data.message || 'Send failed' });
+      } else {
+        results.push({ to: 'liaison', ok: true, id: data.id });
+      }
+    } catch (e) {
+      console.error('[send-email] Liaison fetch error:', e.message);
+      results.push({ to: 'liaison', ok: false, error: e.message });
     }
   }
 
