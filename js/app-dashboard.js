@@ -755,8 +755,8 @@ function doUnassign(jid, slotId){
   if(!jr || !sl) return;
   unassignJr(jr, sl);
   renderOfficer();
-}
   saveState();
+}
 
 
 function toggleHighPriority(slotId){
