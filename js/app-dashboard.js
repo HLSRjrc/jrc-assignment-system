@@ -1408,12 +1408,26 @@ function renderRoster(){
   var aoCount = juniors.filter(function(j){ return j.ageout; }).length;
 
   if(f === 'adult'){
-    var al = adults.filter(function(a){ return !q || a.name.toLowerCase().includes(q) || a.id.includes(q); });
-    document.getElementById('r-count').textContent = al.length + ' adult leaders';
+    var al = adults.filter(function(a){
+      return !a.inactive && (!q || a.name.toLowerCase().includes(q) || a.id.includes(q) || (a.title||'').toLowerCase().includes(q));
+    });
+    document.getElementById('r-count').textContent = al.length + ' adult members';
+    var PERM_LABELS = { admin:'Admin', 'vc-slt':'VC/SLT', officer:'Shift Officer', scheduling:'Scheduler' };
     document.getElementById('r-body').innerHTML = al.map(function(a){
-      return '<tr><td style="font-size:11px;color:var(--gray-400)">' + a.id + '</td><td style="font-weight:600;color:var(--navy)">' + a.name + '</td>' +
-        '<td><span class="badge" style="background:var(--navy-lt);color:var(--navy)">' + a.title + '</span></td>' +
-        '<td colspan="4" style="font-size:12px;color:var(--gray-400)">Admin &mdash; not assigned to committees</td><td></td></tr>';
+      var permBadge = a.permission
+        ? '<span class="badge" style="background:#D4EDDA;color:#155724;font-size:9px;margin-left:4px">' + (PERM_LABELS[a.permission]||a.permission) + '</span>'
+        : '<span style="font-size:10px;color:var(--gray-400);margin-left:4px">Hours only</span>';
+      var contact = '<div style="font-size:11px">' +
+        (a.phone ? '<div>&#128222; ' + a.phone + '</div>' : '') +
+        (a.email ? '<div style="color:#4A6CF7">' + a.email + '</div>' : '') +
+        '</div>';
+      return '<tr>' +
+        '<td style="font-size:11px;color:var(--gray-400)">' + a.id + '</td>' +
+        '<td style="font-weight:600;color:var(--navy)">' + a.name + permBadge + '</td>' +
+        '<td><span class="badge" style="background:var(--navy-lt);color:var(--navy);font-size:9px">' + (a.title||'') + '</span></td>' +
+        '<td>' + contact + '</td>' +
+        '<td colspan="3" style="font-size:11px;color:var(--gray-400)">Adult &mdash; hours tracking only, not in junior pool</td>' +
+        '<td></td></tr>';
     }).join('');
     return;
   }
