@@ -18,7 +18,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 22;  // Major version — milestone releases
-var APP_BUILD   = 7;  // Minor build — increments every small change
+var APP_BUILD   = 2;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -236,8 +236,10 @@ var CD = {
 // LOGO — embed real JRC logo
 // ============================================================
 document.addEventListener('DOMContentLoaded', function(){
-  // TV mode — add ?tv=1 to URL to activate full-screen board layout
-  if(window.location.search.indexOf('tv=1') >= 0){
+  // TV mode — triggered by hostname OR legacy ?tv=1 param
+  var isTVSite = window.location.hostname === 'jrctv.hlsr.app' ||
+                 window.location.search.indexOf('tv=1') >= 0;
+  if(isTVSite){
     document.documentElement.classList.add('tv-mode');
     // Hide login, show app shell immediately
     var ls = document.getElementById('login-screen'); if(ls) ls.style.display='none';
