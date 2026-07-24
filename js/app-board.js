@@ -397,16 +397,61 @@ function renderBoard(){
 
   // CI column is fixed width via CSS (180px) — no dynamic calculation needed
 
+  // Build staff strip
+  var clockedInAdults = (adults||[]).filter(function(a){ return a.clockedIn && !a.inactive; });
+  var vcOnShift   = clockedInAdults.filter(function(a){ return a.boardRole === 'vc'; });
+  var soOnShift   = clockedInAdults.filter(function(a){ return a.boardRole === 'so'; });
+  var mentors     = clockedInAdults.filter(function(a){ return !a.boardRole; });
+
+  function staffLabel(label, people, scroll){
+    if(!people.length) return '';
+    var names = people.map(function(a){ return a.name; }).join(' &bull; ');
+    return '<div style="display:flex;align-items:baseline;gap:8px;flex-shrink:0">' +
+      '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap">' + label + ':</span>' +
+      (scroll && people.length > 2
+        ? '<div style="overflow:hidden;max-width:320px"><div style="display:inline-flex;animation:boardTicker ' + (people.length * 4) + 's linear infinite;white-space:nowrap;font-size:13px;font-weight:600;color:#fff">' + (names + ' &nbsp;&nbsp;&nbsp;&nbsp; ' + names) + '</div></div>'
+        : '<span style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap">' + names + '</span>') +
+    '</div>';
+  }
+
+  var staffStrip = (vcOnShift.length || soOnShift.length || mentors.length)
+    ? '<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:6px 16px 8px;border-top:1px solid rgba(255,255,255,.1);margin-top:4px">' +
+        '<div style="display:flex;align-items:baseline;gap:8px;flex-shrink:0">' +
+          '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Officer in Charge:</span>' +
+          '<span style="font-size:13px;font-weight:600;color:#fff">David Smith</span>' +
+        '</div>' +
+        '<div style="display:flex;align-items:baseline;gap:8px;flex-shrink:0">' +
+          '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Chairman:</span>' +
+          '<span style="font-size:13px;font-weight:600;color:#fff">David Wick</span>' +
+        '</div>' +
+        staffLabel('VC on Shift', vcOnShift, false) +
+        staffLabel('Shift Officer', soOnShift, false) +
+        staffLabel('Mentors', mentors, true) +
+      '</div>'
+    : '<div style="padding:6px 16px 8px;border-top:1px solid rgba(255,255,255,.1);margin-top:4px;display:flex;gap:20px">' +
+        '<div style="display:flex;align-items:baseline;gap:8px">' +
+          '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Officer in Charge:</span>' +
+          '<span style="font-size:13px;font-weight:600;color:#fff">David Smith</span>' +
+        '</div>' +
+        '<div style="display:flex;align-items:baseline;gap:8px">' +
+          '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Chairman:</span>' +
+          '<span style="font-size:13px;font-weight:600;color:#fff">David Wick</span>' +
+        '</div>' +
+      '</div>';
+
   var html = '<div class="board-wrap">' +
-    '<div class="board-header">' +
-      '<div>' +
-        '<div class="board-title">JRC Live Status Board</div>' +
-        '<div id="board-date-lbl" style="font-size:13px;color:#99BBDD;font-weight:600">' + fmtDateLong(date) + '</div>' +
+    '<div class="board-header" style="flex-direction:column;padding-bottom:0">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;padding-bottom:4px">' +
+        '<div>' +
+          '<div class="board-title">JRC Live Status Board</div>' +
+          '<div id="board-date-lbl" style="font-size:13px;color:#99BBDD;font-weight:600">' + fmtDateLong(date) + '</div>' +
+        '</div>' +
+        '<div style="text-align:right">' +
+          '<div id="board-clock" style="font-size:22px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums"></div>' +
+          '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' juniors active</div>' +
+        '</div>' +
       '</div>' +
-      '<div style="text-align:right">' +
-        '<div id="board-clock" style="font-size:22px;font-weight:700;color:#fff;font-variant-numeric:tabular-nums"></div>' +
-        '<div style="font-size:11px;color:#99BBDD;margin-top:2px">' + totalActive + ' juniors active</div>' +
-      '</div>' +
+      staffStrip +
     '</div>' +
     '<div style="display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden">' +
       '<div class="board-body" id="board-body-el">' +
