@@ -176,6 +176,7 @@ function kLookup(){
     }
     dirtyJuniors = true;
     saveStateNow();
+    setTimeout(kReset, 2000);
     return;
   }
   if(!jr){
@@ -340,3 +341,17 @@ function unassignJr(jr, sl){
   sl.assigned = sl.assigned.filter(function(id){ return id !== jr.id; });
 }
 
+
+// ============================================================
+// ADULT BOARD ROLE — cycle through none → VC → SO → none
+// ============================================================
+function cycleAdultBoardRole(adultId){
+  var ad = adults.find(function(a){ return a.id === adultId; });
+  if(!ad) return;
+  var roles = [undefined, 'vc', 'so'];
+  var cur = roles.indexOf(ad.boardRole);
+  ad.boardRole = roles[(cur + 1) % roles.length];
+  dirtyJuniors = true;
+  saveStateNow();
+  renderOfficer();
+}
