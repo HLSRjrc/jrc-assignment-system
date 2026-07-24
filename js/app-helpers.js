@@ -153,7 +153,7 @@ function kLookup(){
     var now = getSimTime();
     var h = now.getHours();
     // Adult shifts: 8am-2pm and 2pm-8pm
-    var adultShift = (h >= 8 && h < 14) ? '8am-2pm' : (h >= 14 && h < 20) ? '2pm-8pm' : null;
+    var adultShift = (h >= 7 && h < 14) ? '8am-2pm' : (h >= 13 && h < 20) ? '2pm-8pm' : null;
     if(!adultShift){
       document.getElementById('k-msg').textContent = 'Welcome, ' + ad.name + '! Check-in is not available outside shift hours.';
       return;
