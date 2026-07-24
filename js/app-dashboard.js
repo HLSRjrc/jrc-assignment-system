@@ -353,8 +353,13 @@ function renderOfficer(search){
       adultStrip.innerHTML =
         '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;white-space:nowrap">&#128084; Adults on Shift:</span>' +
         onShift.map(function(a){
-          return '<span style="background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;white-space:nowrap">' +
-            a.name +
+          var roleBadge = a.boardRole === 'vc'
+            ? ' <span style="background:#4A6CF7;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">VC</span>'
+            : a.boardRole === 'so'
+            ? ' <span style="background:#F5A623;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">SO</span>'
+            : '';
+          return '<span onclick="cycleAdultBoardRole(\'' + a.id + '\')" title="Click to set board role" style="background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;white-space:nowrap;cursor:pointer">' +
+            a.name + roleBadge +
             (a.clockInShift ? ' <span style="opacity:.6;font-size:10px">' + a.clockInShift + '</span>' : '') +
             '</span>';
         }).join('');
