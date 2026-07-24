@@ -343,6 +343,26 @@ function renderOfficer(search){
   }).join('');
   document.getElementById('shift-tabs').innerHTML = tabHtml;
   document.getElementById('slot-shift-lbl').textContent = SL[currentShift];
+
+  // Adults on shift strip
+  var adultStrip = document.getElementById('adult-on-shift');
+  if(adultStrip){
+    var onShift = (adults||[]).filter(function(a){ return a.clockedIn && !a.inactive; });
+    if(onShift.length){
+      adultStrip.style.display = 'flex';
+      adultStrip.innerHTML =
+        '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;white-space:nowrap">&#128084; Adults on Shift:</span>' +
+        onShift.map(function(a){
+          return '<span style="background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;white-space:nowrap">' +
+            a.name +
+            (a.clockInShift ? ' <span style="opacity:.6;font-size:10px">' + a.clockInShift + '</span>' : '') +
+            '</span>';
+        }).join('');
+    } else {
+      adultStrip.style.display = 'none';
+      adultStrip.innerHTML = '';
+    }
+  }
   renderNotesQueue();
   renderNotePick();
   setTimeout(initDragListeners, 0);
