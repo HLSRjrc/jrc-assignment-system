@@ -422,6 +422,14 @@ function renderBoard(){
 
   el.innerHTML = html;
 
+  // Force ticker animation restart after DOM insertion
+  var ticker = document.getElementById('board-ticker');
+  if(ticker){
+    ticker.style.animation = 'none';
+    ticker.offsetHeight; // reflow
+    ticker.style.animation = '';
+  }
+
   // Live clock
   updateBoardClock();
   if(boardTimer) clearInterval(boardTimer);
