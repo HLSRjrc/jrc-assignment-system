@@ -150,7 +150,32 @@ function kLookup(){
   var ad = adults.find(function(a){ return a.id === v; });
   document.getElementById('k-msg').textContent = '';
   if(ad){
-    document.getElementById('k-msg').textContent = 'Welcome, ' + ad.name + '! Adult leaders check in with the Shift Officer.';
+    var now = getSimTime();
+    var h = now.getHours();
+    // Adult shifts: 8am-2pm and 2pm-8pm
+    var adultShift = (h >= 8 && h < 14) ? '8am-2pm' : (h >= 14 && h < 20) ? '2pm-8pm' : null;
+    if(!adultShift){
+      document.getElementById('k-msg').textContent = 'Welcome, ' + ad.name + '! Check-in is not available outside shift hours.';
+      return;
+    }
+    // Toggle clock-in / clock-out
+    var nowStr = now.toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+    if(!ad.clockedIn){
+      ad.clockedIn = true;
+      ad.clockInTime = nowStr;
+      ad.clockInShift = adultShift;
+      if(!ad.shiftLog) ad.shiftLog = [];
+      ad.shiftLog.push({shift: adultShift, in: nowStr, out: null, date: now.toLocaleDateString()});
+      document.getElementById('k-msg').innerHTML = '<span style="color:#2A7D2A;font-weight:600">&#10003; Welcome, ' + ad.name + '! Clocked in for ' + adultShift + ' shift.</span>';
+    } else {
+      var log = ad.shiftLog && ad.shiftLog[ad.shiftLog.length - 1];
+      if(log && !log.out) log.out = nowStr;
+      ad.clockedIn = false;
+      ad.clockInTime = null;
+      document.getElementById('k-msg').innerHTML = '<span style="color:#667788;font-weight:600">&#10003; Goodbye, ' + ad.name + '! Clocked out at ' + nowStr + '.</span>';
+    }
+    dirtyJuniors = true;
+    saveStateNow();
     return;
   }
   if(!jr){
