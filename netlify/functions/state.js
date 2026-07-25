@@ -314,12 +314,18 @@ exports.handler = async (event) => {
         }
         if (body.adults.length > 0) {
           await Promise.all(body.adults.map(a =>
-            sql`INSERT INTO adults (id, name, title, phone, email, inactive, updated_at)
-                VALUES (${a.id}, ${a.name||''}, ${a.title||''}, ${a.phone||''}, ${a.email||''}, ${a.inactive||false}, NOW())
+            sql`INSERT INTO adults (id, name, title, phone, email, inactive, permission, clocked_in, clock_in_time, clock_in_shift, board_role, shift_log, updated_at)
+                VALUES (${a.id}, ${a.name||''}, ${a.title||''}, ${a.phone||''}, ${a.email||''}, ${a.inactive||false}, ${a.permission||null}, ${a.clockedIn||false}, ${a.clockInTime||null}, ${a.clockInShift||null}, ${a.boardRole||null}, ${JSON.stringify(a.shiftLog||[])}, NOW())
                 ON CONFLICT (id) DO UPDATE SET
                   name=EXCLUDED.name, title=EXCLUDED.title,
                   phone=EXCLUDED.phone, email=EXCLUDED.email,
                   inactive=EXCLUDED.inactive,
+                  permission=EXCLUDED.permission,
+                  clocked_in=EXCLUDED.clocked_in,
+                  clock_in_time=EXCLUDED.clock_in_time,
+                  clock_in_shift=EXCLUDED.clock_in_shift,
+                  board_role=EXCLUDED.board_role,
+                  shift_log=EXCLUDED.shift_log,
                 updated_at=NOW()`
           ));
         }
