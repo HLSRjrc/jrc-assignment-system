@@ -308,17 +308,20 @@ function kCancelClockOut(){
 }
 function kReset(){
   pendingJr = null;
-  document.getElementById('kid').value = '';
-  document.getElementById('k-msg').textContent = '';
-  document.getElementById('k-shift-lbl').textContent = 'Enter your 7-digit member ID &mdash; ' + SL[currentShift];
-  document.getElementById('k-entry').style.display = 'block';
-  document.getElementById('k-confirm').style.display = 'none';
-  document.getElementById('k-done').style.display = 'none';
-  document.getElementById('k-clockout').style.display = 'none';
-  document.getElementById('k-clockout-done').style.display = 'none';
-  document.getElementById('k-outside').style.display = 'none';
-  document.getElementById('k-ao-shifts').style.display = 'none';
-  document.getElementById('kid').focus();
+  function _set(id, prop, val){ var el = document.getElementById(id); if(el) el[prop] = val; }
+  function _style(id, val){ var el = document.getElementById(id); if(el) el.style.display = val; }
+  _set('kid', 'value', '');
+  _set('k-msg', 'textContent', '');
+  _set('k-shift-lbl', 'textContent', 'Enter your 7-digit member ID — ' + (SL[currentShift]||''));
+  _style('k-entry', 'block');
+  _style('k-confirm', 'none');
+  _style('k-done', 'none');
+  _style('k-clockout', 'none');
+  _style('k-clockout-done', 'none');
+  _style('k-outside', 'none');
+  _style('k-ao-shifts', 'none');
+  var kid = document.getElementById('kid');
+  if(kid) kid.focus();
 }
 
 // ============================================================
