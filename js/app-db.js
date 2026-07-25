@@ -78,6 +78,15 @@ function _doSave(){
     },
     juniors: activeJuniors,
     activeSlots: activeSlots,
+    adults: (adults||[]).filter(function(a){ return !a.inactive; }).map(function(a){
+      return {
+        id: a.id, name: a.name, title: a.title||'', phone: a.phone||'', email: a.email||'',
+        inactive: a.inactive||false, permission: a.permission||null,
+        clockedIn: a.clockedIn||false, clockInTime: a.clockInTime||null,
+        clockInShift: a.clockInShift||null, boardRole: a.boardRole||null,
+        shiftLog: a.shiftLog||[]
+      };
+    }),
     // committeeRequests sent separately below when changed, to avoid payload size issues
   };
   try { localStorage.setItem(LS_KEY, JSON.stringify({state: payload.state, juniors: juniors, activeSlots: activeSlots, adults: adults})); } catch(e){}
