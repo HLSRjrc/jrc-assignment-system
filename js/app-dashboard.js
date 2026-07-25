@@ -346,37 +346,32 @@ function renderOfficer(search){
 
   // Adults on shift strip — set up click delegation once
   var adultStrip = document.getElementById('adult-on-shift');
-  if(adultStrip && !adultStrip._delegated){
-    adultStrip._delegated = true;
-    adultStrip.addEventListener('click', function(e){
-      var el = e.target;
-      // Walk up to find the pill with data-adultid
-      while(el && el !== adultStrip){
-        if(el.getAttribute && el.getAttribute('data-adultid')){
-          cycleAdultBoardRole(el.getAttribute('data-adultid'));
-          return;
-        }
-        el = el.parentNode;
-      }
-    });
-  }
   if(adultStrip){
     var onShift = (adults||[]).filter(function(a){ return a.clockedIn && !a.inactive; });
     if(onShift.length){
       adultStrip.style.display = 'flex';
-      adultStrip.innerHTML =
-        '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;white-space:nowrap">&#128084; Adults on Shift:</span>' +
-        onShift.map(function(a){
-          var roleBadge = a.boardRole === 'vc'
-            ? ' <span style="background:#4A6CF7;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">VC</span>'
-            : a.boardRole === 'so'
-            ? ' <span style="background:#F5A623;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">SO</span>'
-            : '';
-          return '<span data-adultid="' + a.id + '" title="Click to set board role: Mentor → VC → SO → Mentor" style="background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;white-space:nowrap;cursor:pointer">' +
-            a.name + roleBadge +
-            (a.clockInShift ? ' <span style="opacity:.6;font-size:10px">' + a.clockInShift + '</span>' : '') +
-            '</span>';
-        }).join('');
+      // Build pills as actual DOM elements so onclick works reliably
+      adultStrip.innerHTML = '';
+      var lbl = document.createElement('span');
+      lbl.style.cssText = 'font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;white-space:nowrap';
+      lbl.innerHTML = '&#128084; Adults on Shift:';
+      adultStrip.appendChild(lbl);
+      onShift.forEach(function(a){
+        var pill = document.createElement('span');
+        pill.style.cssText = 'background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;white-space:nowrap;cursor:pointer;user-select:none';
+        pill.title = 'Click to assign role';
+        var roleBadge = a.boardRole === 'vc'
+          ? ' <span style="background:#4A6CF7;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">VC</span>'
+          : a.boardRole === 'so'
+          ? ' <span style="background:#F5A623;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">SO</span>'
+          : '';
+        pill.innerHTML = a.name + roleBadge +
+          (a.clockInShift ? ' <span style="opacity:.6;font-size:10px">' + a.clockInShift + '</span>' : '');
+        (function(adultId){
+          pill.addEventListener('click', function(){ cycleAdultBoardRole(adultId); });
+        })(a.id);
+        adultStrip.appendChild(pill);
+      });
     } else {
       adultStrip.style.display = 'none';
       adultStrip.innerHTML = '';
