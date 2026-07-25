@@ -344,8 +344,15 @@ function renderOfficer(search){
   document.getElementById('shift-tabs').innerHTML = tabHtml;
   document.getElementById('slot-shift-lbl').textContent = SL[currentShift];
 
-  // Adults on shift strip
+  // Adults on shift strip — set up click delegation once
   var adultStrip = document.getElementById('adult-on-shift');
+  if(adultStrip && !adultStrip._delegated){
+    adultStrip._delegated = true;
+    adultStrip.addEventListener('click', function(e){
+      var pill = e.target.closest('[data-adultid]');
+      if(pill) cycleAdultBoardRole(pill.getAttribute('data-adultid'));
+    });
+  }
   if(adultStrip){
     var onShift = (adults||[]).filter(function(a){ return a.clockedIn && !a.inactive; });
     if(onShift.length){
@@ -358,7 +365,7 @@ function renderOfficer(search){
             : a.boardRole === 'so'
             ? ' <span style="background:#F5A623;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">SO</span>'
             : '';
-          return '<span onclick="cycleAdultBoardRole(\'' + a.id + '\')" title="Click to set board role" style="background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;white-space:nowrap;cursor:pointer">' +
+          return '<span data-adultid="' + a.id + '" title="Click to set board role: Mentor → VC → SO → Mentor" style="background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;white-space:nowrap;cursor:pointer">' +
             a.name + roleBadge +
             (a.clockInShift ? ' <span style="opacity:.6;font-size:10px">' + a.clockInShift + '</span>' : '') +
             '</span>';
