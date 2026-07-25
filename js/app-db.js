@@ -245,7 +245,13 @@ function _applyState(data){
     adults = data.adults.map(function(row){
       return {
         id: row.id, name: row.name||'', title: row.title||'', noteLog: row.note_log||[],
-        phone: row.phone||'', email: row.email||'', inactive: row.inactive||false
+        phone: row.phone||'', email: row.email||'', inactive: row.inactive||false,
+        permission: row.permission||null,
+        clockedIn: row.clocked_in||row.clockedIn||false,
+        clockInTime: row.clock_in_time||row.clockInTime||null,
+        clockInShift: row.clock_in_shift||row.clockInShift||null,
+        boardRole: row.board_role||row.boardRole||null,
+        shiftLog: row.shift_log||row.shiftLog||[]
       };
     });
   }
@@ -367,7 +373,7 @@ var headerClockTimer = null;
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
   var isTV = document.documentElement.classList.contains('tv-mode');
-  var interval = isTV ? 5000 : 180000; // TV: 5s, normal: 3min
+  var interval = 10000; // 10s for all modes
   pollTimer = setInterval(function(){
     if(!document.hidden) pollForUpdates();
   }, interval);
