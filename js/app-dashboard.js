@@ -349,8 +349,15 @@ function renderOfficer(search){
   if(adultStrip && !adultStrip._delegated){
     adultStrip._delegated = true;
     adultStrip.addEventListener('click', function(e){
-      var pill = e.target.closest('[data-adultid]');
-      if(pill) cycleAdultBoardRole(pill.getAttribute('data-adultid'));
+      var el = e.target;
+      // Walk up to find the pill with data-adultid
+      while(el && el !== adultStrip){
+        if(el.getAttribute && el.getAttribute('data-adultid')){
+          cycleAdultBoardRole(el.getAttribute('data-adultid'));
+          return;
+        }
+        el = el.parentNode;
+      }
     });
   }
   if(adultStrip){
