@@ -174,9 +174,9 @@ function kLookup(){
       ad.clockInTime = null;
       document.getElementById('k-msg').innerHTML = '<span style="color:#667788;font-weight:600">&#10003; Goodbye, ' + ad.name + '! Clocked out at ' + nowStr + '.</span>';
     }
-    dirtyJuniors = true;
+    // adults saved via saveStateNow directly
     saveStateNow();
-    setTimeout(kReset, 2000);
+    setTimeout(kReset, 1000);
     return;
   }
   if(!jr){
@@ -351,7 +351,6 @@ function cycleAdultBoardRole(adultId){
   var roles = [undefined, 'vc', 'so'];
   var cur = roles.indexOf(ad.boardRole);
   ad.boardRole = roles[(cur + 1) % roles.length];
-  dirtyJuniors = true;
   saveStateNow();
   renderOfficer();
 }
