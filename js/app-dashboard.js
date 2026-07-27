@@ -534,7 +534,13 @@ function renderOfficer(search){
             (s.highPriority ? '<span class="badge" style="background:#CC0000;color:#fff">&#9650; HIGH PRIORITY</span>' : '') +
           '</div>' +
         '</div>' +
-        '<span class="badge ' + (full ? 'b-full' : 'b-open') + '">' + s.assigned.length + ' / ' + s.capacity + '</span>' +
+        ((currentRole==='admin'||currentRole==='slt') ?
+          '<div style="display:flex;align-items:center;gap:4px">' +
+            '<button onclick="adjustSlotCapacity(\'' + s.id + '\',-1)" style="background:none;border:1px solid var(--gray-200);border-radius:4px;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;color:var(--gray-400);display:flex;align-items:center;justify-content:center" title="Decrease capacity">&#8722;</button>' +
+            '<span class="badge ' + (full ? 'b-full' : 'b-open') + '" style="min-width:48px;text-align:center">' + s.assigned.length + ' / ' + s.capacity + '</span>' +
+            '<button onclick="adjustSlotCapacity(\'' + s.id + '\',1)" style="background:none;border:1px solid var(--gray-200);border-radius:4px;width:22px;height:22px;font-size:14px;line-height:1;cursor:pointer;color:var(--navy);display:flex;align-items:center;justify-content:center" title="Increase capacity">&#43;</button>' +
+          '</div>'
+        : '<span class="badge ' + (full ? 'b-full' : 'b-open') + '">' + s.assigned.length + ' / ' + s.capacity + '</span>') +
       '</div>' +
       '<div class="prog-bar"><div class="prog-fill ' + fillClass + '" style="width:' + pct + '%"></div></div>' +
       '<div class="assignees">' +
