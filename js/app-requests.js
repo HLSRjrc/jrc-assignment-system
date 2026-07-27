@@ -550,6 +550,7 @@ var _reqFilterNames  = [];
 var _reqFilterDate   = '';
 var _reqFilterDateFrom = '';
 var _reqFilterDateTo   = '';
+var _reqFilterKeyword  = '';
 
 
 function reqStatusChange(sel){
@@ -669,6 +670,7 @@ function reqFilterUpdate(){
   _reqFilterDate     = (document.getElementById('req-search-date')||{}).value||'';
   _reqFilterDateFrom = (document.getElementById('req-date-from')||{}).value||'';
   _reqFilterDateTo   = (document.getElementById('req-date-to')||{}).value||'';
+  _reqFilterKeyword  = ((document.getElementById('req-keyword-search')||{}).value||'').toLowerCase().trim();
   renderRequests();
   updateReqFilterSummary();
 }
@@ -681,6 +683,7 @@ function updateReqFilterSummary(){
   if(_reqFilterStatus!=='all') parts.push('Status: '+_reqFilterStatus);
   if(_reqFilterNames.length) parts.push(_reqFilterNames.length+' committee'+(+_reqFilterNames.length!==1?'s':'')+' selected');
   if(_reqFilterDate) parts.push('Date: '+_reqFilterDate);
+  if(_reqFilterKeyword) parts.push('Keyword: "'+_reqFilterKeyword+'"');
   if(parts.length){ el.style.display='flex'; txt.textContent=parts.join(' · '); }
   else { el.style.display='none'; }
 }
@@ -692,7 +695,8 @@ function reqClearFilters(){
   var sd=document.getElementById('req-search-date'); if(sd) sd.value='';
   var df=document.getElementById('req-date-from'); if(df) df.value='';
   var dt=document.getElementById('req-date-to'); if(dt) dt.value='';
-  _reqFilterDateFrom=''; _reqFilterDateTo='';
+  var kw=document.getElementById('req-keyword-search'); if(kw) kw.value='';
+  _reqFilterDateFrom=''; _reqFilterDateTo=''; _reqFilterKeyword='';
   updateReqFilterSummary(); renderRequests();
 }
 
@@ -732,6 +736,15 @@ function renderRequests(){
     }
     // Committee name filter
     if(_reqFilterNames.length && _reqFilterNames.indexOf(r.name) < 0) return false;
+    // Keyword search — committee name, chair, liaison, location, duties, notes
+    if(_reqFilterKeyword){
+      var kw = _reqFilterKeyword;
+      var haystack = [
+        r.name||'', r.chair||'', r.liaison||'', r.location||'',
+        r.duties||'', r.notes||'', r.chairEmail||'', r.liaisonEmail||''
+      ].join(' ').toLowerCase();
+      if(haystack.indexOf(kw) < 0) return false;
+    }
     // Date range filter
     var dfrom = _reqFilterDateFrom || _reqFilterDate;
     var dto   = _reqFilterDateTo   || _reqFilterDate;
