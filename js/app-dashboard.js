@@ -1834,6 +1834,8 @@ function onSetupDateChange(){
     _loadSlotsForDate(date);
     _lastSavedHash = '';
     saveState();
+    renderSetupApproved(); // re-render night-before planner for new date
+    renderSetup();
   }
   // Note: currentDate updated above; activateShift also updates it
   var prev = document.getElementById('setup-date-slots-preview');
