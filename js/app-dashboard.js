@@ -1817,6 +1817,7 @@ function onSetupDateChange(){
   // Clear active slots when date changes
   // Clear active slots when setup date changes
   if(date && date !== prevSetupDate && activeSlots.length > 0){
+    var hasAssigned = juniors.some(function(j){ return j.assignment; });
     if(hasAssigned){
       if(!confirm('Changing the date will clear all current slots and assignments. Continue?')) {
         document.getElementById('setup-date').value = prevSetupDate;
