@@ -142,7 +142,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
             <button class="role-btn" onclick="selectRole('kiosk')">
         <div class="role-icon" style="background:transparent;padding:2px;width:44px;height:44px;display:flex;align-items:center;justify-content:center"><img src="/assets/jrc-logo-navy.png" style="width:40px;height:auto" alt="JRC"></div>
         <div>
-          <div class="role-name">Junior Login</div>
+          <div class="role-name">Kiosk</div>
           <div class="role-desc">Junior check-in screen</div>
         </div>
       </button>
@@ -652,6 +652,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
       <input type="date" id="req-date-to" class="finput" oninput="reqFilterUpdate()" style="font-size:13px;width:140px" title="To date">
     </div>
 
+    <input type="text" id="req-keyword-search" class="finput" oninput="reqFilterUpdate()" placeholder="&#128269; Search name, chair, liaison, location..." style="font-size:13px;min-width:240px;flex:1">
     <button id="req-refresh-btn" class="btn btn-sm" style="border-color:var(--navy);color:var(--navy);white-space:nowrap" onclick="refreshRequests()">&#8635; Refresh</button>
     <button onclick="reqClearFilters()" class="btn btn-sm" style="color:#667788;white-space:nowrap">&#x2715; Clear</button>
   </div>
