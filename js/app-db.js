@@ -114,8 +114,8 @@ function _doSave(){
   });
 
   // Save committeeRequests separately in batch mode (upsert only) to avoid size limits
-  // Only when something changed — check against a hash
-  var reqHash = committeeRequests.length + ':' + (committeeRequests[0] ? committeeRequests[0].id : '');
+  // Only when something changed — check against a hash (include statuses so approve/reject triggers save)
+  var reqHash = committeeRequests.length + ':' + committeeRequests.map(function(r){ return r.id + '=' + r.status; }).join(',');
   if(reqHash !== (_lastReqHash || '')){
     _lastReqHash = reqHash;
     var CREQ_CHUNK = 200;
