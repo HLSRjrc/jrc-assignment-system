@@ -357,3 +357,17 @@ function cycleAdultBoardRole(adultId){
   saveStateNow();
   renderOfficer();
 }
+
+// ============================================================
+// SLOT CAPACITY ADJUSTMENT — +/- buttons on dashboard cards
+// ============================================================
+function adjustSlotCapacity(slotId, delta){
+  var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
+  if(!sl) return;
+  var newCap = sl.capacity + delta;
+  if(newCap < sl.assigned.length) return; // can't go below assigned count
+  if(newCap < 2) return; // minimum 2
+  sl.capacity = newCap;
+  renderOfficer();
+  saveStateNow();
+}
