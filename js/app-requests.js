@@ -1030,6 +1030,7 @@ function revokeRequest(id){
   if(!r) return;
   if(!confirm('Revoke approval for "' + r.name + '"? It will go back to pending.')) return;
   r.status = 'pending';
+  _lastReqHash = ''; // force save
   renderRequests();
   saveStateNow();
   showAlert(r.name + ' approval revoked — back to pending.', 'warn');
@@ -1042,7 +1043,8 @@ function approveRequest(id){
   r.schedulingNotes = noteEl ? noteEl.value.trim() : '';
   r.status = 'approved';
   r.approvedAt = new Date().toISOString();
-  saveState();
+  _lastReqHash = ''; // force committeeRequests save on next tick
+  saveStateNow();
 
   // Add to committee library if not already there
   var exists = committeeLibrary.find(function(c){ return c.name.toLowerCase() === r.name.toLowerCase(); });
@@ -1068,7 +1070,8 @@ function rejectRequest(id){
   var noteEl = document.getElementById('req-note-' + id);
   r.schedulingNotes = noteEl ? noteEl.value.trim() : '';
   r.status = 'rejected';
-  saveState();
+  _lastReqHash = ''; // force save
+  saveStateNow();
   renderRequests();
 }
 
