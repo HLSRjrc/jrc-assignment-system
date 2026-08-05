@@ -45,17 +45,17 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
     <!-- Personal Login Form (shown first) -->
     <div id="personal-login">
-      <div style="font-size:13px;color:#667788;margin-bottom:16px;text-align:center">Sign in with your email and member number</div>
+      <div style="font-size:13px;color:#667788;margin-bottom:16px;text-align:center">Sign in with your email and password</div>
       <div style="margin-bottom:12px">
         <div style="font-size:12px;color:#667788;margin-bottom:4px">Email Address</div>
         <input class="finput" type="email" id="pl-email" placeholder="your@email.com" autocomplete="email" style="font-size:14px">
       </div>
       <div style="margin-bottom:16px">
         <div style="font-size:12px;color:#667788;margin-bottom:4px">Member Number</div>
-        <input class="finput" type="password" id="pl-password" placeholder="Your member number" autocomplete="current-password" style="font-size:14px" onkeydown="if(event.key==='Enter') doPersonalLogin()">
+        <input class="finput" type="password" id="pl-password" placeholder="Password" autocomplete="current-password" style="font-size:14px" onkeydown="if(event.key==='Enter') doPersonalLogin()">
       </div>
       <div id="pl-err" style="color:#CC0000;font-size:12px;min-height:18px;margin-bottom:8px;text-align:center"></div>
-      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px;margin-bottom:14px" onclick="doPersonalLogin()">Sign In &rarr;</button>
+      <button class="btn btn-primary" id="pl-submit-btn" style="width:100%;padding:12px;font-size:14px;margin-bottom:14px" onclick="doPersonalLogin()">Sign In &rarr;</button>
 
     </div>
     <div id="role-select" style="display:none">
@@ -426,6 +426,22 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- SETTINGS / DATE SIMULATOR -->
 <div id="panel-simulate" class="panel">
+
+  <!-- PERMISSIONS MANAGEMENT — admin only -->
+  <div class="card" id="perms-mgmt-card" style="margin-bottom:16px">
+    <div class="section-lbl" style="margin-bottom:4px">&#128274; Permissions &amp; Passwords</div>
+    <div style="font-size:12px;color:#667788;margin-bottom:12px">Set access levels and passwords for committee members. Adults not listed here can only use the kiosk.</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input type="text" id="perms-search" class="finput" placeholder="&#128269; Search by name or member #..." oninput="renderPermsTable()" style="font-size:12px;flex:1;min-width:200px">
+      <select id="perms-filter" class="finput" onchange="renderPermsTable()" style="font-size:12px;min-width:140px">
+        <option value="all">All adults</option>
+        <option value="permissioned">Has permission</option>
+        <option value="none">No permission</option>
+      </select>
+    </div>
+    <div id="perms-table-wrap" style="max-height:400px;overflow-y:auto"></div>
+    <div id="perms-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+  </div>
 
   <!-- BULK CHECK-IN / CLOCK-OUT TOOL -->
   <div class="card" style="margin-bottom:16px;border:2px solid #5C6BC0">
