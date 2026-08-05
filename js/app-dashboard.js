@@ -3184,7 +3184,7 @@ function renderPermsTable(){
         '<td style="padding:6px 8px;font-weight:600;color:var(--navy)">' + a.name + '</td>' +
         '<td style="padding:6px 8px;color:#667788">' + a.id + '</td>' +
         '<td style="padding:6px 8px;color:#667788;font-size:11px">' + (a.title||'') + '</td>' +
-        '<td style="padding:6px 8px"><select class="finput" id="perm-sel-' + a.id + '" style="font-size:11px;padding:3px 6px" onchange="renderPermsTable()">' + permSel + '</select></td>' +
+        '<td style="padding:6px 8px"><select class="finput" id="perm-sel-' + a.id + '" style="font-size:11px;padding:3px 6px">' + permSel + '</select></td>' +
         '<td style="padding:6px 8px">' +
           (needsPass
             ? '<input type="password" class="finput" id="perm-pw-' + a.id + '" placeholder="New password (6+ chars)" style="font-size:11px;padding:3px 6px;min-width:160px">'
@@ -3209,7 +3209,7 @@ function saveAdultPerm(adultId){
 
   // Validate password if required
   var needsPass = newPerm && newPerm !== 'officer';
-  if(needsPass && pwEl && newPass && newPass.length < 6){
+  if(needsPass && newPass && newPass.length < 6){
     if(msg) msg.innerHTML = '<span style="color:#CC0000">Password must be at least 6 characters.</span>';
     return;
   }
