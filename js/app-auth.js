@@ -121,8 +121,7 @@ function doPersonalLogin(){
     if(!anyRolesConfigured){
       loggedInAdult = adult;
       try { localStorage.setItem('jrc_logged_adult', JSON.stringify({id:adult.id, name:adult.name, role:'admin'})); } catch(e){}
-      document.getElementById('personal-login').style.display = 'none';
-      document.getElementById('role-select').style.display = 'block';
+      _showRolePicker(['admin','slt','officer','scheduling','board','kiosk']);
       return;
     }
     // Default: give basic access (kiosk + status board)
@@ -134,17 +133,54 @@ function doPersonalLogin(){
   try { localStorage.setItem('jrc_logged_adult', JSON.stringify({id:adult.id, name:adult.name, role:role})); } catch(e){}
 
   if(role === 'admin'){
-    // Admin only: sees role picker to choose which hat to wear
-    document.getElementById('personal-login').style.display = 'none';
-    document.getElementById('role-select').style.display = 'block';
+    // Admin sees filtered role picker — only their permitted roles + kiosk
+    _showRolePicker(['admin','slt','officer','scheduling','board','kiosk']);
+  } else if(role === 'slt'){
+    _showRolePicker(['slt','board','kiosk']);
+  } else if(role === 'officer'){
+    _showRolePicker(['officer','board','kiosk']);
+  } else if(role === 'scheduling'){
+    _showRolePicker(['scheduling','kiosk']);
   } else {
-    // Everyone else — straight to their assigned tabs, no role picker
+    // Kiosk-only roles — straight in, no picker
     document.getElementById('personal-login').style.display = 'none';
-    loginAs(role);
+    loginAs('kiosk');
   }
 }
 
 
+
+// Role card mapping — which onclick value maps to which role key
+var _ROLE_CARD_MAP = {
+  'admin':      "selectRole('admin')",
+  'slt':        "selectRole('slt')",
+  'officer':    "selectRole('officer')",
+  'scheduling': "selectRole('scheduling')",
+  'junior':     "selectRole('junior')",
+  'board':      "selectRole('board')",
+  'kiosk':      "selectRole('kiosk')"
+};
+
+function _showRolePicker(allowedRoles){
+  document.getElementById('personal-login').style.display = 'none';
+  var roleSelect = document.getElementById('role-select');
+  roleSelect.style.display = 'block';
+  // Hide buttons not in allowedRoles; always hide junior (duplicate of kiosk) and partner
+  var btns = roleSelect.querySelectorAll('.role-btn');
+  btns.forEach(function(btn){
+    var onclick = btn.getAttribute('onclick') || '';
+    var role = null;
+    for(var r in _ROLE_CARD_MAP){
+      if(onclick === _ROLE_CARD_MAP[r]){ role = r; break; }
+    }
+    // Always hide junior (same as kiosk) and partner button
+    if(!role || role === 'junior' || onclick.indexOf('enterPartnerMode') >= 0){
+      btn.style.display = 'none';
+      return;
+    }
+    btn.style.display = allowedRoles.indexOf(role) >= 0 ? '' : 'none';
+  });
+}
 
 function selectRole(role){
   loginAs(role);
