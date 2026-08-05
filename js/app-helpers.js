@@ -138,7 +138,7 @@ function switchTab(t, el){
   }
   if(t === 'checkins') renderCheckins();
   if(t === 'hours') renderHours();
-  if(t === 'simulate'){ renderUserMgmt(); renderStrandedPanel(); renderSimulateMigrationStatus(); }
+  if(t === 'simulate'){ renderUserMgmt(); renderStrandedPanel(); renderSimulateMigrationStatus(); if(currentRole==='admin') renderPermsTable(); }
 }
 
 // ============================================================
