@@ -91,61 +91,59 @@ function hideDeviceMode(){
 
 function doPersonalLogin(){
   var email    = (document.getElementById('pl-email').value || '').trim().toLowerCase();
-  var memberId = (document.getElementById('pl-password').value || '').trim();
+  var password = (document.getElementById('pl-password').value || '').trim();
   var errEl    = document.getElementById('pl-err');
-  errEl.textContent = '';
+  var btnEl    = document.getElementById('pl-submit-btn');
+  if(errEl) errEl.textContent = '';
 
-  if(!email || !memberId){ errEl.textContent = 'Please enter your email and member number.'; return; }
-
-  // Adults must be loaded — if not, fetch first
-  if(!adults.length){
-    errEl.style.color = '#667788';
-    errEl.textContent = 'Still connecting... please wait a moment and try again.';
-    _preloadAdults();
+  if(!email || !password){
+    if(errEl) errEl.textContent = 'Please enter your email and password.';
     return;
   }
 
-  // Find matching adult
-  var adult = adults.find(function(a){
-    return (a.email || '').trim().toLowerCase() === email && String(a.id).trim() === memberId;
-  });
+  // Show loading state
+  if(btnEl){ btnEl.disabled = true; btnEl.textContent = 'Signing in...'; }
+  if(errEl) errEl.textContent = '';
 
-  if(!adult){ errEl.textContent = 'Email or member number not found. Please try again.'; return; }
-
-  // Check explicit role first, then fall back to title-based role
-  var role = userRoles[adult.id] || _titleToRole(adult.title);
-  if(!role){
-    // If NO roles have been configured at all, allow any authenticated adult
-    // to access the admin role picker so someone can bootstrap the system
-    var anyRolesConfigured = Object.keys(userRoles).length > 0;
-    if(!anyRolesConfigured){
-      loggedInAdult = adult;
-      try { localStorage.setItem('jrc_logged_adult', JSON.stringify({id:adult.id, name:adult.name, role:'admin'})); } catch(e){}
-      _showRolePicker(['admin','slt','officer','scheduling','board','kiosk']);
+  fetch('/.netlify/functions/auth', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','x-api-token': API_TOKEN},
+    body: JSON.stringify({email: email, password: password})
+  })
+  .then(function(r){ return r.json().then(function(d){ return {ok: r.ok, data: d}; }); })
+  .then(function(res){
+    if(btnEl){ btnEl.disabled = false; btnEl.textContent = 'Sign In'; }
+    if(!res.ok || !res.data.ok){
+      if(errEl) errEl.textContent = res.data.error || 'Login failed. Please try again.';
       return;
     }
-    // Default: give basic access (kiosk + status board)
-    role = 'junior'; // default: kiosk only if no role assigned
-  }
+    var adult = res.data.adult;
+    var permMap = {'admin':'admin','vc-slt':'slt','officer':'officer','scheduling':'scheduling'};
+    var role = adult.permission ? (permMap[adult.permission] || 'kiosk') : 'kiosk';
 
-  // Success — store who logged in
-  loggedInAdult = adult;
-  try { localStorage.setItem('jrc_logged_adult', JSON.stringify({id:adult.id, name:adult.name, role:role})); } catch(e){}
+    // Store locally for session restore
+    loggedInAdult = adult;
+    try { localStorage.setItem('jrc_logged_adult', JSON.stringify({id:adult.id, name:adult.name, role:role})); } catch(e){}
 
-  if(role === 'admin'){
-    // Admin sees filtered role picker — only their permitted roles + kiosk
-    _showRolePicker(['admin','slt','officer','scheduling','board','kiosk']);
-  } else if(role === 'slt'){
-    _showRolePicker(['slt','board','kiosk']);
-  } else if(role === 'officer'){
-    _showRolePicker(['officer','board','kiosk']);
-  } else if(role === 'scheduling'){
-    _showRolePicker(['scheduling','kiosk']);
-  } else {
-    // Kiosk-only roles — straight in, no picker
-    document.getElementById('personal-login').style.display = 'none';
-    loginAs('kiosk');
-  }
+    // Show role picker filtered by permission
+    if(role === 'admin'){
+      _showRolePicker(['admin','slt','officer','scheduling','board','kiosk']);
+    } else if(role === 'slt'){
+      _showRolePicker(['slt','board','kiosk']);
+    } else if(role === 'officer'){
+      _showRolePicker(['officer','board','kiosk']);
+    } else if(role === 'scheduling'){
+      _showRolePicker(['scheduling','kiosk']);
+    } else {
+      document.getElementById('personal-login').style.display = 'none';
+      loginAs('kiosk');
+    }
+  })
+  .catch(function(e){
+    if(btnEl){ btnEl.disabled = false; btnEl.textContent = 'Sign In'; }
+    if(errEl) errEl.textContent = 'Connection error. Please try again.';
+    console.error('[auth] Login error:', e.message);
+  });
 }
 
 
