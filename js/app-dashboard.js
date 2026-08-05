@@ -3137,3 +3137,104 @@ function activateShift(){
 
 
 
+
+// ============================================================
+// PERMISSIONS MANAGEMENT — admin-only settings screen
+// ============================================================
+function renderPermsTable(){
+  var wrap = document.getElementById('perms-table-wrap');
+  if(!wrap) return;
+  var q = ((document.getElementById('perms-search')||{}).value||'').toLowerCase().trim();
+  var filter = ((document.getElementById('perms-filter')||{}).value)||'all';
+
+  var list = (adults||[]).filter(function(a){
+    if(a.inactive) return false;
+    if(q && !a.name.toLowerCase().includes(q) && !a.id.includes(q)) return false;
+    if(filter === 'permissioned' && !a.permission) return false;
+    if(filter === 'none' && a.permission) return false;
+    return true;
+  });
+
+  if(!list.length){ wrap.innerHTML = '<div style="color:#999;font-size:13px;padding:8px">No adults found.</div>'; return; }
+
+  var PERM_OPTS = [
+    {val:'', label:'Kiosk only'},
+    {val:'admin', label:'Admin'},
+    {val:'vc-slt', label:'VC / SLT'},
+    {val:'officer', label:'Shift Officer'},
+    {val:'scheduling', label:'Scheduling'}
+  ];
+
+  wrap.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
+    '<thead><tr style="background:var(--navy);color:#fff">' +
+      '<th style="padding:6px 8px;text-align:left;font-weight:600">Name</th>' +
+      '<th style="padding:6px 8px;text-align:left;font-weight:600">Member #</th>' +
+      '<th style="padding:6px 8px;text-align:left;font-weight:600">Title</th>' +
+      '<th style="padding:6px 8px;text-align:left;font-weight:600">Permission</th>' +
+      '<th style="padding:6px 8px;text-align:left;font-weight:600">Password</th>' +
+      '<th style="padding:6px 8px;text-align:center;font-weight:600">Save</th>' +
+    '</tr></thead><tbody>' +
+    list.map(function(a, i){
+      var bg = i % 2 === 0 ? '#fff' : 'var(--surface-2,#F8F9FA)';
+      var permSel = PERM_OPTS.map(function(o){
+        return '<option value="' + o.val + '"' + (a.permission === o.val || (!a.permission && o.val === '') ? ' selected' : '') + '>' + o.label + '</option>';
+      }).join('');
+      var needsPass = a.permission && a.permission !== 'officer';
+      return '<tr style="background:' + bg + ';border-bottom:1px solid var(--gray-100)">' +
+        '<td style="padding:6px 8px;font-weight:600;color:var(--navy)">' + a.name + '</td>' +
+        '<td style="padding:6px 8px;color:#667788">' + a.id + '</td>' +
+        '<td style="padding:6px 8px;color:#667788;font-size:11px">' + (a.title||'') + '</td>' +
+        '<td style="padding:6px 8px"><select class="finput" id="perm-sel-' + a.id + '" style="font-size:11px;padding:3px 6px" onchange="renderPermsTable()">' + permSel + '</select></td>' +
+        '<td style="padding:6px 8px">' +
+          (needsPass
+            ? '<input type="password" class="finput" id="perm-pw-' + a.id + '" placeholder="New password (6+ chars)" style="font-size:11px;padding:3px 6px;min-width:160px">'
+            : '<span style="color:#999;font-size:11px">Uses member #</span>') +
+        '</td>' +
+        '<td style="padding:6px 8px;text-align:center">' +
+          '<button class="btn btn-primary" style="font-size:11px;padding:4px 10px" onclick="saveAdultPerm(\'' + a.id + '\')">Save</button>' +
+        '</td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table>';
+}
+
+function saveAdultPerm(adultId){
+  var selEl = document.getElementById('perm-sel-' + adultId);
+  var pwEl  = document.getElementById('perm-pw-' + adultId);
+  var msg   = document.getElementById('perms-msg');
+  if(!selEl) return;
+
+  var newPerm = selEl.value || null;
+  var newPass = pwEl ? pwEl.value.trim() : '';
+
+  // Validate password if required
+  var needsPass = newPerm && newPerm !== 'officer';
+  if(needsPass && pwEl && newPass && newPass.length < 6){
+    if(msg) msg.innerHTML = '<span style="color:#CC0000">Password must be at least 6 characters.</span>';
+    return;
+  }
+
+  if(msg) msg.textContent = 'Saving...';
+
+  var payload = {adultId: adultId, newPermission: newPerm};
+  if(needsPass && newPass) payload.newPassword = newPass;
+
+  fetch('/.netlify/functions/set-password', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json','x-api-token': API_TOKEN},
+    body: JSON.stringify(payload)
+  }).then(function(r){ return r.json(); }).then(function(d){
+    if(d.ok){
+      // Update local adult object
+      var ad = adults.find(function(a){ return a.id === adultId; });
+      if(ad){ ad.permission = newPerm; }
+      if(pwEl) pwEl.value = '';
+      if(msg) msg.innerHTML = '<span style="color:#2A7D2A">&#10003; Saved.</span>';
+      setTimeout(function(){ if(msg) msg.textContent = ''; renderPermsTable(); }, 1500);
+    } else {
+      if(msg) msg.innerHTML = '<span style="color:#CC0000">Error: ' + (d.error||'Save failed') + '</span>';
+    }
+  }).catch(function(e){
+    if(msg) msg.innerHTML = '<span style="color:#CC0000">Connection error.</span>';
+  });
+}
