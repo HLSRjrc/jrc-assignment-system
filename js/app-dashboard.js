@@ -22,14 +22,22 @@ function buildReports(slots){
     fmtDate(d) + ' — ' + slots.length + ' committee' + (slots.length!==1?'s':'');
   var html = '';
   slots.forEach(function(sl){
-    var det = CD[sl.name] || {};
-    // For custom slots, use their directly-entered contact data
-    if(!CD[sl.name] && sl.custom){
-      det = {loc:sl.location||'', duties:sl.duties||'', notes:sl.notes||'',
-             liaison:sl.liaison||'', lp:sl.liaisonPhone||'', le:sl.liaisonEmail||'',
-             chair:sl.chair||'', cp:sl.chairPhone||''};
-    }
+    // Pull details from CD (bulk upload) OR directly from slot fields (request system)
+    var cdDet = CD[sl.name] || {};
+    var det = {
+      loc:     sl.location    || cdDet.loc     || '',
+      duties:  sl.duties      || cdDet.duties  || '',
+      notes:   sl.notes       || cdDet.notes   || '',
+      liaison: sl.liaison     || cdDet.liaison || '',
+      lp:      sl.liaisonPhone|| cdDet.lp      || '',
+      le:      sl.liaisonEmail|| cdDet.le      || '',
+      chair:   sl.chair       || cdDet.chair   || '',
+      cp:      sl.chairPhone  || cdDet.cp      || ''
+    };
     var jrs = sl.assigned.map(function(jid){ return juniors.find(function(j){ return j.id===jid; }); }).filter(Boolean);
+    // Total rows = max of assigned or capacity, min 1
+    var totalRows = Math.max(sl.capacity, jrs.length);
+
     html += '<div class="rpt-page">';
     // Page header
     html += '<div class="rpt-ph">' +
@@ -44,7 +52,7 @@ function buildReports(slots){
       '</div>' +
     '</div>';
     if(sl.hat) html += '<div class="rpt-hat">&#9888; Cowboy hat required for this assignment</div>';
-    // Details
+    // Details grid
     html += '<div class="rpt-grid">';
     if(det.loc)    html += '<div class="rpt-field full"><label>Location / Where to Report</label><p>' + det.loc + '</p></div>';
     if(det.liaison)html += '<div class="rpt-field"><label>Event Contact / Liaison</label><p><strong>' + det.liaison + '</strong>' + (det.lp ? '<br>' + det.lp : '') + (det.le ? '<br>' + det.le : '') + '</p></div>';
@@ -52,16 +60,33 @@ function buildReports(slots){
     if(det.duties) html += '<div class="rpt-field full"><label>Duties</label><p>' + det.duties + '</p></div>';
     if(det.notes)  html += '<div class="rpt-field full"><label>Notes / Attire</label><p>' + det.notes + '</p></div>';
     html += '</div>';
-    // Junior lines
-    html += '<div class="rpt-jlist"><div class="rpt-jlabel">Juniors Sent to Assignment (' + jrs.length + ' of ' + sl.capacity + ')</div>';
-    for(var i=0;i<sl.capacity;i++){
-      var jr = jrs[i];
-      html += '<div class="rpt-jrow">' +
-        '<span class="rpt-num">' + (i+1) + '.</span>' +
-        '<span class="rpt-name">' + (jr ? (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name + (jr.ageout?' &#9733;':'') : '') + '</span>' +
-      '</div>';
+
+    // 2-column junior list, 20 per page
+    var ROWS_PER_PAGE = 20;
+    var pages = Math.ceil(totalRows / ROWS_PER_PAGE) || 1;
+    for(var pg = 0; pg < pages; pg++){
+      if(pg > 0) html += '<div class="rpt-page">';
+      var startIdx = pg * ROWS_PER_PAGE;
+      var endIdx = Math.min(startIdx + ROWS_PER_PAGE, totalRows);
+      var pageRows = [];
+      for(var i = startIdx; i < endIdx; i++){
+        var jr = jrs[i];
+        pageRows.push('<div class="rpt-jrow">' +
+          '<span class="rpt-num">' + (i+1) + '.</span>' +
+          '<span class="rpt-name">' + (jr ? jr.name + (jr.ageout?' &#9733;':'') : '') + '</span>' +
+        '</div>');
+      }
+      // Split into 2 columns
+      var half = Math.ceil(pageRows.length / 2);
+      var col1 = pageRows.slice(0, half);
+      var col2 = pageRows.slice(half);
+      html += '<div class="rpt-jlist"><div class="rpt-jlabel">Juniors Sent to Assignment (' + jrs.length + ' of ' + sl.capacity + ')</div>';
+      html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">';
+      html += '<div>' + col1.join('') + '</div>';
+      html += '<div>' + col2.join('') + '</div>';
+      html += '</div></div>';
+      if(pg < pages - 1) html += '</div>'; // close extra page div
     }
-    html += '</div>';
     html += '<div style="margin-top:20px;padding-top:16px;border-top:2px solid var(--navy)">' +
       '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--navy);margin-bottom:14px">Partner Committee Representative</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px">' +
