@@ -382,9 +382,11 @@ function renderOfficer(search){
       lbl.innerHTML = '&#128084; Adults on Shift:';
       adultStrip.appendChild(lbl);
       onShift.forEach(function(a){
+        var wrapper = document.createElement('div');
+        wrapper.style.cssText = 'position:relative;display:inline-block';
+
         var pill = document.createElement('span');
-        pill.style.cssText = 'background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;white-space:nowrap;cursor:pointer;user-select:none';
-        pill.title = 'Click to assign role';
+        pill.style.cssText = 'background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;white-space:nowrap;cursor:pointer;user-select:none;display:inline-block';
         var roleBadge = a.boardRole === 'vc'
           ? ' <span style="background:#4A6CF7;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">VC</span>'
           : a.boardRole === 'so'
@@ -392,11 +394,63 @@ function renderOfficer(search){
           : '';
         pill.innerHTML = a.name + roleBadge +
           (a.clockInShift ? ' <span style="opacity:.6;font-size:10px">' + a.clockInShift + '</span>' : '');
-        (function(adultId){
-          pill.addEventListener('click', function(){ cycleAdultBoardRole(adultId); });
-        })(a.id);
-        adultStrip.appendChild(pill);
+
+        // Dropdown menu
+        var menu = document.createElement('div');
+        menu.style.cssText = 'display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #E0E8F0;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:999;min-width:150px;overflow:hidden;margin-top:4px';
+        var menuItems = [
+          {label: a.boardRole === 'vc' ? '&#10003; VC on Shift' : 'VC on Shift', role: 'vc'},
+          {label: a.boardRole === 'so' ? '&#10003; Shift Officer' : 'Shift Officer', role: 'so'},
+          {label: a.boardRole ? 'Remove Role' : '&#10003; Mentor (no role)', role: null},
+          {label: '&#9679; Clock Out', role: 'clockout'}
+        ];
+        menuItems.forEach(function(item){
+          var opt = document.createElement('div');
+          opt.innerHTML = item.label;
+          opt.style.cssText = 'padding:8px 14px;font-size:12px;cursor:pointer;color:' +
+            (item.role === 'clockout' ? '#CC0000' : 'var(--navy)') + ';font-weight:' +
+            (item.role === a.boardRole || (!item.role && !a.boardRole) ? '700' : '400');
+          opt.addEventListener('mouseenter', function(){ opt.style.background = '#F0F4F8'; });
+          opt.addEventListener('mouseleave', function(){ opt.style.background = ''; });
+          (function(adultId, role){
+            opt.addEventListener('click', function(e){
+              e.stopPropagation();
+              menu.style.display = 'none';
+              if(role === 'clockout'){
+                adultClockOut(adultId);
+              } else {
+                var ad = adults.find(function(x){ return x.id === adultId; });
+                if(ad) ad.boardRole = (ad.boardRole === role) ? null : role;
+                saveStateNow();
+                renderOfficer();
+              }
+            });
+          })(a.id, item.role);
+          menu.appendChild(opt);
+        });
+
+        (function(pillEl, menuEl){
+          pillEl.addEventListener('click', function(e){
+            e.stopPropagation();
+            // Close any other open menus
+            document.querySelectorAll('.adult-pill-menu').forEach(function(m){ m.style.display = 'none'; });
+            menuEl.style.display = menuEl.style.display === 'block' ? 'none' : 'block';
+          });
+        })(pill, menu);
+
+        wrapper.appendChild(pill);
+        wrapper.appendChild(menu);
+        menu.className = 'adult-pill-menu';
+        adultStrip.appendChild(wrapper);
       });
+
+      // Close menus when clicking elsewhere
+      if(!adultStrip._menuClose){
+        adultStrip._menuClose = true;
+        document.addEventListener('click', function(){
+          document.querySelectorAll('.adult-pill-menu').forEach(function(m){ m.style.display = 'none'; });
+        });
+      }
     } else {
       adultStrip.style.display = 'none';
       adultStrip.innerHTML = '';
@@ -3262,4 +3316,21 @@ function saveAdultPerm(adultId){
   }).catch(function(e){
     if(msg) msg.innerHTML = '<span style="color:#CC0000">Connection error.</span>';
   });
+}
+
+// ============================================================
+// ADULT CLOCK OUT — manual clock out from dashboard
+// ============================================================
+function adultClockOut(adultId){
+  var ad = adults.find(function(a){ return a.id === adultId; });
+  if(!ad) return;
+  var nowStr = new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+  var log = ad.shiftLog && ad.shiftLog[ad.shiftLog.length - 1];
+  if(log && !log.out) log.out = nowStr;
+  ad.clockedIn = false;
+  ad.clockInTime = null;
+  ad.boardRole = null;
+  saveStateNow();
+  renderOfficer();
+  showAlert(ad.name + ' clocked out at ' + nowStr + '.', 'info');
 }
