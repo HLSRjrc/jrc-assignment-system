@@ -1707,12 +1707,12 @@ function bulkAddShift(shift, silent){
         }
         if(psShift !== shift) return;
         var slotName = r.name + (s.startTime ? ' (' + s.startTime + '–' + s.endTime + ')' : '');
-        toAdd.push({name:slotName, shift:shift, cap:s.cap, hat:r.hat});
+        toAdd.push({name:slotName, shift:shift, cap:s.cap, hat:r.hat, liaison:r.liaison||'', liaisonPhone:r.liaisonPhone||'', liaisonEmail:r.liaisonEmail||'', chair:r.chair||'', chairPhone:r.chairPhone||'', location:r.location||'', duties:r.duties||'', notes:r.notes||''});
       } else {
         if(s.shift !== shift) return;
         // Match specific-date requests OR all-show requests (all20:true)
         if(s.date === date || s.all20){
-          toAdd.push({name:r.name, shift:shift, cap:s.cap, hat:r.hat});
+          toAdd.push({name:r.name, shift:shift, cap:s.cap, hat:r.hat, liaison:r.liaison||'', liaisonPhone:r.liaisonPhone||'', liaisonEmail:r.liaisonEmail||'', chair:r.chair||'', chairPhone:r.chairPhone||'', location:r.location||'', duties:r.duties||'', notes:r.notes||''});
         }
       }
     });
@@ -1721,7 +1721,7 @@ function bulkAddShift(shift, silent){
   toAdd.forEach(function(c){
     var alreadyHas = activeSlots.some(function(s){ return s.name === c.name && s.shift === shift; });
     if(alreadyHas){ skipped++; return; }
-    activeSlots.push({id:Date.now() + Math.random(), name:c.name, capacity:c.cap, shift:shift, hat:c.hat, assigned:[]});
+    activeSlots.push({id:Date.now() + Math.random(), name:c.name, capacity:c.cap, shift:shift, hat:c.hat, assigned:[], liaison:c.liaison||'', liaisonPhone:c.liaisonPhone||'', liaisonEmail:c.liaisonEmail||'', chair:c.chair||'', chairPhone:c.chairPhone||'', location:c.location||'', duties:c.duties||'', notes:c.notes||''});
     added++;
   });
   if(!silent){
@@ -2536,7 +2536,15 @@ function applyCull(keptSlots, shift){
       capacity: s.cap,
       hat: s.hat||false,
       highPriority: s.highPriority||false,
-      assigned: []
+      assigned: [],
+      liaison: s.liaison||'',
+      liaisonPhone: s.liaisonPhone||'',
+      liaisonEmail: s.liaisonEmail||'',
+      chair: s.chair||'',
+      chairPhone: s.chairPhone||'',
+      location: s.location||'',
+      duties: s.duties||'',
+      notes: s.notes||''
     });
   });
 
@@ -2620,7 +2628,7 @@ function renderSetupApproved(){
       var slotName = s.preshow ? (r.name + ' (' + effLabel + ')') : r.name;
       var existingSlot = activeSlots.find(function(sl){ return sl.name === slotName && sl.shift === effShift; });
       var isPriority = existingSlot ? !!existingSlot.highPriority : !!(r.highPriority);
-      relevant.push({name:slotName, shift:effShift, shiftLabel:effLabel, cap:s.cap, rid:r.id, si:si, isPriority:isPriority});
+      relevant.push({name:slotName, shift:effShift, shiftLabel:effLabel, cap:s.cap, rid:r.id, si:si, isPriority:isPriority, liaison:r.liaison||'', liaisonPhone:r.liaisonPhone||'', liaisonEmail:r.liaisonEmail||'', chair:r.chair||'', chairPhone:r.chairPhone||'', location:r.location||'', duties:r.duties||'', notes:r.notes||''});
     });
   });
 
