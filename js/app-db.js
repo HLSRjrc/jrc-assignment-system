@@ -1059,8 +1059,12 @@ function openNoteLog(jIdx){
         '</select>' +
       '</div>' +
       '<div style="font-size:11px;color:#8899AA;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Details</div>' +
-      '<div style="font-size:11px;color:#667788;margin-bottom:6px">If this information is sensitive it should be sent directly to <a href="mailto:JRCchairman@hlsr.com" style="color:var(--navy)">JRCchairman@hlsr.com</a> rather than input here.</div>' +
-      '<textarea id="note-log-input" class="finput" rows="3" placeholder="Please add details and your initials" style="width:100%;resize:vertical;margin-bottom:8px"></textarea>' +
+      '<div style="font-size:11px;color:#667788;margin-bottom:6px">Please add all information available. If this information is sensitive it should be sent directly to <a href="mailto:JRCchairman@hlsr.com" style="color:var(--navy)">JRCchairman@hlsr.com</a> rather than input here.</div>' +
+      '<textarea id="note-log-input" class="finput" rows="3" placeholder="Add all available details..." style="width:100%;resize:vertical;margin-bottom:8px"></textarea>' +
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+        '<input id="note-log-initials" class="finput" type="text" maxlength="6" placeholder="Initials *" style="width:90px;font-size:13px;text-transform:uppercase;font-weight:700;letter-spacing:.1em">' +
+        '<span style="font-size:11px;color:#667788">Required — your initials to confirm this entry</span>' +
+      '</div>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end">' +
         '<button class="btn" onclick="closeNoteLog()">Cancel</button>' +
         '<button class="btn btn-primary" onclick="submitNoteFromLog('+jIdx+')">Add Note</button>' +
@@ -1078,14 +1082,30 @@ function closeNoteLog(){
 }
 
 function submitNoteFromLog(jIdx){
-  var input   = document.getElementById('note-log-input');
-  var typeEl  = document.getElementById('note-log-type');
-  var text    = (input ? input.value.trim() : '');
-  var type    = (typeEl ? typeEl.value : '') || '';
-  if(!type){ if(typeEl){ typeEl.style.border='2px solid #CC0000'; typeEl.focus(); } return; }
+  var input      = document.getElementById('note-log-input');
+  var typeEl     = document.getElementById('note-log-type');
+  var initialsEl = document.getElementById('note-log-initials');
+  var text       = (input ? input.value.trim() : '');
+  var type       = (typeEl ? typeEl.value : '') || '';
+  var initials   = (initialsEl ? initialsEl.value.trim().toUpperCase() : '');
+
+  if(!type){
+    if(typeEl){ typeEl.style.border='2px solid #CC0000'; typeEl.focus(); }
+    return;
+  }
   if(typeEl) typeEl.style.border='';
+
   if(!text){ if(input) input.focus(); return; }
-  addJuniorNote(jIdx, text, type);
+
+  if(!initials){
+    if(initialsEl){ initialsEl.style.border='2px solid #CC0000'; initialsEl.focus(); }
+    return;
+  }
+  if(initialsEl) initialsEl.style.border='';
+
+  // Append initials to text so they appear in the saved note
+  var fullText = text + '  —  ' + initials;
+  addJuniorNote(jIdx, fullText, type);
   closeNoteLog();
   setTimeout(function(){ openNoteLog(jIdx); }, 100);
 }
