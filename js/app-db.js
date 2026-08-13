@@ -678,8 +678,8 @@ function exportHoursCSV(){
   var rows = [['Member #','Name','Title','Age-Out','Date','Shift','Committee','Hours','No-Show','Shift Note','Manager Note Type','Manager Note']];
 
   juniors.filter(function(j){ return !j.inactive; }).forEach(function(j){
-    var shiftLog = j.shiftLog || [];
-    var noteLog  = j.noteLog  || [];
+    var shiftLog = Array.isArray(j.shiftLog) ? j.shiftLog : [];
+    var noteLog  = Array.isArray(j.noteLog)  ? j.noteLog  : [];
 
     // One row per shift entry
     shiftLog.forEach(function(e){
@@ -709,10 +709,7 @@ function exportHoursCSV(){
 
     // If junior has no entries at all, still include a summary row so every member appears
     if(!shiftLog.length && !noteLog.length){
-      rows.push([
-        j.id, j.name, j.title||'', j.ageout ? 'Yes' : 'No',
-        '', '', '', 0, 'No', '', '', ''
-      ]);
+      rows.push([j.id, j.name, j.title||'', j.ageout?'Yes':'No', '', '', '', 0, 'No', '', '', '']);
     }
   });
 
