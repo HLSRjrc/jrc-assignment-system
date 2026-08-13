@@ -1,3 +1,4 @@
+[CLAUDE (1).md](https://github.com/user-attachments/files/31045784/CLAUDE.1.md)
 [CLAUDE.md](https://github.com/user-attachments/files/29980801/CLAUDE.md)
 # JRC Assignment System — Claude Project Context
 
@@ -6,16 +7,16 @@ This is the **JRC Assignment System** for the Houston Livestock Show & Rodeo (HL
 
 - **Live app:** `jrc.hlsr.app`
 - **Partner portal:** `jrcpartner.hlsr.app` (committee request submission)
-- **TV status board:** `jrc.hlsr.app/?tv=1`
+- **TV status board:** `jrctv.hlsr.app`
 - **Repo:** `HLSRjrc/jrc-assignment-system` (private)
-- **Current version:** V21
+- **Current version:** V24
 
 ---
 
 ## Tech Stack
-- **Frontend:** Single-page JS app — `js/app.js`, `index.html`, `css/app.css`
+- **Frontend:** Split JS modules — `js/app-data.js`, `js/app-helpers.js`, `js/app-dashboard.js`, `js/app-auth.js`, `js/app-requests.js`, `js/app-board.js`, `js/app-db.js`, `index.html`, `css/app.css`
 - **Build:** esbuild minification (`npx esbuild js/app.js --bundle=false --minify`)
-- **Backend:** Netlify serverless functions — `netlify/functions/state.js`
+- **Backend:** Netlify serverless functions — `netlify/functions/state.js`, `netlify/functions/auth.js`, `netlify/functions/set-password.js`, `netlify/functions/send-email.js`
 - **Database:** Neon PostgreSQL (separate dev/prod databases)
 - **Deployment:** GitHub Actions → Netlify auto-deploy from `main` branch
 - **Domain:** Porkbun (hlsr.app)
@@ -32,7 +33,7 @@ This is the **JRC Assignment System** for the Houston Livestock Show & Rodeo (HL
 4. **Hat priority:** When hat slot filling is at risk (hat juniors remaining ≤ hat spots needed + 2), route hat juniors to hat slots FIRST before non-hat slots.
 5. **History variety:** Avoid repeating the most recent committee assignment. Use `jr.last` field to track.
 6. **High priority slots:** Fill HP slots to capacity before distributing to regular slots.
-7. **Last resort fallback:** If a junior truly has no eligible slot (all remaining open slots are hat-required and they have no hat), they CAN be placed in a hat slot rather than left stranded.
+7. ~~Last resort fallback~~ — **REMOVED.** Non-hat juniors are NEVER assigned to hat-required slots under any circumstances. If a junior has no eligible slot, they remain as a straggler and must be placed manually by the officer.
 
 ### Age-Out Rules
 - Age-outs work multiple shifts in one day (8am, 12pm, 4pm or any combo)
