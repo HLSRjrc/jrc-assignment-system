@@ -429,7 +429,11 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
   <!-- PERMISSIONS MANAGEMENT — admin only -->
   <div class="card" id="perms-mgmt-card" style="margin-bottom:16px">
-    <div class="section-lbl" style="margin-bottom:4px">&#128274; Permissions &amp; Passwords</div>
+    <div onclick="toggleSection('sec-perms')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+      <div class="section-lbl" style="margin-bottom:0">&#128274; Permissions &amp; Passwords</div>
+      <span id="sec-perms-arrow" style="font-size:10px;color:#999">&#9660;</span>
+    </div>
+    <div id="sec-perms" style="display:none;margin-top:12px">
     <div style="font-size:12px;color:#667788;margin-bottom:12px">Set access levels and passwords for committee members. Adults not listed here can only use the kiosk.</div>
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <input type="text" id="perms-search" class="finput" placeholder="&#128269; Search by name or member #..." oninput="renderPermsTable()" style="font-size:12px;flex:1;min-width:200px">
@@ -441,11 +445,16 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </div>
     <div id="perms-table-wrap" style="max-height:400px;overflow-y:auto"></div>
     <div id="perms-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+    </div>
   </div>
 
   <!-- BULK CHECK-IN / CLOCK-OUT TOOL -->
   <div class="card" style="margin-bottom:16px;border:2px solid #5C6BC0">
-    <div class="section-lbl" style="margin-bottom:4px;color:#5C6BC0">&#9881; Bulk Check-in / Clock-out</div>
+    <div onclick="toggleSection('sec-bulk')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+      <div class="section-lbl" style="margin-bottom:0;color:#5C6BC0">&#9881; Bulk Check-in / Clock-out</div>
+      <span id="sec-bulk-arrow" style="font-size:10px;color:#999">&#9660;</span>
+    </div>
+    <div id="sec-bulk" style="display:none;margin-top:12px">
     <div style="font-size:12px;color:#667788;margin-bottom:12px">Simulates realistic arrivals and departures. Juniors get random hats, some age-outs, and a few with notes.</div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -512,10 +521,15 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
     </div>
     <button class="btn btn-sm btn-danger" style="margin-top:10px;width:100%" onclick="simStopAll()">&#9646;&#9646; Stop All</button>
+    </div>
   </div>
 
   <div class="card">
-    <div class="section-lbl" style="margin-bottom:8px">Set Date &amp; Time</div>
+    <div onclick="toggleSection('sec-datetime')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+      <div class="section-lbl" style="margin-bottom:0">Set Date &amp; Time</div>
+      <span id="sec-datetime-arrow" style="font-size:10px;color:#999">&#9660;</span>
+    </div>
+    <div id="sec-datetime" style="display:none;margin-top:12px">
     <div style="font-size:13px;color:#667788;margin-bottom:16px">Set the current date and time for the app. The clock advances normally from whatever you set.</div>
     <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:flex-end;margin-bottom:14px">
       <div>
@@ -543,10 +557,15 @@ if(window.location.search.indexOf('partner=1') >= 0){
       <button class="btn" onclick="clearSimTime();var el=document.getElementById('sim-status');if(el)el.innerHTML='<span style=&quot;color:var(--green);font-weight:600&quot;>&#10003; Using current real time</span>';">Use Real Time</button>
       <span id="sim-status" style="font-size:12px;color:#667788">Not set &mdash; using real time</span>
     </div>
+    </div>
   </div>
 
   <div class="card">
-    <div class="section-lbl" style="margin-bottom:8px">Roster Import</div>
+    <div onclick="toggleSection('sec-roster')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+      <div class="section-lbl" style="margin-bottom:0">Roster Import</div>
+      <span id="sec-roster-arrow" style="font-size:10px;color:#999">&#9660;</span>
+    </div>
+    <div id="sec-roster" style="display:none;margin-top:12px">
     <div style="font-size:13px;color:#667788;margin-bottom:12px;line-height:1.6">
       Upload HLSR roster exports (.xlsx). New members are added, existing members get updated contact info, members removed from their file are marked inactive (history preserved).
     </div>
@@ -607,10 +626,15 @@ if(window.location.search.indexOf('partner=1') >= 0){
         </div>
       </div>
     </div>
+    </div>
   </div>
 
   <div class="card">
-    <div class="section-lbl" style="margin-bottom:8px">Data management</div>
+    <div onclick="toggleSection('sec-data')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+      <div class="section-lbl" style="margin-bottom:0">Data management</div>
+      <span id="sec-data-arrow" style="font-size:10px;color:#999">&#9660;</span>
+    </div>
+    <div id="sec-data" style="display:none;margin-top:12px">
     <div style="font-size:13px;color:#667788;margin-bottom:12px;line-height:1.6">
       Use these with caution. All destructive actions require confirmation.
     </div>
@@ -636,6 +660,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
         </div>
         <button class="btn btn-danger" onclick="confirmFullReset()">Full Reset</button>
       </div>
+    </div>
     </div>
   </div>
 
