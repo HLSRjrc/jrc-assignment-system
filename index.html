@@ -427,7 +427,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
 <!-- SETTINGS / DATE SIMULATOR -->
 <div id="panel-simulate" class="panel">
 
-  <div class="card">
+  <div class="card" style="margin-bottom:16px">
     <div onclick="toggleSection('sec-datetime')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
       <div class="section-lbl" style="margin-bottom:0">Set Date &amp; Time</div>
       <span id="sec-datetime-arrow" style="font-size:10px;color:#999">&#9660;</span>
@@ -464,7 +464,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
   </div>
 
   <!-- BULK CHECK-IN / CLOCK-OUT TOOL -->
-  <div class="card" style="margin-bottom:16px;border:2px solid #5C6BC0">
+  <div class="card" style="margin-bottom:16px">
     <div onclick="toggleSection('sec-bulk')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
       <div class="section-lbl" style="margin-bottom:0;color:#5C6BC0">&#9881; Bulk Check-in / Clock-out</div>
       <span id="sec-bulk-arrow" style="font-size:10px;color:#999">&#9660;</span>
@@ -540,7 +540,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
   </div>
 
   <!-- PERMISSIONS MANAGEMENT — admin only -->
-  <div class="card" id="perms-mgmt-card" style="margin-bottom:16px">
+  <div class="card" style="margin-bottom:16px">
     <div onclick="toggleSection('sec-perms')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
       <div class="section-lbl" style="margin-bottom:0">&#128274; Permissions &amp; Passwords</div>
       <span id="sec-perms-arrow" style="font-size:10px;color:#999">&#9660;</span>
@@ -560,7 +560,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" style="margin-bottom:16px">
     <div onclick="toggleSection('sec-roster')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
       <div class="section-lbl" style="margin-bottom:0">Roster Import</div>
       <span id="sec-roster-arrow" style="font-size:10px;color:#999">&#9660;</span>
@@ -629,7 +629,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </div>
   </div>
 
-  <div class="card">
+  <div class="card" style="margin-bottom:16px">
     <div onclick="toggleSection('sec-data')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
       <div class="section-lbl" style="margin-bottom:0">Data management</div>
       <span id="sec-data-arrow" style="font-size:10px;color:#999">&#9660;</span>
@@ -733,7 +733,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
   <div class="orb" style="width:14px;height:14px;left:16%;bottom:-20px;animation-duration:5.2s;animation-delay:-3.3s;opacity:0.5"></div>
   <div class="orb" style="width:5px;height:5px;left:88%;bottom:-20px;animation-duration:11.7s;animation-delay:-6.5s;opacity:0.67"></div>
   <div class="orb" style="width:4px;height:4px;left:5%;bottom:-20px;animation-duration:5.8s;animation-delay:-2.8s;opacity:0.67"></div>
-  <div class="card" style="max-width:700px;margin:0 auto">
+  <div class="card" style="margin-bottom:16px">
     <div style="margin-bottom:4px;padding-right:110px;position:relative">
       <div style="font-size:16px;font-weight:700;color:var(--navy)">Junior Rodeo Committee &mdash; Opportunity Request</div>
       <img src="/assets/jrc-logo-navy.png" style="position:absolute;top:-4px;right:0;width:100px;height:auto" alt="JRC">
@@ -850,9 +850,7 @@ if(window.location.search.indexOf('partner=1') >= 0){
     <button class="btn btn-orange"  style="width:100%;padding:12px;font-size:14px" onclick="submitRequest()">Submit Request</button>
   </div>
 </div>
-
-<!-- STATUS BOARD -->
-<div id="panel-board" class="panel">
+div id="panel-board" class="panel">
   <div id="board-content"></div>
 </div>
 
