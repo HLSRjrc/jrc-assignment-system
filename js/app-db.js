@@ -674,56 +674,80 @@ function exportHoursCSV(){
     'note':          'Additional Information'
   };
 
-  // Header
-  var rows = [['Member #','Name','Title','Age-Out','Date','Shift','Committee','Hours','No-Show','Shift Note','Manager Note Type','Manager Note']];
+  var list = juniors.filter(function(j){ return !j.inactive; })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); });
 
-  juniors.filter(function(j){ return !j.inactive; }).forEach(function(j){
+  // ── Sheet 1: Detail — one row per shift entry or manager note ────────────
+  var detail = [['Member #','Name','Title','Age-Out','Date','Shift','Committee','Hours','No-Show','Shift Note','Manager Note Type','Manager Note']];
+
+  list.forEach(function(j){
     var shiftLog = Array.isArray(j.shiftLog) ? j.shiftLog : [];
     var noteLog  = Array.isArray(j.noteLog)  ? j.noteLog  : [];
 
-    // One row per shift entry
     shiftLog.forEach(function(e){
-      rows.push([
-        j.id, j.name, j.title||'', j.ageout ? 'Yes' : 'No',
+      detail.push([
+        j.id, j.name, j.title||'', j.ageout?'Yes':'No',
         e.date ? fmtDate(e.date) : '', SL[e.shift]||e.shift||'', e.committee||'',
         e.noshow ? 0 : (e.hours||4),
         e.noshow ? 'Yes' : 'No',
-        e.note || '',
-        '', ''
+        e.note||'', '', ''
       ]);
     });
 
-    // One row per manager note (no-shows from noteLog also get their own row)
     noteLog.forEach(function(e){
       var d = new Date(e.ts);
-      var dateStr = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
-      rows.push([
-        j.id, j.name, j.title||'', j.ageout ? 'Yes' : 'No',
-        dateStr, '', '',
-        '', '',
-        '',
-        NOTE_LABELS[e.type] || e.type || 'Note',
-        (e.by ? '[' + e.by + '] ' : '') + (e.text||'')
+      var ds = (d.getMonth()+1)+'/'+d.getDate()+'/'+d.getFullYear();
+      detail.push([
+        j.id, j.name, j.title||'', j.ageout?'Yes':'No',
+        ds, '', '', '', '', '',
+        NOTE_LABELS[e.type]||e.type||'Note',
+        (e.by?'['+e.by+'] ':''+(e.text||''))
       ]);
     });
 
-    // If junior has no entries at all, still include a summary row so every member appears
     if(!shiftLog.length && !noteLog.length){
-      rows.push([j.id, j.name, j.title||'', j.ageout?'Yes':'No', '', '', '', 0, 'No', '', '', '']);
+      detail.push([j.id, j.name, j.title||'', j.ageout?'Yes':'No', '', '', '', 0, 'No', '', '', '']);
     }
   });
 
-  var csv = rows.map(function(r){
-    return r.map(function(c){ return '"' + String(c==null?'':c).replace(/"/g,'""') + '"'; }).join(',');
-  }).join('\n');
+  // ── Sheet 2: Summary — one row per junior ────────────────────────────────
+  var summary = [['Member #','Name','Title','Age-Out','Total Hours','Shifts Worked','No-Shows']];
 
-  var blob = new Blob([csv], {type:'text/csv'});
-  var a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'jrc_hours_' + (currentDate||'export') + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  list.forEach(function(j){
+    var shiftLog = Array.isArray(j.shiftLog) ? j.shiftLog : [];
+    var noteLog  = Array.isArray(j.noteLog)  ? j.noteLog  : [];
+
+    var totalHrs    = shiftLog.reduce(function(s,e){ return s + (e.noshow ? 0 : (e.hours||4)); }, 0);
+    var shiftsWorked = shiftLog.filter(function(e){ return !e.noshow; }).length;
+    var noShowsLog  = shiftLog.filter(function(e){ return e.noshow; }).length;
+    var noShowsNote = noteLog.filter(function(e){
+      return e.type==='noshow-nocall'||e.type==='noshow-prior'||e.type==='noshow-dayof';
+    }).length;
+
+    summary.push([
+      j.id, j.name, j.title||'', j.ageout?'Yes':'No',
+      totalHrs, shiftsWorked, noShowsLog + noShowsNote
+    ]);
+  });
+
+  // ── Build workbook with two sheets ───────────────────────────────────────
+  var wb = XLSX.utils.book_new();
+  var ws1 = XLSX.utils.aoa_to_sheet(detail);
+  var ws2 = XLSX.utils.aoa_to_sheet(summary);
+
+  // Column widths for detail sheet
+  ws1['!cols'] = [
+    {wch:12},{wch:28},{wch:20},{wch:8},{wch:12},{wch:12},{wch:28},
+    {wch:8},{wch:9},{wch:20},{wch:30},{wch:50}
+  ];
+  // Column widths for summary sheet
+  ws2['!cols'] = [{wch:12},{wch:28},{wch:20},{wch:8},{wch:12},{wch:14},{wch:10}];
+
+  XLSX.utils.book_append_sheet(wb, ws1, 'Detail');
+  XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
+
+  var fname = 'JRC_Hours_' + (currentDate||new Date().toISOString().slice(0,10)) + '.xlsx';
+  XLSX.writeFile(wb, fname);
 }
 
 
