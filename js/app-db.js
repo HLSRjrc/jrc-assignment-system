@@ -666,27 +666,67 @@ function updateShiftNote(jri, ei, val){
 }
 
 function exportHoursCSV(){
-  // One row per shift entry, plus a summary row per junior
-  var rows = [['Name','Title','Age-Out','Date','Shift','Committee','Hours','No-Show','Note']];
-  juniors.forEach(function(j){
-    var log = j.shiftLog || [];
-    if(!log.length) return;
-    log.forEach(function(e){
+  var NOTE_LABELS = {
+    'noshow-nocall': 'NO SHOW: No Call',
+    'noshow-prior':  'NO SHOW: Called Prior to Shift Date',
+    'noshow-dayof':  'NO SHOW: Called Day of Shift',
+    'incident':      'Incident on Shift',
+    'note':          'Additional Information'
+  };
+
+  // Header
+  var rows = [['Member #','Name','Title','Age-Out','Date','Shift','Committee','Hours','No-Show','Shift Note','Manager Note Type','Manager Note']];
+
+  juniors.filter(function(j){ return !j.inactive; }).forEach(function(j){
+    var shiftLog = j.shiftLog || [];
+    var noteLog  = j.noteLog  || [];
+
+    // One row per shift entry
+    shiftLog.forEach(function(e){
       rows.push([
-        j.name, j.title||'', j.ageout ? 'Yes' : 'No',
-        fmtDate(e.date), SL[e.shift]||e.shift, e.committee||'',
+        j.id, j.name, j.title||'', j.ageout ? 'Yes' : 'No',
+        e.date ? fmtDate(e.date) : '', SL[e.shift]||e.shift||'', e.committee||'',
         e.noshow ? 0 : (e.hours||4),
         e.noshow ? 'Yes' : 'No',
-        e.note || ''
+        e.note || '',
+        '', ''
       ]);
     });
+
+    // One row per manager note (no-shows from noteLog also get their own row)
+    noteLog.forEach(function(e){
+      var d = new Date(e.ts);
+      var dateStr = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear();
+      rows.push([
+        j.id, j.name, j.title||'', j.ageout ? 'Yes' : 'No',
+        dateStr, '', '',
+        '', '',
+        '',
+        NOTE_LABELS[e.type] || e.type || 'Note',
+        (e.by ? '[' + e.by + '] ' : '') + (e.text||'')
+      ]);
+    });
+
+    // If junior has no entries at all, still include a summary row so every member appears
+    if(!shiftLog.length && !noteLog.length){
+      rows.push([
+        j.id, j.name, j.title||'', j.ageout ? 'Yes' : 'No',
+        '', '', '', 0, 'No', '', '', ''
+      ]);
+    }
   });
-  var csv = rows.map(function(r){ return r.map(function(c){ return '"' + String(c).replace(/"/g,'""') + '"'; }).join(','); }).join('\n');
+
+  var csv = rows.map(function(r){
+    return r.map(function(c){ return '"' + String(c==null?'':c).replace(/"/g,'""') + '"'; }).join(',');
+  }).join('\n');
+
   var blob = new Blob([csv], {type:'text/csv'});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'jrc_hours_' + currentDate + '.csv';
+  a.download = 'jrc_hours_' + (currentDate||'export') + '.csv';
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
 }
 
 
