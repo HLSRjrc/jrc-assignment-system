@@ -3359,3 +3359,16 @@ function adultClockOut(adultId){
   renderOfficer();
   showAlert(ad.name + ' clocked out at ' + nowStr + '.', 'info');
 }
+
+// ============================================================
+// COLLAPSIBLE SETTINGS SECTIONS
+// ============================================================
+function toggleSection(id){
+  var body = document.getElementById(id);
+  var arrow = document.getElementById(id + '-arrow');
+  if(!body) return;
+  var open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if(arrow) arrow.innerHTML = open ? '&#9660;' : '&#9650;';
+  if(!open && id === 'sec-perms') renderPermsTable();
+}
