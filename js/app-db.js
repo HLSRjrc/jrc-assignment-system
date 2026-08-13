@@ -1050,16 +1050,17 @@ function openNoteLog(jIdx){
       '<div style="margin-bottom:8px">' +
         '<div style="font-size:11px;color:#8899AA;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Note Type</div>' +
         '<select id="note-log-type" class="finput" style="font-size:12px;width:100%">' +
+          '<option value="" disabled selected>— Select a note type —</option>' +
           '<option value="noshow-nocall">NO SHOW: No Call</option>' +
           '<option value="noshow-prior">NO SHOW: Called Prior to Shift Date</option>' +
           '<option value="noshow-dayof">NO SHOW: Called Day of Shift</option>' +
           '<option value="incident">Incident on Shift</option>' +
-          '<option value="note" selected>Additional Information</option>' +
+          '<option value="note">Additional Information</option>' +
         '</select>' +
       '</div>' +
       '<div style="font-size:11px;color:#8899AA;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Details</div>' +
-      '<div style="font-size:11px;color:#667788;margin-bottom:6px">Type your name, date and time and all available information regarding the situation. If this information is sensitive it should be sent directly to <a href="mailto:JRCchairman@hlsr.com" style="color:var(--navy)">JRCchairman@hlsr.com</a> rather than input here.</div>' +
-      '<textarea id="note-log-input" class="finput" rows="3" placeholder="Your name, date, time, and details..." style="width:100%;resize:vertical;margin-bottom:8px"></textarea>' +
+      '<div style="font-size:11px;color:#667788;margin-bottom:6px">If this information is sensitive it should be sent directly to <a href="mailto:JRCchairman@hlsr.com" style="color:var(--navy)">JRCchairman@hlsr.com</a> rather than input here.</div>' +
+      '<textarea id="note-log-input" class="finput" rows="3" placeholder="Please add details and your initials" style="width:100%;resize:vertical;margin-bottom:8px"></textarea>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end">' +
         '<button class="btn" onclick="closeNoteLog()">Cancel</button>' +
         '<button class="btn btn-primary" onclick="submitNoteFromLog('+jIdx+')">Add Note</button>' +
@@ -1080,7 +1081,9 @@ function submitNoteFromLog(jIdx){
   var input   = document.getElementById('note-log-input');
   var typeEl  = document.getElementById('note-log-type');
   var text    = (input ? input.value.trim() : '');
-  var type    = (typeEl ? typeEl.value : 'note') || 'note';
+  var type    = (typeEl ? typeEl.value : '') || '';
+  if(!type){ if(typeEl){ typeEl.style.border='2px solid #CC0000'; typeEl.focus(); } return; }
+  if(typeEl) typeEl.style.border='';
   if(!text){ if(input) input.focus(); return; }
   addJuniorNote(jIdx, text, type);
   closeNoteLog();
