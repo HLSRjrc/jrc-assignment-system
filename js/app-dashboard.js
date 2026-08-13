@@ -1187,6 +1187,7 @@ function resetAllHistory(){
     j.last     = 'None';
     j.shiftLog = [];
     j.noteLog  = [];
+    dirtyJuniors.add(j.id); // force every junior into the save payload
   });
   // Clear adults: shift log (hours)
   (adults||[]).forEach(function(a){
