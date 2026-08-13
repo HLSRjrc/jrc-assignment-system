@@ -591,13 +591,12 @@ function renderHours(){
     }).length : 0;
     return s + fromShiftLog + fromNoteLog;
   }, 0);
-  var earlyOuts   = juniors.reduce(function(s, j){ return s + (j.shiftLog ? j.shiftLog.filter(function(e){ return !e.noshow && e.hours < 4; }).length : 0); }, 0);
+
 
   summaryEl.innerHTML =
     '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">Total Shifts</div><div class="stat-val">' + totalShifts + '</div></div>' +
     '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">Total Hours</div><div class="stat-val">' + totalHours + '</div></div>' +
-    '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">No-Shows</div><div class="stat-val" style="color:var(--red)">' + noShows + '</div></div>' +
-    '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">Early Departures</div><div class="stat-val" style="color:var(--orange)">' + earlyOuts + '</div></div>';
+    '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">No-Shows</div><div class="stat-val" style="color:var(--red)">' + noShows + '</div></div>';
 
   el.innerHTML = list.map(function(j){
     var hrs = getTotalHours(j);
@@ -606,7 +605,7 @@ function renderHours(){
       ((j.noteLog||[]).filter(function(e){
         return e.type==='noshow-nocall'||e.type==='noshow-prior'||e.type==='noshow-dayof';
       }).length);
-    var earlyCount  = log.filter(function(e){ return !e.noshow && e.hours < 4; }).length;
+
 
     // Expandable shift log rows
     var logRows = log.length === 0 ? '<tr><td colspan="6" style="font-size:11px;color:var(--gray-400);padding:4px 12px">No shifts recorded</td></tr>' :
@@ -636,7 +635,7 @@ function renderHours(){
       '<td style="font-weight:700;color:' + (hrs >= 8 ? 'var(--green)' : hrs > 0 ? 'var(--navy)' : 'var(--gray-400)') + '">' + hrs + ' hrs</td>' +
       '<td style="font-size:12px">' + log.length + '</td>' +
       '<td style="font-size:12px;color:' + (noShowCount > 0 ? 'var(--red)' : 'var(--gray-400)') + '">' + (noShowCount || '—') + '</td>' +
-      '<td style="font-size:12px;color:' + (earlyCount > 0 ? 'var(--orange)' : 'var(--gray-400)') + '">' + (earlyCount || '—') + '</td>' +
+
     '</tr>' +
     '<tr style="display:none"><td colspan="6" style="padding:0"><table style="width:100%;border-collapse:collapse">' + logRows + '</table></td></tr>';
   }).join('');
