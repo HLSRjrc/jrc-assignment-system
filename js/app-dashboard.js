@@ -1,4 +1,24 @@
 // JRC Assignment System — app-dashboard.js
+
+// ============================================================
+// REQUEST CONTACT LOOKUP — shared helper
+// Finds the approved request matching a slot/committee name and
+// returns its contact fields. Handles preshow names like
+// "Name (3:00 PM-9:00 PM)" by matching on the base name.
+// ============================================================
+function _reqContact(slotName){
+  if(!slotName) return {};
+  var base = String(slotName).replace(/\s*\(.*\)\s*$/, '').trim();
+  var r = (committeeRequests||[]).find(function(x){
+    return x.status === 'approved' && x.name === base;
+  }) || (committeeRequests||[]).find(function(x){ return x.name === base; });
+  if(!r) return {};
+  return {
+    liaison: r.liaison||'', liaisonPhone: r.liaisonPhone||'', liaisonEmail: r.liaisonEmail||'',
+    chair: r.chair||'', chairPhone: r.chairPhone||'',
+    location: r.location||'', duties: r.duties||'', notes: r.notes||''
+  };
+}
 // Officer dashboard, check-ins, library, shift setup, culling engine, schedule migration, simulator
 // ============================================================
 // OFFICER DASHBOARD
@@ -22,17 +42,19 @@ function buildReports(slots){
     fmtDate(d) + ' — ' + slots.length + ' committee' + (slots.length!==1?'s':'');
   var html = '';
   slots.forEach(function(sl){
-    // Pull details from CD (bulk upload) OR directly from slot fields (request system)
+    // Details priority: slot fields → CD library (bulk upload) → approved request lookup.
+    // The request fallback heals stale slots saved to Neon before contact fields were carried over.
     var cdDet = CD[sl.name] || {};
+    var rq = _reqContact(sl.name);
     var det = {
-      loc:     sl.location    || cdDet.loc     || '',
-      duties:  sl.duties      || cdDet.duties  || '',
-      notes:   sl.notes       || cdDet.notes   || '',
-      liaison: sl.liaison     || cdDet.liaison || '',
-      lp:      sl.liaisonPhone|| cdDet.lp      || '',
-      le:      sl.liaisonEmail|| cdDet.le      || '',
-      chair:   sl.chair       || cdDet.chair   || '',
-      cp:      sl.chairPhone  || cdDet.cp      || ''
+      loc:     sl.location    || cdDet.loc     || rq.location     || '',
+      duties:  sl.duties      || cdDet.duties  || rq.duties       || '',
+      notes:   sl.notes       || cdDet.notes   || rq.notes        || '',
+      liaison: sl.liaison     || cdDet.liaison || rq.liaison      || '',
+      lp:      sl.liaisonPhone|| cdDet.lp      || rq.liaisonPhone || '',
+      le:      sl.liaisonEmail|| cdDet.le      || rq.liaisonEmail || '',
+      chair:   sl.chair       || cdDet.chair   || rq.chair        || '',
+      cp:      sl.chairPhone  || cdDet.cp      || rq.chairPhone   || ''
     };
     var jrs = sl.assigned.map(function(jid){ return juniors.find(function(j){ return j.id===jid; }); }).filter(Boolean);
     // Total rows = max of assigned or capacity, min 1
@@ -2137,7 +2159,7 @@ function loadAllPreviewSlotsForDate(){
   }).forEach(function(r){
     r.shifts.filter(function(s){ return !s.virtual && (s.date===date||s.all20); }).forEach(function(s){
       var ex = slots.some(function(x){ return x.name===r.name && x.shift===(s.shift||'8am'); });
-      if(!ex) slots.push({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false});
+      if(!ex) slots.push(Object.assign({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false}, _reqContact(r.name)));
     });
   });
   slots.forEach(function(s){
@@ -2145,7 +2167,7 @@ function loadAllPreviewSlotsForDate(){
     if(already) return;
     // Check if cap was overridden in the preview
     var capKey = 'prevcap_' + s.shift + '_0'; // approximate — use slot cap
-    activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
+    activeSlots.push(Object.assign({id:Date.now()+Math.random(), name:s.name, capacity:s.cap, shift:s.shift, hat:s.hat||false, assigned:[]}, _reqContact(s.name)));
     added++;
   });
   onSetupDateChange();
@@ -2156,7 +2178,7 @@ function loadAllPreviewSlotsForDate(){
 function addSinglePreviewSlot(name, shift, cap, hat){
   var already = activeSlots.some(function(s){ return s.name===name && s.shift===shift; });
   if(already) return;
-  activeSlots.push({id:Date.now()+Math.random(), name:name, capacity:cap, shift:shift, hat:hat, assigned:[]});
+  activeSlots.push(Object.assign({id:Date.now()+Math.random(), name:name, capacity:cap, shift:shift, hat:hat, assigned:[]}, _reqContact(name)));
   onSetupDateChange();
   renderSetup();
   renderSetupApproved();
@@ -3175,13 +3197,13 @@ function _loadSlotsForDate(date){
   }).forEach(function(r){
     r.shifts.filter(function(s){ return !s.virtual && (s.date===date || s.all20); }).forEach(function(s){
       var exists = slots.some(function(x){ return x.name===r.name && x.shift===(s.shift||'8am'); });
-      if(!exists) slots.push({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false});
+      if(!exists) slots.push(Object.assign({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false}, _reqContact(r.name)));
     });
   });
   slots.forEach(function(s){
     var already = activeSlots.some(function(a){ return a.name===s.name && a.shift===s.shift; });
     if(already) return;
-    activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap||s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
+    activeSlots.push(Object.assign({id:Date.now()+Math.random(), name:s.name, capacity:s.cap||s.cap, shift:s.shift, hat:s.hat||false, assigned:[]}, _reqContact(s.name)));
   });
   if(activeSlots.length > 0){
     window._activeSlotsDate = date; // only stamp if slots actually loaded
@@ -3216,11 +3238,11 @@ function activateShift(){
     }).forEach(function(r){
       r.shifts.filter(function(s){ return !s.virtual && (s.date===selectedDate || s.all20); }).forEach(function(s){
         var exists = autoSlots.some(function(x){ return x.name===r.name && x.shift===(s.shift||'8am'); });
-        if(!exists) autoSlots.push({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false});
+        if(!exists) autoSlots.push(Object.assign({name:r.name, shift:s.shift||'8am', cap:s.cap||2, hat:r.hat||false}, _reqContact(r.name)));
       });
     });
     autoSlots.forEach(function(s){
-      activeSlots.push({id:Date.now()+Math.random(), name:s.name, capacity:s.cap, shift:s.shift, hat:s.hat||false, assigned:[]});
+      activeSlots.push(Object.assign({id:Date.now()+Math.random(), name:s.name, capacity:s.cap, shift:s.shift, hat:s.hat||false, assigned:[]}, _reqContact(s.name)));
     });
   }
 
