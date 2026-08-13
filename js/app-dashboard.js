@@ -1175,10 +1175,27 @@ function renderStrandedPanel(){
   el.innerHTML = html;
 }
 
+function confirmClearHistory(){
+  if(!confirm('Clear all assignment history AND hours for every junior and adult? This cannot be undone.')) return;
+  resetAllHistory();
+}
+
 function resetAllHistory(){
-  juniors.forEach(function(j){ j.history = []; j.last = 'None'; });
+  // Clear juniors: assignment history, last committee, shift log (hours), note log
+  juniors.forEach(function(j){
+    j.history  = [];
+    j.last     = 'None';
+    j.shiftLog = [];
+    j.noteLog  = [];
+  });
+  // Clear adults: shift log (hours)
+  (adults||[]).forEach(function(a){
+    a.shiftLog = [];
+  });
+  _lastSavedHash = '';
+  saveStateNow();
   renderRoster();
-  showAlert('All assignment history cleared.', 'info');
+  showAlert('All assignment history and hours cleared.', 'info');
 }
 
 var _alertTimer = null;
@@ -3341,18 +3358,4 @@ function adultClockOut(adultId){
   saveStateNow();
   renderOfficer();
   showAlert(ad.name + ' clocked out at ' + nowStr + '.', 'info');
-}
-
-// ============================================================
-// COLLAPSIBLE SETTINGS SECTIONS
-// ============================================================
-function toggleSection(id){
-  var body = document.getElementById(id);
-  var arrow = document.getElementById(id + '-arrow');
-  if(!body) return;
-  var open = body.style.display !== 'none';
-  body.style.display = open ? 'none' : 'block';
-  if(arrow) arrow.innerHTML = open ? '&#9660;' : '&#9650;';
-  // If opening permissions table, render it
-  if(!open && id === 'sec-perms') renderPermsTable();
 }
