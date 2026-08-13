@@ -584,7 +584,13 @@ function renderHours(){
   // Summary stats
   var totalShifts = juniors.reduce(function(s, j){ return s + (j.shiftLog ? j.shiftLog.length : 0); }, 0);
   var totalHours  = juniors.reduce(function(s, j){ return s + getTotalHours(j); }, 0);
-  var noShows     = juniors.reduce(function(s, j){ return s + (j.shiftLog ? j.shiftLog.filter(function(e){ return e.noshow; }).length : 0); }, 0);
+  var noShows     = juniors.reduce(function(s, j){
+    var fromShiftLog = j.shiftLog ? j.shiftLog.filter(function(e){ return e.noshow; }).length : 0;
+    var fromNoteLog  = j.noteLog  ? j.noteLog.filter(function(e){
+      return e.type === 'noshow-nocall' || e.type === 'noshow-prior' || e.type === 'noshow-dayof';
+    }).length : 0;
+    return s + fromShiftLog + fromNoteLog;
+  }, 0);
   var earlyOuts   = juniors.reduce(function(s, j){ return s + (j.shiftLog ? j.shiftLog.filter(function(e){ return !e.noshow && e.hours < 4; }).length : 0); }, 0);
 
   summaryEl.innerHTML =
@@ -596,7 +602,10 @@ function renderHours(){
   el.innerHTML = list.map(function(j){
     var hrs = getTotalHours(j);
     var log = j.shiftLog || [];
-    var noShowCount = log.filter(function(e){ return e.noshow; }).length;
+    var noShowCount = log.filter(function(e){ return e.noshow; }).length +
+      ((j.noteLog||[]).filter(function(e){
+        return e.type==='noshow-nocall'||e.type==='noshow-prior'||e.type==='noshow-dayof';
+      }).length);
     var earlyCount  = log.filter(function(e){ return !e.noshow && e.hours < 4; }).length;
 
     // Expandable shift log rows
@@ -985,8 +994,18 @@ function openNoteLog(jIdx){
   if(!j) return;
   var log = j.noteLog || [];
 
-  var typeColors = { note:'var(--navy)', 'check-in':'#27AE60', dismissed:'#EF7622', system:'#8899AA' };
-  var typeLabels = { note:'Note', 'check-in':'Check-In', dismissed:'Dismissed to Pool', system:'System' };
+  var typeColors = {
+    note:'var(--navy)', 'check-in':'#27AE60', dismissed:'#EF7622', system:'#8899AA',
+    'noshow-nocall':'#CC0000', 'noshow-prior':'#E65100', 'noshow-dayof':'#BF360C',
+    incident:'#6A1B9A'
+  };
+  var typeLabels = {
+    note:'Additional Information', 'check-in':'Check-In', dismissed:'Dismissed to Pool', system:'System',
+    'noshow-nocall':'NO SHOW: No Call',
+    'noshow-prior':'NO SHOW: Called Prior to Shift Date',
+    'noshow-dayof':'NO SHOW: Called Day of Shift',
+    incident:'Incident on Shift'
+  };
 
   var logHtml = log.length === 0
     ? '<div style="color:#aaa;font-size:13px;padding:20px 0;text-align:center">No entries yet</div>'
@@ -1028,8 +1047,19 @@ function openNoteLog(jIdx){
       logHtml +
     '</div>' +
     '<div style="padding:16px 20px;border-top:1px solid #eee;background:#F8FAFC">' +
-      '<div style="font-size:12px;color:#8899AA;margin-bottom:6px">Add a note — visible to all officers</div>' +
-      '<textarea id="note-log-input" class="finput" rows="3" placeholder="Type a note..." style="width:100%;resize:vertical;margin-bottom:8px"></textarea>' +
+      '<div style="margin-bottom:8px">' +
+        '<div style="font-size:11px;color:#8899AA;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Note Type</div>' +
+        '<select id="note-log-type" class="finput" style="font-size:12px;width:100%">' +
+          '<option value="noshow-nocall">NO SHOW: No Call</option>' +
+          '<option value="noshow-prior">NO SHOW: Called Prior to Shift Date</option>' +
+          '<option value="noshow-dayof">NO SHOW: Called Day of Shift</option>' +
+          '<option value="incident">Incident on Shift</option>' +
+          '<option value="note" selected>Additional Information</option>' +
+        '</select>' +
+      '</div>' +
+      '<div style="font-size:11px;color:#8899AA;margin-bottom:4px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Details</div>' +
+      '<div style="font-size:11px;color:#667788;margin-bottom:6px">Type your name, date and time and all available information regarding the situation. If this information is sensitive it should be sent directly to <a href="mailto:JRCchairman@hlsr.com" style="color:var(--navy)">JRCchairman@hlsr.com</a> rather than input here.</div>' +
+      '<textarea id="note-log-input" class="finput" rows="3" placeholder="Your name, date, time, and details..." style="width:100%;resize:vertical;margin-bottom:8px"></textarea>' +
       '<div style="display:flex;gap:8px;justify-content:flex-end">' +
         '<button class="btn" onclick="closeNoteLog()">Cancel</button>' +
         '<button class="btn btn-primary" onclick="submitNoteFromLog('+jIdx+')">Add Note</button>' +
@@ -1047,12 +1077,13 @@ function closeNoteLog(){
 }
 
 function submitNoteFromLog(jIdx){
-  var input = document.getElementById('note-log-input');
-  var text = (input ? input.value.trim() : '');
-  if(!text){ input.focus(); return; }
-  addJuniorNote(jIdx, text, 'note');
+  var input   = document.getElementById('note-log-input');
+  var typeEl  = document.getElementById('note-log-type');
+  var text    = (input ? input.value.trim() : '');
+  var type    = (typeEl ? typeEl.value : 'note') || 'note';
+  if(!text){ if(input) input.focus(); return; }
+  addJuniorNote(jIdx, text, type);
   closeNoteLog();
-  // Re-open to show the new entry
   setTimeout(function(){ openNoteLog(jIdx); }, 100);
 }
 
