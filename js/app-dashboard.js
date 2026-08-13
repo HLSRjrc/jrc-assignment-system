@@ -1569,7 +1569,7 @@ function renderRoster(){
     return;
   }
 
-  var list = juniors.slice();
+  var list = juniors.slice().sort(function(a,b){ return a.name.localeCompare(b.name); });
   if(f === 'inactive'){
     list = list.filter(function(j){ return j.inactive; });
   } else if(f === 'ageout'){
