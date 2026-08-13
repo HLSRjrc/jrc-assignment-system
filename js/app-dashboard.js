@@ -77,7 +77,7 @@ function buildReports(slots){
     // Details grid
     html += '<div class="rpt-grid">';
     if(det.loc)    html += '<div class="rpt-field full"><label>Location / Where to Report</label><p>' + det.loc + '</p></div>';
-    if(det.liaison)html += '<div class="rpt-field"><label>Event Contact / Liaison</label><p><strong>' + det.liaison + '</strong>' + (det.lp ? '<br>' + det.lp : '') + (det.le ? '<br>' + det.le : '') + '</p></div>';
+    if(det.liaison)html += '<div class="rpt-field"><label>Day of Committee Contact</label><p><strong>' + det.liaison + '</strong>' + (det.lp ? '<br>' + det.lp : '') + (det.le ? '<br>' + det.le : '') + '</p></div>';
     if(det.chair)  html += '<div class="rpt-field"><label>Committee Chair</label><p><strong>' + det.chair + '</strong>' + (det.cp ? '<br>' + det.cp : '') + '</p></div>';
     if(det.duties) html += '<div class="rpt-field full"><label>Duties</label><p>' + det.duties + '</p></div>';
     if(det.notes)  html += '<div class="rpt-field full"><label>Notes / Attire</label><p>' + det.notes + '</p></div>';
