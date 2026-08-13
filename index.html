@@ -427,24 +427,39 @@ if(window.location.search.indexOf('partner=1') >= 0){
 <!-- SETTINGS / DATE SIMULATOR -->
 <div id="panel-simulate" class="panel">
 
-  <!-- PERMISSIONS MANAGEMENT — admin only -->
-  <div class="card" id="perms-mgmt-card" style="margin-bottom:16px">
-    <div onclick="toggleSection('sec-perms')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
-      <div class="section-lbl" style="margin-bottom:0">&#128274; Permissions &amp; Passwords</div>
-      <span id="sec-perms-arrow" style="font-size:10px;color:#999">&#9660;</span>
+  <div class="card">
+    <div onclick="toggleSection('sec-datetime')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+      <div class="section-lbl" style="margin-bottom:0">Set Date &amp; Time</div>
+      <span id="sec-datetime-arrow" style="font-size:10px;color:#999">&#9660;</span>
     </div>
-    <div id="sec-perms" style="display:none;margin-top:12px">
-    <div style="font-size:12px;color:#667788;margin-bottom:12px">Set access levels and passwords for committee members. Adults not listed here can only use the kiosk.</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <input type="text" id="perms-search" class="finput" placeholder="&#128269; Search by name or member #..." oninput="renderPermsTable()" style="font-size:12px;flex:1;min-width:200px">
-      <select id="perms-filter" class="finput" onchange="renderPermsTable()" style="font-size:12px;min-width:140px">
-        <option value="all">All adults</option>
-        <option value="permissioned">Has permission</option>
-        <option value="none">No permission</option>
-      </select>
+    <div id="sec-datetime" style="display:none;margin-top:12px">
+    <div style="font-size:13px;color:#667788;margin-bottom:16px">Set the current date and time for the app. The clock advances normally from whatever you set.</div>
+    <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:flex-end;margin-bottom:14px">
+      <div>
+        <div style="font-size:12px;color:#667788;margin-bottom:4px">Date</div>
+        <input class="finput" type="date" id="sim-date">
+      </div>
+      <div>
+        <div style="font-size:12px;color:#667788;margin-bottom:4px">Time</div>
+        <input type="number" class="finput" id="sim-hour" value="8" min="1" max="12" style="width:70px">
+      </div>
+      <div>
+        <div style="font-size:12px;color:#667788;margin-bottom:4px">Minute</div>
+        <input type="number" class="finput" id="sim-min" value="0" min="0" max="59" style="width:70px">
+      </div>
+      <div>
+        <div style="font-size:12px;color:#667788;margin-bottom:4px">AM/PM</div>
+        <select class="finput" id="sim-ampm" style="width:80px">
+          <option value="am">AM</option>
+          <option value="pm">PM</option>
+        </select>
+      </div>
     </div>
-    <div id="perms-table-wrap" style="max-height:400px;overflow-y:auto"></div>
-    <div id="perms-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="applySimDate()">&#9201; Apply</button>
+      <button class="btn" onclick="clearSimTime();var el=document.getElementById('sim-status');if(el)el.innerHTML='<span style=&quot;color:var(--green);font-weight:600&quot;>&#10003; Using current real time</span>';">Use Real Time</button>
+      <span id="sim-status" style="font-size:12px;color:#667788">Not set &mdash; using real time</span>
+    </div>
     </div>
   </div>
 
@@ -524,39 +539,24 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </div>
   </div>
 
-  <div class="card">
-    <div onclick="toggleSection('sec-datetime')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
-      <div class="section-lbl" style="margin-bottom:0">Set Date &amp; Time</div>
-      <span id="sec-datetime-arrow" style="font-size:10px;color:#999">&#9660;</span>
+  <!-- PERMISSIONS MANAGEMENT — admin only -->
+  <div class="card" id="perms-mgmt-card" style="margin-bottom:16px">
+    <div onclick="toggleSection('sec-perms')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none">
+      <div class="section-lbl" style="margin-bottom:0">&#128274; Permissions &amp; Passwords</div>
+      <span id="sec-perms-arrow" style="font-size:10px;color:#999">&#9660;</span>
     </div>
-    <div id="sec-datetime" style="display:none;margin-top:12px">
-    <div style="font-size:13px;color:#667788;margin-bottom:16px">Set the current date and time for the app. The clock advances normally from whatever you set.</div>
-    <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:flex-end;margin-bottom:14px">
-      <div>
-        <div style="font-size:12px;color:#667788;margin-bottom:4px">Date</div>
-        <input class="finput" type="date" id="sim-date">
-      </div>
-      <div>
-        <div style="font-size:12px;color:#667788;margin-bottom:4px">Time</div>
-        <input type="number" class="finput" id="sim-hour" value="8" min="1" max="12" style="width:70px">
-      </div>
-      <div>
-        <div style="font-size:12px;color:#667788;margin-bottom:4px">Minute</div>
-        <input type="number" class="finput" id="sim-min" value="0" min="0" max="59" style="width:70px">
-      </div>
-      <div>
-        <div style="font-size:12px;color:#667788;margin-bottom:4px">AM/PM</div>
-        <select class="finput" id="sim-ampm" style="width:80px">
-          <option value="am">AM</option>
-          <option value="pm">PM</option>
-        </select>
-      </div>
+    <div id="sec-perms" style="display:none;margin-top:12px">
+    <div style="font-size:12px;color:#667788;margin-bottom:12px">Set access levels and passwords for committee members. Adults not listed here can only use the kiosk.</div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input type="text" id="perms-search" class="finput" placeholder="&#128269; Search by name or member #..." oninput="renderPermsTable()" style="font-size:12px;flex:1;min-width:200px">
+      <select id="perms-filter" class="finput" onchange="renderPermsTable()" style="font-size:12px;min-width:140px">
+        <option value="all">All adults</option>
+        <option value="permissioned">Has permission</option>
+        <option value="none">No permission</option>
+      </select>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <button class="btn btn-primary" onclick="applySimDate()">&#9201; Apply</button>
-      <button class="btn" onclick="clearSimTime();var el=document.getElementById('sim-status');if(el)el.innerHTML='<span style=&quot;color:var(--green);font-weight:600&quot;>&#10003; Using current real time</span>';">Use Real Time</button>
-      <span id="sim-status" style="font-size:12px;color:#667788">Not set &mdash; using real time</span>
-    </div>
+    <div id="perms-table-wrap" style="max-height:400px;overflow-y:auto"></div>
+    <div id="perms-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
     </div>
   </div>
 
