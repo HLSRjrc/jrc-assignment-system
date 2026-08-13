@@ -1717,22 +1717,41 @@ function bulkAddShift(shift, silent){
       }
     });
   });
-  var added = 0, skipped = 0;
+  var added = 0, skipped = 0, healed = 0;
   toAdd.forEach(function(c){
-    var alreadyHas = activeSlots.some(function(s){ return s.name === c.name && s.shift === shift; });
-    if(alreadyHas){ skipped++; return; }
+    var existing = activeSlots.find(function(s){ return s.name === c.name && s.shift === shift; });
+    if(existing){
+      // Slot already exists — backfill contact fields so stale slots
+      // (created before contact info was carried over) self-heal.
+      // Never touches capacity or assigned juniors.
+      var wasEmpty = !existing.liaison && !existing.location && !existing.duties;
+      if(c.liaison)      existing.liaison      = c.liaison;
+      if(c.liaisonPhone) existing.liaisonPhone = c.liaisonPhone;
+      if(c.liaisonEmail) existing.liaisonEmail = c.liaisonEmail;
+      if(c.chair)        existing.chair        = c.chair;
+      if(c.chairPhone)   existing.chairPhone   = c.chairPhone;
+      if(c.location)     existing.location     = c.location;
+      if(c.duties)       existing.duties       = c.duties;
+      if(c.notes)        existing.notes        = c.notes;
+      if(wasEmpty && (c.liaison || c.location || c.duties)) healed++;
+      else skipped++;
+      return;
+    }
     activeSlots.push({id:Date.now() + Math.random(), name:c.name, capacity:c.cap, shift:shift, hat:c.hat, assigned:[], liaison:c.liaison||'', liaisonPhone:c.liaisonPhone||'', liaisonEmail:c.liaisonEmail||'', chair:c.chair||'', chairPhone:c.chairPhone||'', location:c.location||'', duties:c.duties||'', notes:c.notes||''});
     added++;
   });
   if(!silent){
     var msg = '';
     if(added > 0) msg += added + ' committee' + (added !== 1 ? 's' : '') + ' added for ' + SL[shift] + '.';
+    if(healed > 0) msg += ' ' + healed + ' existing slot' + (healed !== 1 ? 's' : '') + ' updated with contact info.';
     if(skipped > 0) msg += ' ' + skipped + ' already added, skipped.';
-    if(added === 0 && skipped === 0) msg = 'No ' + SL[shift] + ' slots found for this date.';
+    if(added === 0 && skipped === 0 && healed === 0) msg = 'No ' + SL[shift] + ' slots found for this date.';
     document.getElementById('bulk-result').textContent = msg;
     onSetupDateChange();
     renderSetup();
   }
+  // Save immediately so the 10s poll can't restore stale Neon data over these changes
+  if(added > 0 || healed > 0) saveStateNow();
   return added;
 }
 
