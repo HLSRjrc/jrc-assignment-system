@@ -1665,7 +1665,7 @@ function renderRoster(){
     var al = adults.filter(function(a){
       return !a.inactive && (!q || a.name.toLowerCase().includes(q) || a.id.includes(q) || (a.title||'').toLowerCase().includes(q));
     });
-    document.getElementById('r-count').textContent = al.length + ' adult members';
+    document.getElementById('r-count').innerHTML = al.length + ' adult members';
     var PERM_LABELS = { admin:'Admin', 'vc-slt':'VC/SLT', officer:'Shift Officer', scheduling:'Scheduler' };
     document.getElementById('r-body').innerHTML = al.map(function(a){
       var permBadge = a.permission
@@ -1712,7 +1712,7 @@ function renderRoster(){
   if(f === 'inactive') countLabel += ' (inactive)';
   else if(f === 'ageout') countLabel += ' (age-outs)';
   else countLabel += ' &bull; ' + aoCount + ' age-outs total';
-  document.getElementById('r-count').textContent = countLabel;
+  document.getElementById('r-count').innerHTML = countLabel;
 
   document.getElementById('r-body').innerHTML = list.map(function(j){
     var ri = juniors.indexOf(j);
@@ -3371,14 +3371,31 @@ function activateShift(){
 function renderPermsTable(){
   var wrap = document.getElementById('perms-table-wrap');
   if(!wrap) return;
-  var q = ((document.getElementById('perms-search')||{}).value||'').toLowerCase().trim();
-  var filter = ((document.getElementById('perms-filter')||{}).value)||'all';
+  var q          = ((document.getElementById('perms-search')||{}).value||'').toLowerCase().trim();
+  var filter     = ((document.getElementById('perms-filter')||{}).value)||'all';
+  var titleFilter= ((document.getElementById('perms-title-filter')||{}).value)||'all';
 
+  // Populate title dropdown from unique adult titles
+  var titleEl = document.getElementById('perms-title-filter');
+  if(titleEl && titleEl.options.length <= 1){
+    var titles = [];
+    (adults||[]).forEach(function(a){ if(a.title && titles.indexOf(a.title) < 0) titles.push(a.title); });
+    titles.sort();
+    titles.forEach(function(t){
+      var opt = document.createElement('option');
+      opt.value = t; opt.textContent = t;
+      titleEl.appendChild(opt);
+    });
+  }
+
+  var PERM_VALS = ['admin','vc-slt','officer','scheduling'];
   var list = (adults||[]).filter(function(a){
     if(a.inactive) return false;
-    if(q && !a.name.toLowerCase().includes(q) && !a.id.includes(q)) return false;
+    if(q && !a.name.toLowerCase().includes(q) && !a.id.includes(q) && !(a.title||'').toLowerCase().includes(q)) return false;
     if(filter === 'permissioned' && !a.permission) return false;
     if(filter === 'none' && a.permission) return false;
+    if(PERM_VALS.indexOf(filter) >= 0 && a.permission !== filter) return false;
+    if(titleFilter !== 'all' && a.title !== titleFilter) return false;
     return true;
   });
 
@@ -3489,6 +3506,52 @@ function adultClockOut(adultId){
 // ============================================================
 // COLLAPSIBLE SETTINGS SECTIONS
 // ============================================================
+function saveAllAdultPerms(){
+  var msg = document.getElementById('perms-msg');
+  if(msg) msg.textContent = 'Saving...';
+  var wrap = document.getElementById('perms-table-wrap');
+  if(!wrap) return;
+  var selects = wrap.querySelectorAll('[id^="perm-sel-"]');
+  var promises = [];
+  var saved = 0, errors = 0;
+
+  selects.forEach(function(sel){
+    var adultId = sel.id.replace('perm-sel-', '');
+    var newPerm = sel.value || null;
+    var pwEl = document.getElementById('perm-pw-' + adultId);
+    var newPass = pwEl ? pwEl.value.trim() : '';
+    var needsPass = newPerm && newPerm !== 'officer';
+    if(needsPass && newPass && newPass.length < 6){ errors++; return; }
+
+    var payload = {adultId: adultId, newPermission: newPerm};
+    if(needsPass && newPass) payload.newPassword = newPass;
+
+    var ad = adults.find(function(a){ return a.id === adultId; });
+    var p = fetch('/.netlify/functions/set-password', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','x-api-token': API_TOKEN},
+      body: JSON.stringify(payload)
+    }).then(function(r){ return r.json(); }).then(function(d){
+      if(d.ok){
+        if(ad){ ad.permission = newPerm; }
+        if(pwEl) pwEl.value = '';
+        saved++;
+      } else { errors++; }
+    }).catch(function(){ errors++; });
+    promises.push(p);
+  });
+
+  Promise.all(promises).then(function(){
+    if(msg){
+      if(errors > 0)
+        msg.innerHTML = '<span style="color:#CC0000">&#10003; ' + saved + ' saved, ' + errors + ' failed (passwords must be 6+ chars).</span>';
+      else
+        msg.innerHTML = '<span style="color:#2A7D2A">&#10003; All ' + saved + ' saved successfully.</span>';
+      setTimeout(function(){ if(msg) msg.textContent = ''; renderPermsTable(); }, 2000);
+    }
+  });
+}
+
 function toggleSection(id){
   var body = document.getElementById(id);
   var arrow = document.getElementById(id + '-arrow');
