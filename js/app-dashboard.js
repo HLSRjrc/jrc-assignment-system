@@ -468,7 +468,8 @@ function renderOfficer(search){
     // Build one entry per age-out per planned shift
     var aoItems = [];
     aoJuniors.forEach(function(j){
-      var shifts = (j.plannedShifts && j.plannedShifts.length > 0) ? j.plannedShifts : [currentShift];
+      var shifts = getJrPlannedShifts(j);
+      if(!shifts.length) shifts = [getJrActiveShift(j)];
       shifts.forEach(function(sh){
         aoItems.push({jr:j, shift:sh});
       });
@@ -520,7 +521,7 @@ function renderOfficer(search){
       '<div class="pick-panel">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
           '<div class="pick-header">' + (pickJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pickJr.name + ', choose your assignment</div>' +
-          (pickJr.plannedShifts && pickJr.plannedShifts.length > 1 ? '<div style="font-size:12px;color:#2A3DB5;margin-top:3px">&#9432; Planned shifts: <strong>' + pickJr.plannedShifts.map(function(s){ return SL[s]; }).join(', ') + '</strong></div>' : '') +
+          (getJrPlannedShifts(pickJr).length > 1 ? '<div style="font-size:12px;color:#2A3DB5;margin-top:3px">&#9432; Planned shifts: <strong>' + getJrPlannedShifts(pickJr).map(function(s){ return SL[s]; }).join(', ') + '</strong></div>' : '') +
         '</div>' +
           '<button class="btn btn-sm" onclick="closePick()">Cancel</button>' +
         '</div>' +
@@ -754,17 +755,18 @@ function removeFromAoQueue(jid){
   showAlert(jr.name.split(',')[0] + ' removed from queue.', 'info');
 }
 
-var _pickReturnShift = null; // shift to return to after age-out pick
+var _pickReturnShift = null; // legacy — kept so old saved state can't strand us
 function openPickForShift(jid, shift){
-  _pickReturnShift = currentShift; // remember where we came from
+  // NOTE: deliberately does NOT touch currentShift. currentShift is the
+  // officer's tab; the pick panel scopes itself with activePickShift. Moving
+  // the global shift here was silently reassigning the whole app to whatever
+  // shift an age-out happened to be picking for.
   activePick = jid + '_' + shift;
   activePickShift = shift;
-  currentShift = shift;
   renderOfficer();
 }
 function closePick(){
   activePick = null; activePickShift = null;
-  // Return to the shift we came from after picking for an age-out
   if(_pickReturnShift){ currentShift = _pickReturnShift; _pickReturnShift = null; }
   renderOfficer();
 }
@@ -797,7 +799,9 @@ function pickSlot(jid, slotId){
     }
 
     jr.shiftAssignments[sl.shift] = sl.name;
-    if(sl.shift === currentShift){
+    // Only go "live" if this pick is for the shift they're actually working
+    // now. Picks for later shifts stay parked in shiftAssignments.
+    if(sl.shift === getJrActiveShift(jr)){
       assignJr(jr, sl.name);
       lockedJuniors.add(jr.id);
     }
@@ -807,6 +811,8 @@ function pickSlot(jid, slotId){
   }
   sl.assigned.push(jr.id);
   activePick = null;
+  activePickShift = null;
+  if(_pickReturnShift){ currentShift = _pickReturnShift; _pickReturnShift = null; }
   renderOfficer();
   saveStateNow();
 }
