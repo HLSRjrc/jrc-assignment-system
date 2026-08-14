@@ -169,7 +169,10 @@ function kLookup(){
       document.getElementById('k-msg').innerHTML = '<span style="color:#2A7D2A;font-weight:600">&#10003; Welcome, ' + ad.name + '! Clocked in for ' + adultShift + ' shift.</span>';
     } else {
       var log = ad.shiftLog && ad.shiftLog[ad.shiftLog.length - 1];
-      if(log && !log.out) log.out = nowStr;
+      if(log && !log.out){
+        log.out = nowStr;
+        log.role = ad.boardRole || 'mentor'; // save role at clock-out time
+      }
       ad.clockedIn = false;
       ad.clockInTime = null;
       document.getElementById('k-msg').innerHTML = '<span style="color:#667788;font-weight:600">&#10003; Goodbye, ' + ad.name + '! Clocked out at ' + nowStr + '.</span>';
