@@ -548,13 +548,23 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </div>
     <div id="sec-perms" style="display:none;margin-top:12px">
     <div style="font-size:12px;color:#667788;margin-bottom:12px">Set access levels and passwords for committee members. Adults not listed here can only use the kiosk.</div>
-    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
       <input type="text" id="perms-search" class="finput" placeholder="&#128269; Search by name or member #..." oninput="renderPermsTable()" style="font-size:12px;flex:1;min-width:200px">
       <select id="perms-filter" class="finput" onchange="renderPermsTable()" style="font-size:12px;min-width:140px">
         <option value="all">All adults</option>
         <option value="permissioned">Has permission</option>
         <option value="none">No permission</option>
+        <option value="admin">Admin only</option>
+        <option value="vc-slt">VC / SLT only</option>
+        <option value="officer">Shift Officer only</option>
+        <option value="scheduling">Scheduling only</option>
       </select>
+      <select id="perms-title-filter" class="finput" onchange="renderPermsTable()" style="font-size:12px;min-width:160px">
+        <option value="all">All titles</option>
+      </select>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button class="btn btn-primary" style="font-size:12px;padding:5px 14px" onclick="saveAllAdultPerms()">&#10003; Save All Changes</button>
     </div>
     <div id="perms-table-wrap" style="max-height:400px;overflow-y:auto"></div>
     <div id="perms-msg" style="font-size:12px;margin-top:8px;min-height:16px"></div>
