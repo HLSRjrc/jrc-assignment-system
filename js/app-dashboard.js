@@ -1117,10 +1117,14 @@ function resetShift(){
   clockedOutShifts = {};
   onShiftJuniors = new Set();
   onShiftSlots = new Set();
-  onShiftSlots = new Set();
   lockedJuniors = new Set();
+  juniors.forEach(function(j){ dirtyJuniors.add(j.id); });
+  _lastSavedHash = '';
+  saveStateNow();
+  renderBoard();
   document.getElementById('off-alert').style.display = 'none';
   renderOfficer();
+  showAlert('Shift cleared.', 'info');
 }
 
 function clearAll(){
