@@ -134,18 +134,28 @@ function switchTab(t, el){
   if(t === 'reqform') renderReqForm();
   if(t === 'board'){
     document.body.classList.add('board-tab-active');
-    // Inject escape button if not already present
-    if(!document.getElementById('board-escape-btn')){
-      var esc = document.createElement('button');
+    // Inject escape button — always re-attach onclick in case DOM was rebuilt
+    var esc = document.getElementById('board-escape-btn');
+    if(!esc){
+      esc = document.createElement('button');
       esc.id = 'board-escape-btn';
-      esc.textContent = '\u2190 Dashboard';
-      esc.title = 'Back to dashboard';
-      esc.onclick = function(){ switchTab('officer', null); };
       document.body.appendChild(esc);
     }
+    esc.textContent = '\u2190 Dashboard';
+    esc.title = 'Back to dashboard';
+    // Use direct style so pointer-events override is guaranteed regardless of CSS load order
+    esc.style.cssText = 'position:fixed;top:12px;right:16px;z-index:99999;' +
+      'background:rgba(239,118,34,.85);border:none;border-radius:6px;' +
+      'color:#fff;font-size:12px;font-weight:700;letter-spacing:.06em;' +
+      'padding:7px 14px;cursor:pointer !important;pointer-events:auto !important;' +
+      'font-family:inherit;text-transform:uppercase;display:block;';
+    esc.onclick = function(e){ e.stopPropagation(); switchTab('officer', null); };
     renderBoard();
   } else {
     document.body.classList.remove('board-tab-active');
+    // Hide escape button when leaving board tab
+    var esc2 = document.getElementById('board-escape-btn');
+    if(esc2) esc2.style.display = 'none';
   }
   if(t === 'checkins') renderCheckins();
   if(t === 'hours'){ renderHours(); renderAdultHours(); }
