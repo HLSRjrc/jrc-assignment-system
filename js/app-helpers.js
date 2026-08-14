@@ -118,6 +118,9 @@ function applySimDate(){
 
 function switchTab(t, el){
   currentTab = t;
+  // Close drop-off report when switching tabs
+  var rw = document.getElementById('report-wrap');
+  if(rw) rw.style.display = 'none';
   // Re-render tabs to update active state
   renderTabs(t);
   // Show correct panel
