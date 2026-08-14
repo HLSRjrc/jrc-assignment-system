@@ -54,13 +54,9 @@ function applySimTime(){
   var ampm = h >= 12 ? 'PM' : 'AM';
   var h12 = h > 12 ? h-12 : (h===0 ? 12 : h);
   var label = h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
-  document.getElementById('sim-time-status').innerHTML = '<strong style="color:var(--orange)">&#9201; Simulated time set: ' + label + '</strong> &mdash; advancing in real time from this point &bull; syncing to all devices';
+  document.getElementById('sim-time-status').innerHTML = '<strong style="color:var(--orange)">&#9201; Simulated time set: ' + label + '</strong> &mdash; advancing in real time from this point';
   // Update the board clock immediately
   updateBoardClock();
-  // Push to Neon so the kiosk tablet and TV board move with us. Without this
-  // the clock only ever changed on the device that set it.
-  _lastSavedHash = '';
-  saveStateNow();
 }
 
 function simUpdate(){} // no-op — status shown after apply
@@ -87,7 +83,6 @@ function applySimDate(){
       j.plannedShifts   = [];
     });
     clockedOut       = {};
-    clockedOutShifts = {};
     onShiftJuniors   = new Set();
     onShiftSlots     = new Set();
     checkInOrder     = 0;
@@ -138,8 +133,16 @@ function switchTab(t, el){
   if(t === 'requests') refreshRequests();
   if(t === 'reqform') renderReqForm();
   if(t === 'board'){
-    // Board tab looks identical to TV page — apply tv-mode class to body
     document.body.classList.add('board-tab-active');
+    // Inject escape button if not already present
+    if(!document.getElementById('board-escape-btn')){
+      var esc = document.createElement('button');
+      esc.id = 'board-escape-btn';
+      esc.textContent = '\u2190 Dashboard';
+      esc.title = 'Back to dashboard';
+      esc.onclick = function(){ switchTab('officer', null); };
+      document.body.appendChild(esc);
+    }
     renderBoard();
   } else {
     document.body.classList.remove('board-tab-active');
@@ -198,25 +201,9 @@ function kLookup(){
   if(jr.checkedIn && !clockedOut[jr.id]){
     pendingJr = jr;
     document.getElementById('kco-name').innerHTML = (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
-    var activeSh  = getJrActiveShift(jr);
-    var activeCom = getJrCommittee(jr, activeSh);
-    document.getElementById('kco-assignment').textContent = activeCom
-      ? 'Currently assigned to: ' + activeCom + ' (' + getShiftLabel(activeSh) + ' shift)'
-      : 'Not yet assigned to a committee';
+    document.getElementById('kco-assignment').textContent = jr.assignment ? 'Currently assigned to: ' + jr.assignment : 'Not yet assigned to a committee';
     var nextEl = document.getElementById('kco-next-shift');
-    if(nextEl){
-      var later = getJrLaterShifts(jr);
-      if(later.length){
-        nextEl.innerHTML = later.map(function(sh){
-          var com = jr.shiftAssignments && jr.shiftAssignments[sh];
-          return '<div style="margin-top:4px">&#9200; Be sure to sign in again for your <strong>' +
-                 getShiftLabel(sh) + '</strong> shift' +
-                 (com ? ' at <strong>' + com + '</strong>' : '') + '.</div>';
-        }).join('');
-      } else {
-        nextEl.textContent = '';
-      }
-    }
+    if(nextEl) nextEl.textContent = '';
     document.getElementById('k-entry').style.display = 'none';
     document.getElementById('k-clockout').style.display = 'block';
     return;
@@ -235,68 +222,20 @@ function kLookup(){
   if(jr.ageout) b += ' <span class="badge b-ageout">Age-Out</span>';
   document.getElementById('kc-badges').innerHTML = b;
   document.getElementById('k-entry').style.display = 'none';
-  // Age-outs: returning ones skip the picker; first check-in goes to picker
+  // Age-outs get extra shift-selection screen
   if(jr.ageout){
-    var _detectedShift = getShiftFromTime(getSimTime()) || currentShift;
-    var _hasPlanned = jr.shiftAssignments && Object.keys(jr.shiftAssignments).length > 0;
-    if(_hasPlanned){
-      // Returning age-out — show their pre-built schedule, skip picker
-      document.getElementById('kar-name').innerHTML =
-        (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
-      var _retSched = document.getElementById('kar-schedule');
-      if(_retSched){
-        var _laterShs = getJrLaterShifts(jr);
-        var _thisCom = jr.shiftAssignments[_detectedShift] || null;
-        var _schedHtml =
-          '<div style="background:#E8F5E9;border:2px solid #27AE60;border-radius:10px;padding:14px 16px;margin-bottom:12px;font-size:16px;color:#155724;font-weight:700">' +
-          "You're here for your <strong>" + getShiftLabel(_detectedShift) + '</strong> shift' +
-          (_thisCom ? ' at <strong>' + _thisCom + '</strong>' : '') + '!' +
-          '</div>';
-        if(_laterShs.length){
-          _schedHtml += '<div style="font-size:14px;color:#2A3DB5;font-weight:600;margin-bottom:6px">Also on your schedule today:</div>';
-          _schedHtml += _laterShs.map(function(sh){
-            var c = jr.shiftAssignments[sh];
-            return '<div style="background:#E8F0FF;border:1px solid #4A6CF7;border-radius:8px;padding:10px 14px;margin-bottom:6px;font-size:14px;color:#2A3DB5">' +
-              '&#9200; <strong>' + getShiftLabel(sh) + '</strong>' + (c ? ' &mdash; ' + c : '') + '</div>';
-          }).join('');
-        }
-        _retSched.innerHTML = _schedHtml;
-      }
-      var _hatRet = document.getElementById('k-hat-ret');
-      if(_hatRet) _hatRet.checked = jr.hasHat || false;
-      document.getElementById('k-ao-return').style.display = 'block';
-    } else {
-      // First check-in of the day — show shift picker with correct box pre-checked
-      document.getElementById('kao-name').innerHTML =
-        (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
-      ['8am','12pm','4pm'].forEach(function(sh){
-        var cb = document.getElementById('kao-shift-' + sh);
-        if(cb) cb.checked = (sh === _detectedShift);
-      });
-      document.getElementById('k-ao-shifts').style.display = 'block';
-    }
+    document.getElementById('kao-name').innerHTML = (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
+    // Pre-check current shift
+    ['8am','12pm','4pm'].forEach(function(sh){
+      var cb = document.getElementById('kao-shift-' + sh);
+      if(cb) cb.checked = (sh === currentShift);
+    });
+    document.getElementById('k-ao-shifts').style.display = 'block';
   } else {
     updateKioskShiftBanner();
     document.getElementById('k-confirm').style.display = 'block';
   }
 }
-function kAoReturnConfirm(){
-  if(!pendingJr) return;
-  var _detectedShift = getShiftFromTime(getSimTime()) || currentShift;
-  // Restore plannedShifts from shiftAssignments so later-shift ticker still works
-  pendingJr.plannedShifts = Object.keys(pendingJr.shiftAssignments || {})
-    .filter(function(sh){ return sh === _detectedShift || SHIFT_ORDER[sh] > SHIFT_ORDER[_detectedShift]; })
-    .sort(function(a,b){ return SHIFT_ORDER[a]-SHIFT_ORDER[b]; });
-  pendingJr.checkInShift = _detectedShift;
-  pendingJr.hasHat = document.getElementById('k-hat-ret') ? document.getElementById('k-hat-ret').checked : (pendingJr.hasHat||false);
-  document.getElementById('k-ao-return').style.display = 'none';
-  // Reuse kConfirm — it handles the pre-assignment restore, save, and done screen
-  // Skip notes and hat screens — just set hat directly and call kConfirm
-  document.getElementById('k-hat').checked = pendingJr.hasHat;
-  document.getElementById('k-notes').value = '';
-  kConfirm();
-}
-
 function kAoNext(){
   // Age-out confirmed their planned shifts — move to hat/notes confirm screen
   pendingJr.plannedShifts = [];
@@ -329,28 +268,14 @@ function kConfirm(){
   pendingJr.checkInShift     = getShiftFromTime(getSimTime()) || currentShift;
   pendingJr.checkInDate      = currentDate; // stamp today's date — used for stale check-in detection
   pendingJr.checkInTimestamp = getSimTime().getTime(); // epoch ms — used in Check-ins tab
-  // Clock-back-in: clear the global clockedOut so they appear on the board.
-  // Leave clockedOutShifts entries intact — they track history for strikethrough.
   clockedOut[pendingJr.id] = false;
   delete clockedOut[pendingJr.id];
-  onShiftJuniors.delete(pendingJr.id);
-  onShiftJuniors.delete(String(pendingJr.id));
-
-  // Clear any assignment carried over from a previous shift — jr.assignment
-  // only ever describes the shift they are checked in for right now.
-  var _inShift = pendingJr.checkInShift;
-  var _preCom  = (pendingJr.shiftAssignments && pendingJr.shiftAssignments[_inShift]) || null;
-  pendingJr.assignment = null;
-
-  // If they already picked a committee for THIS shift (age-out multi-shift),
-  // put them straight back into that slot.
-  var _preRestored = false;
-  if(_preCom){
-    var preSlot = activeSlots.find(function(s){ return s.name === _preCom && s.shift === _inShift; });
-    if(preSlot){
-      if(preSlot.assigned.indexOf(pendingJr.id) < 0) preSlot.assigned.push(pendingJr.id);
+  // If age-out has a pre-assignment for the current shift, restore it
+  if(pendingJr.ageout && pendingJr.shiftAssignments && pendingJr.shiftAssignments[currentShift]){
+    var preSlot = activeSlots.find(function(s){ return s.name === pendingJr.shiftAssignments[currentShift] && s.shift === currentShift; });
+    if(preSlot && preSlot.assigned.indexOf(pendingJr.id) < 0){
+      preSlot.assigned.push(pendingJr.id);
       assignJr(pendingJr, preSlot.name);
-      _preRestored = true;
     }
   }
   // Reset inputs
@@ -359,15 +284,11 @@ function kConfirm(){
   document.getElementById('kd-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
   // Done screen age-out message
   var aoMsg = '';
-  // No pre-assignment message — they still need to be dismissed by an officer
-  var _later = getJrLaterShifts(pendingJr);
-  if(_later.length){
-    aoMsg += '<div style="background:#E8F0FF;border:2px solid #4A6CF7;border-radius:7px;padding:10px 14px;margin-top:8px;font-size:14px;color:#2A3DB5;font-weight:600">' +
-             '&#9200; Also working today: ' +
-             _later.map(function(sh){
-               var c = pendingJr.shiftAssignments && pendingJr.shiftAssignments[sh];
-               return getShiftLabel(sh) + (c ? ' &mdash; ' + c : '');
-             }).join(' &nbsp;&bull;&nbsp; ') + '</div>';
+  if(pendingJr.ageout){
+    var shifts = (pendingJr.plannedShifts && pendingJr.plannedShifts.length > 0)
+      ? pendingJr.plannedShifts.map(function(s){ return SL[s]; }).join(', ')
+      : SL[currentShift];
+    aoMsg = '';
   }
   document.getElementById('kd-ao').innerHTML = aoMsg;
   document.getElementById('k-confirm').style.display = 'none';
@@ -383,45 +304,12 @@ function kClockOut(){
   // They stay on the dashboard card but disappear from status board
   onShiftJuniors.delete(pendingJr.id);
   onShiftJuniors.delete(String(pendingJr.id));
-  // Stamp the committee onto the shift record before clearing live state so
-  // the drop-off report and hours log keep it after they clock back in.
-  var _outShift = getJrActiveShift(pendingJr);
-  if(pendingJr.assignment){
-    if(!pendingJr.shiftAssignments) pendingJr.shiftAssignments = {};
-    pendingJr.shiftAssignments[_outShift] = pendingJr.assignment;
-  }
-  // Per-shift stamp so the slot card can strikethrough just this shift's pill
-  if(!clockedOutShifts[pendingJr.id]) clockedOutShifts[pendingJr.id] = {};
-  clockedOutShifts[pendingJr.id][_outShift] = true;
   pendingJr.checkedIn = false;
   // Keep pendingJr.assignment so they stay in the slot card
   clockedOut[pendingJr.id] = true;
   dirtyJuniors.add(pendingJr.id);
   saveStateNow();
   document.getElementById('kdo-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
-  // Inject return reminder for age-outs with later shifts
-  var _kdoReminder = document.getElementById('kdo-reminder');
-  if(_kdoReminder){
-    var _laterNow = getJrLaterShifts(pendingJr);
-    if(_laterNow.length){
-      var _nextSh = _laterNow[0];
-      var _nextCom = pendingJr.shiftAssignments && pendingJr.shiftAssignments[_nextSh];
-      _kdoReminder.innerHTML =
-        '<div style="background:#FFF8E7;border:2px solid #F5A623;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:15px;color:#7B4F00;font-weight:600">' +
-        'Be sure to sign in again for your <strong>' + getShiftLabel(_nextSh) + '</strong> shift' +
-        (_nextCom ? ' at <strong>' + _nextCom + '</strong>' : '') + '!' +
-        (_laterNow.length > 1
-          ? '<div style="font-size:13px;font-weight:400;margin-top:4px;color:#A06000">Also working: ' +
-              _laterNow.slice(1).map(function(sh){
-                var c=pendingJr.shiftAssignments&&pendingJr.shiftAssignments[sh];
-                return getShiftLabel(sh)+(c?' at '+c:'');
-              }).join(', ') + '</div>'
-          : '') +
-        '</div>';
-    } else {
-      _kdoReminder.innerHTML = '';
-    }
-  }
   document.getElementById('k-clockout').style.display = 'none';
   document.getElementById('k-clockout-done').style.display = 'block';
   renderOfficer();
@@ -445,7 +333,6 @@ function kReset(){
   _style('k-clockout', 'none');
   _style('k-clockout-done', 'none');
   _style('k-outside', 'none');
-  _style('k-ao-return', 'none');
   _style('k-ao-shifts', 'none');
   var kid = document.getElementById('kid');
   if(kid) kid.focus();
