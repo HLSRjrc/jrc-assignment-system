@@ -18,13 +18,17 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 22;  // Major version — milestone releases
-var APP_BUILD   = 6;  // Minor build — increments every small change
+var APP_BUILD   = 5;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
 var simTimeEnabled = false;
 var simTargetEpoch = 0; // absolute epoch ms of sim time target — cross-device safe
 var simDateSet = false;   // true once user has explicitly set date/time
+// Wall-clock ms when THIS device last set sim time. Sim time is a system-wide
+// setting synced through Neon; the only reason to prefer the local value is a
+// set we just made that hasn't round-tripped yet.
+var _simSetLocallyAt = 0;
 function getSimTime(){
   // Always apply offset — when sim not enabled, offset is 0 (real time behavior)
   return new Date(Date.now() + (simTimeEnabled ? simTimeOffset : 0));
@@ -46,6 +50,62 @@ function getShiftFromTime(t){
 
 function getShiftLabel(sh){
   return {'8am':'8:00 AM','12pm':'12:00 PM','4pm':'4:00 PM'}[sh] || sh;
+}
+
+// ============================================================
+// CANONICAL SHIFT RESOLUTION
+// ------------------------------------------------------------
+// `currentShift` is the shift TAB the officer is looking at — it is a UI
+// value and must never be used to decide what shift a junior is working.
+// Everything operational goes through the helpers below.
+// ============================================================
+var SHIFT_ORDER = {'8am':0, '12pm':1, '4pm':2};
+
+// The shift block the day is actually in right now (unlike getShiftFromTime,
+// this never returns null — the 8am block runs until noon, etc.)
+function getOperatingShift(t){
+  t = t || getSimTime();
+  var mins = t.getHours() * 60 + t.getMinutes();
+  if(mins < 720)  return '8am';   // before 12:00pm
+  if(mins < 960)  return '12pm';  // before 4:00pm
+  return '4pm';
+}
+
+// The shift a specific junior is working RIGHT NOW. Driven by the shift they
+// physically checked in for — never by the officer's tab or the wall clock.
+function getJrActiveShift(jr){
+  if(!jr) return currentShift;
+  return jr.checkInShift || currentShift;
+}
+
+// Deduped, order-sorted planned shifts for a junior.
+function getJrPlannedShifts(jr){
+  if(!jr || !jr.plannedShifts || !jr.plannedShifts.length) return [];
+  var seen = {}, out = [];
+  jr.plannedShifts.forEach(function(sh){
+    if(SHIFT_ORDER[sh] === undefined) return;
+    if(seen[sh]) return;
+    seen[sh] = true;
+    out.push(sh);
+  });
+  return out.sort(function(a,b){ return SHIFT_ORDER[a] - SHIFT_ORDER[b]; });
+}
+
+// Planned shifts that come AFTER the one this junior is currently working.
+function getJrLaterShifts(jr){
+  if(!jr || !jr.checkInShift) return [];
+  var base = SHIFT_ORDER[jr.checkInShift];
+  if(base === undefined) return [];
+  return getJrPlannedShifts(jr).filter(function(sh){ return SHIFT_ORDER[sh] > base; });
+}
+
+// The committee this junior is assigned to for a given shift.
+// shiftAssignments is authoritative; jr.assignment is only the live one.
+function getJrCommittee(jr, sh){
+  if(!jr) return null;
+  if(sh && jr.shiftAssignments && jr.shiftAssignments[sh]) return jr.shiftAssignments[sh];
+  if(!sh || sh === getJrActiveShift(jr)) return jr.assignment || null;
+  return null;
 }
 function updateKioskShiftBanner(){
   var el = document.getElementById('kc-shift-banner');
@@ -76,6 +136,7 @@ function setSimTime(h, m, dateStr){
   simTimeEnabled = true;
   simDateSet = true;
   simTargetEpoch = target.getTime(); // stored for reference only
+  _simSetLocallyAt = Date.now();       // poll defers to us for a few seconds
   // Persist the offset itself — never recalculate from simTargetEpoch on load
   try { localStorage.setItem('jrc_simstate', JSON.stringify({
     simTimeEnabled: true,
@@ -88,11 +149,14 @@ function clearSimTime(){
   simTimeOffset = 0;
   simTimeEnabled = false;
   simDateSet = false;
+  simTargetEpoch = 0;
+  _simSetLocallyAt = Date.now();
   // Don't reset currentDate to real today — keep whatever was set
   currentShift = getShiftFromTime(new Date()) || '8am'; // default to 8am outside check-in windows
   try { localStorage.removeItem(('jrc_simstate_v' + APP_VERSION)); } catch(e){}
   try { localStorage.removeItem('jrc_simstate'); } catch(e){}
   updateHeaderDate();
+  try { saveStateNow(); } catch(e){}  // push the clear to every other device
 }
 var pendingJr = null;
 
