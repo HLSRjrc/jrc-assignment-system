@@ -416,44 +416,55 @@ function renderBoard(){
   var soOnShift   = clockedInAdults.filter(function(a){ return a.boardRole === 'so'; });
   var mentors     = clockedInAdults.filter(function(a){ return !a.boardRole; });
 
-  function staffLabel(label, people, scroll){
+  // Build one label cell: "LABEL: Name1 • Name2 …"
+  // Names use an auto-scrolling track that fills remaining space.
+  // A unique id is needed per cell so _tuneStaffTicker can find it.
+  // Build a staff label cell. Names fill available space and scroll if they overflow.
+  function staffLabel(label, people, cellId){
     if(!people.length) return '';
     var names = people.map(function(a){ return a.name; }).join(' &bull; ');
-    return '<div style="display:flex;align-items:baseline;gap:8px;flex-shrink:0">' +
+    return '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
       '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap">' + label + ':</span>' +
-      (scroll && people.length > 2
-        ? '<div style="overflow:hidden;max-width:320px"><div style="display:inline-flex;animation:boardTicker ' + (people.length * 4) + 's linear infinite;white-space:nowrap;font-size:13px;font-weight:600;color:#fff">' + (names + ' &nbsp;&nbsp;&nbsp;&nbsp; ' + names) + '</div></div>'
-        : '<span style="font-size:13px;font-weight:600;color:#fff;white-space:nowrap">' + names + '</span>') +
+      '<div id="' + cellId + '-track" style="overflow:hidden;max-width:260px">' +
+        '<div id="' + cellId + '" style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;color:#fff">' +
+          names +
+        '</div>' +
+      '</div>' +
     '</div>';
   }
 
-  var staffStrip = (vcOnShift.length || soOnShift.length || mentors.length)
-    ? '<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:6px 16px 8px;border-top:1px solid rgba(255,255,255,.1);margin-top:4px">' +
-        '<div style="display:flex;align-items:baseline;gap:8px;flex-shrink:0">' +
-          '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Officer in Charge:</span>' +
-          '<span style="font-size:13px;font-weight:600;color:#fff">David Smith</span>' +
-        '</div>' +
-        '<div style="display:flex;align-items:baseline;gap:8px;flex-shrink:0">' +
-          '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Chairman:</span>' +
-          '<span style="font-size:13px;font-weight:600;color:#fff">David Wick</span>' +
-        '</div>' +
-        staffLabel('VC on Shift', vcOnShift, false) +
-        staffLabel('Shift Officer', soOnShift, false) +
-        staffLabel('Mentors', mentors, true) +
-      '</div>'
-    : '<div style="padding:6px 16px 8px;border-top:1px solid rgba(255,255,255,.1);margin-top:4px;display:flex;gap:20px">' +
-        '<div style="display:flex;align-items:baseline;gap:8px">' +
-          '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Officer in Charge:</span>' +
-          '<span style="font-size:13px;font-weight:600;color:#fff">David Smith</span>' +
-        '</div>' +
-        '<div style="display:flex;align-items:baseline;gap:8px">' +
-          '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Chairman:</span>' +
-          '<span style="font-size:13px;font-weight:600;color:#fff">David Wick</span>' +
-        '</div>' +
-      '</div>';
+  // Staff strip — single row, full viewport width, wraps if needed.
+  // OIC and Chairman are fixed text. VC/SO/Mentor are dynamic.
+  // The whole strip sits below the title+clock row via flex-direction:column
+  // on board-header, which is width:100% of the viewport.
+  var staffStrip =
+    '<div id="staff-strip" style="width:100%;border-top:1px solid rgba(255,255,255,.1);margin-top:4px;' +
+         'padding:5px 16px 7px;box-sizing:border-box;display:flex;align-items:center;' +
+         'gap:20px;flex-wrap:wrap">' +
+      '<div style="display:flex;align-items:baseline;gap:6px;flex-shrink:0">' +
+        '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">OIC:</span>' +
+        '<span style="font-size:13px;font-weight:600;color:#fff">David Smith</span>' +
+      '</div>' +
+      '<div style="display:flex;align-items:baseline;gap:6px;flex-shrink:0">' +
+        '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Chairman:</span>' +
+        '<span style="font-size:13px;font-weight:600;color:#fff">David Wick</span>' +
+      '</div>' +
+      staffLabel('VC on Shift', vcOnShift, 'staff-vc') +
+      staffLabel('Shift Officer', soOnShift, 'staff-so') +
+      (mentors.length
+        ? '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;overflow:hidden">' +
+            '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap;flex-shrink:0">Mentors:</span>' +
+            '<div id="staff-mentors-track" style="overflow:hidden;flex:1;min-width:0">' +
+              '<div id="staff-mentors" style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;color:#fff">' +
+                mentors.map(function(a){ return a.name; }).join(' &bull; ') +
+              '</div>' +
+            '</div>' +
+          '</div>'
+        : '') +
+    '</div>';
 
   var html = '<div class="board-wrap">' +
-    '<div class="board-header" style="flex-direction:column;padding-bottom:0">' +
+    '<div class="board-header" style="flex-direction:column;padding-bottom:0;width:100%;box-sizing:border-box">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;width:100%;padding-bottom:4px">' +
         '<div>' +
           '<div class="board-title">JRC Live Status Board</div>' +
@@ -480,8 +491,9 @@ function renderBoard(){
 
   el.innerHTML = html;
 
-  // Only duplicate + animate the ticker when the content actually overflows
+  // Tune later-shift ticker and staff name tickers
   _tuneBoardTicker();
+  _tuneStaffTickers();
 
   // Live clock
   updateBoardClock();
@@ -490,6 +502,35 @@ function renderBoard(){
 
   // Auto-scroll CI + Assigned sections (slow ping-pong crawl when overflowing)
   startBoardAutoScroll();
+}
+
+// Measure each staff name track after DOM insertion. If the names overflow,
+// duplicate + animate exactly like _tuneBoardTicker.
+function _tuneStaffTickers(){
+  ['staff-vc','staff-so','staff-mentors'].forEach(function(id){
+    var track = document.getElementById(id + '-track');
+    var ticker = document.getElementById(id);
+    if(!track || !ticker) return;
+    ticker.style.animation = 'none';
+    if(ticker.scrollWidth <= track.clientWidth + 4) return; // fits — leave static
+    var content = ticker.innerHTML;
+    ticker.innerHTML = content + ' &nbsp;&nbsp;&nbsp; ' + content;
+    var secs = Math.max(8, Math.round(ticker.scrollWidth / 60));
+    ticker.offsetHeight;
+    ticker.style.animation = 'boardTicker ' + secs + 's linear infinite';
+  });
+  // Mentors track has a different id structure
+  var mt = document.getElementById('staff-mentors-track');
+  var mn = document.getElementById('staff-mentors');
+  if(mt && mn && mn.style.animation === 'none'){
+    if(mn.scrollWidth > mt.clientWidth + 4){
+      var mc = mn.innerHTML;
+      mn.innerHTML = mc + ' &nbsp;&nbsp;&nbsp; ' + mc;
+      var ms = Math.max(8, Math.round(mn.scrollWidth / 60));
+      mn.offsetHeight;
+      mn.style.animation = 'boardTicker ' + ms + 's linear infinite';
+    }
+  }
 }
 
 function _tuneBoardTicker(){
