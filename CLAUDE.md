@@ -1,3 +1,4 @@
+[CLAUDE (3).md](https://github.com/user-attachments/files/31088894/CLAUDE.3.md)
 [CLAUDE (1).md](https://github.com/user-attachments/files/31045784/CLAUDE.1.md)
 [CLAUDE.md](https://github.com/user-attachments/files/29980801/CLAUDE.md)
 # JRC Assignment System — Claude Project Context
@@ -280,3 +281,110 @@ onShiftJuniors.delete(String(jr.id));
 - Working files: `/home/claude/`
 - Outputs: `/mnt/user-data/outputs/`
 - Deploy to repo: `js/app.js`, `css/app.css`, `index.html`, `netlify/functions/state.js`
+
+---
+
+## Module Version Skew (CRITICAL LESSON — Aug 2026)
+
+**All seven JS modules must be rolled back or deployed TOGETHER, never individually.**
+
+The modules cross-reference each other: `app-board.js` and `app-dashboard.js` call helper
+functions defined in `app-data.js`. If one module is rolled back to an older version while
+others stay current, the app breaks with silent runtime errors (functions undefined) that
+produce blank screens with no visible error.
+
+**Real incident:** During a layout-fix rollback, `app-data.js` reverted to a pre-V22 copy,
+losing the canonical shift helpers. `renderBoard()` crashed on `getJrActiveShift is not
+defined` before painting anything — the status board tab appeared blank for hours and was
+misdiagnosed as CSS. Diagnosed by loading the real modules in jsdom and clicking the tab.
+
+**Debugging rule:** When a tab/panel renders blank, check the browser console for
+exceptions FIRST before touching CSS. A render function that throws leaves the panel
+empty — indistinguishable from a styling problem until you look at the console.
+
+### Canonical Shift Helpers (must exist in app-data.js)
+These are required by app-board.js and app-dashboard.js:
+
+```js
+var SHIFT_ORDER = ['8am','12pm','4pm'];
+var clockedOutShifts = {};  // per-shift clock-out map: {jid: {'8am':true}}
+
+getJrActiveShift(jr)    // shift junior is physically here for (from checkInShift)
+getJrCommittee(jr, sh)  // committee for a shift — shiftAssignments authoritative
+getJrPlannedShifts(jr)  // all planned shifts today, deduped, day order
+getJrLaterShifts(jr)    // shifts after the active one
+getOperatingShift(t)    // operational shift at time t (<11:00 → 8am, <15:00 → 12pm, else 4pm)
+```
+
+**Rule:** A junior's operational state must always derive from these helpers — never from
+`currentShift`, which is ONLY the officer's UI tab selection.
+
+---
+
+## Theme System (V22 redesign)
+
+- Dark mode is DEFAULT — "sports ops dashboard" aesthetic for 17-20yo users
+- `html[data-theme="light"]` attribute switches to light theme (CSS overrides appended in app.css)
+- Toggle button in header (`#theme-toggle`), persists via `localStorage.jrc_theme`
+- Pre-paint init script in index.html <head> prevents flash of wrong theme
+- `toggleTheme()` lives in app-auth.js
+
+### Dark theme conventions
+- Surfaces: mid-navy (#0D2040 → #122445 → #1A2E54), NOT near-black
+- Body: #091A35 with radial gradient accents
+- Board/TV background: `var(--navy)` (#002E5D) — full brand navy, never black
+- "Out on Shift" is ORANGE everywhere (banner, board names, board col headers, check-ins label, full progress bars) — NOT green
+- Green is reserved for: success alerts, approved badges, capacity-full states
+- Muted text: rgba(255,255,255,.5-.6) — never below .45 opacity (readability)
+- `--r-pill` MUST stay 999px — banners and badges depend on it (6px broke them)
+- Header keeps navy gradient in BOTH themes (brand)
+- Drop-off reports and print views stay white in both themes (paper output)
+
+### Dark mode inline-style overrides
+Many JS-generated elements hardcode light-mode inline styles (color:#667788,
+background:#FFF8F0, etc.). CSS attribute-selector overrides scoped to panels
+(e.g. `#panel-checkins [style*="color:#667788"]`) map them to dark equivalents,
+with `html[data-theme="light"]` restores. Prefer this over patching every JS string.
+
+### Known CSS landmine
+The original app.css had mobile-only rules (`.stats{repeat(2,1fr)!important}`,
+`#slots-container{1fr}`) sitting OUTSIDE any @media query — collapsing desktop
+grids at all widths. If layout "loses all spacing," check for bare responsive
+rules outside @media blocks first.
+
+---
+
+## Status Board Tab (in-app) — Architecture
+
+- The in-app board tab does NOT do a full-screen takeover. Header and tab bar stay
+  visible so users can navigate away. No pointer-events lockdown in tab mode.
+- `board-tab-active` body class now ONLY provides the 2-col grid + font clamps.
+- Pointer lockdown (`pointer-events:none` on everything) applies ONLY under
+  `.tv-mode` (the jrctv.hlsr.app TV page).
+- `startBoardAutoScroll()` MUST early-return unless `tv-mode` — running its 75ms
+  scrollHeight/scrollTop interval inside the normal page forces a layout reflow
+  13x/second and freezes the browser.
+- Board timers (clock + autoscroll) are cleared in switchTab when leaving the tab.
+- `#panel-board.active` uses `display:flex !important` — switchTab sets inline
+  `display:block` which would break the flex height chain without the !important.
+
+---
+
+## Browser History / Back Button
+
+- `switchTab(t, el, skipHistory)` pushes `history.pushState({tab:t},'','#'+t)` per switch
+- `popstate` listener restores the tab (with role-permission check), passing
+  skipHistory=true to avoid loops
+- Back button cycles tabs instead of leaving the app
+
+---
+
+## Deploy Workflow Notes
+
+- GitHub Actions `bump-version.yml` auto-bumps APP_BUILD in app-data.js on JS pushes.
+  This RACES manual GitHub UI edits of app-data.js. Resolution: push app-data.js FIRST,
+  wait ~30-60s for the bot commit, then push other files. CSS-only pushes don't trigger it.
+- Netlify CDN can serve stale CSS after deploy — hard refresh (Ctrl+Shift+R) before
+  assuming a fix didn't work.
+- Uploaded files do NOT persist between separate Claude conversations — re-upload
+  current repo copies each session.
