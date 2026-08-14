@@ -3484,7 +3484,10 @@ function adultClockOut(adultId){
   if(!ad) return;
   var nowStr = new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
   var log = ad.shiftLog && ad.shiftLog[ad.shiftLog.length - 1];
-  if(log && !log.out) log.out = nowStr;
+  if(log && !log.out){
+    log.out = nowStr;
+    log.role = ad.boardRole || 'mentor'; // save role at clock-out time
+  }
   ad.clockedIn = false;
   ad.clockInTime = null;
   ad.boardRole = null;
@@ -3639,15 +3642,16 @@ function printMemberReport(memberId, isAdult){
         '<thead><tr style="background:#002E5D;color:#fff">' +
           '<th style="padding:6px 10px;text-align:left">Date</th>' +
           '<th style="padding:6px 10px;text-align:left">Shift</th>' +
-          (isAdult ? '' : '<th style="padding:6px 10px;text-align:left">Committee</th>') +
+          (isAdult ? '<th style="padding:6px 10px;text-align:left">Role</th>' : '<th style="padding:6px 10px;text-align:left">Committee</th>') +
           '<th style="padding:6px 10px;text-align:left">Hours</th>' +
         '</tr></thead><tbody>' +
         shiftLog.map(function(e,i){
           var bg = i%2===0?'#fff':'#F8F9FA';
+          var ROLE_LABELS = {vc:'VC on Shift', so:'Shift Officer', mentor:'Mentor'};
           return '<tr style="background:' + bg + '">' +
             '<td style="padding:5px 10px">' + (e.date||'') + '</td>' +
             '<td style="padding:5px 10px">' + (SL[e.shift]||e.shift||'') + '</td>' +
-            (isAdult ? '' : '<td style="padding:5px 10px">' + (e.committee||'') + '</td>') +
+            (isAdult ? '<td style="padding:5px 10px">' + (ROLE_LABELS[e.role]||e.role||'Mentor') + '</td>' : '<td style="padding:5px 10px">' + (e.committee||'') + '</td>') +
             '<td style="padding:5px 10px;' + (e.noshow?'color:#CC0000':'') + '">' + (e.noshow?'No-Show':(e.hours||4)+' hrs') + '</td>' +
           '</tr>';
         }).join('') +
