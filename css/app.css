@@ -738,8 +738,7 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
 }
 .tv-mode #board-ticker{font-size:clamp(14px,1.3vw,20px)}
 
-/* Board tab in-app — identical to TV mode */
-body.board-tab-active *{pointer-events:none !important;cursor:none !important;user-select:none !important}
+/* Board tab in-app — full screen, no interaction except escape button */
 body.board-tab-active{overflow:hidden}
 body.board-tab-active #main-header,
 body.board-tab-active #tab-bar,
@@ -774,9 +773,9 @@ body.board-tab-active #board-ticker{font-size:clamp(14px,1.3vw,20px)}
   text-transform:uppercase;backdrop-filter:blur(8px);transition:all .15s;
 }
 #board-escape-btn:hover{background:rgba(239,118,34,.4);color:#fff;border-color:rgba(239,118,34,.5);}
-body.board-tab-active #board-escape-btn{display:block;}
+/* Lockdown all pointer events, then carve out the escape button */
 body.board-tab-active *{pointer-events:none !important;cursor:none !important;user-select:none !important;}
-body.board-tab-active #board-escape-btn{pointer-events:auto !important;cursor:pointer !important;}
+body.board-tab-active #board-escape-btn{display:block;pointer-events:auto !important;cursor:pointer !important;}
 
 /* ================================================================
    LIGHT THEME
