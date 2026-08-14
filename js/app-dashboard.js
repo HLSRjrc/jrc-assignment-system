@@ -1303,30 +1303,8 @@ function renderCheckins(){
     '</div>' +
   '</div>';
 
-  html += '<div id="checkins-table-wrap">';
-  if(allCI.length === 0){
-    html += '<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;color:var(--gray-400);font-style:italic;margin-bottom:16px">No juniors checked in right now.</div>';
-  } else {
-    html += '<div style="overflow-x:auto;margin-bottom:16px"><table style="width:100%;border-collapse:collapse;font-size:13px">' +
-      '<thead><tr style="background:var(--navy);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.07em">' +
-        '<th style="padding:8px 12px;text-align:left;font-weight:600">Name</th>' +
-        '<th style="padding:8px 12px;text-align:left;font-weight:600">Shift</th>' +
-        '<th style="padding:8px 12px;text-align:left;font-weight:600">Checked In At</th>' +
-        '<th style="padding:8px 12px;text-align:left;font-weight:600">Status</th>' +
-        '<th style="padding:8px 12px;text-align:left;font-weight:600">Assignment</th>' +
-        '<th style="padding:8px 12px;text-align:right;font-weight:600">Action</th>' +
-      '</tr></thead>' +
-      '<tbody>' +
-        allCI.slice().sort(function(a,b){
-          var aStale = a.checkInDate && a.checkInDate !== currentDate ? 1 : 0;
-          var bStale = b.checkInDate && b.checkInDate !== currentDate ? 1 : 0;
-          if(aStale !== bStale) return aStale - bStale;
-          return (a.checkInTimestamp||0) - (b.checkInTimestamp||0);
-        }).map(buildRow).join('') +
-      '</tbody>' +
-    '</table></div>';
-  }
-  html += '</div>'; // checkins-table-wrap
+  // Table is populated by renderCheckinsTable() after the outer shell is set
+  html += '<div id="checkins-table-wrap"></div>';
 
   // ── Junior Roster (collapsible) ──────────────────────────
   var notCI = juniors.filter(function(j){
@@ -1430,6 +1408,8 @@ function renderCheckins(){
   '</div></div>';
 
   el.innerHTML = html;
+  // Now fill the table (includes both juniors AND adults)
+  renderCheckinsTable();
 }
 
 // Refresh only the active check-ins table (called after quickCheckIn to avoid collapsing the drawer)
@@ -1462,8 +1442,8 @@ function renderCheckinsTable(){
     return h + ':' + String(m).padStart(2,'0') + ' ' + ampm + ', ' + (j.checkInDate || '');
   }
 
-  if(allCI.length === 0){
-    el.innerHTML = '<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;color:var(--gray-400);font-style:italic;margin-bottom:16px">No juniors checked in right now.</div>';
+  if(allCI.length === 0 && activeAdults.length === 0){
+    el.innerHTML = '<div style="padding:20px;background:var(--gray-50);border-radius:8px;text-align:center;color:var(--gray-400);font-style:italic;margin-bottom:16px">No one checked in right now.</div>';
     return;
   }
 
@@ -1507,7 +1487,10 @@ function renderCheckinsTable(){
       '<td style="padding:8px 12px"><span style="color:var(--orange)">&#9679; On Shift</span></td>' +
       '<td style="padding:8px 12px">—</td>' +
       '<td style="padding:8px 12px;text-align:right">' +
-        '<button class="btn btn-sm btn-danger" onclick="adultClockOut(\''+ a.id +'\')" style="font-size:11px">Clock Out</button>' +
+        '<button class="btn btn-sm btn-danger" style="font-size:11px" ' +
+        'onclick="if(window._acoConfirm===\''+ a.id +'\'){adultClockOut(\''+ a.id +'\');window._acoConfirm=null;}' +
+        'else{window._acoConfirm=\''+ a.id +'\';this.textContent=\'Confirm?\';var _b=this;setTimeout(function(){if(window._acoConfirm===\''+ a.id +'\'){window._acoConfirm=null;_b.textContent=\'Clock Out\';}},3000);}">' +
+        'Clock Out</button>' +
       '</td>' +
     '</tr>';
   }).join('');
@@ -1651,9 +1634,6 @@ function quickAdultCheckIn(adultId){
 function adminClockOut(jid){
   var jr = juniors.find(function(j){ return j.id === jid; });
   if(!jr) return;
-  if(!confirm('Clock out ' + jr.name + '? This will remove them from the queue and any assignment.')) return;
-  // Must set checkedIn false so Neon stores them as not checked in — otherwise
-  // a page refresh pulls checkedIn:true back and they reappear on the tab.
   jr.checkedIn = false;
   clockedOut[jr.id] = true;
   if(!clockedOutShifts[jr.id]) clockedOutShifts[jr.id] = {};
@@ -1661,9 +1641,12 @@ function adminClockOut(jid){
   jr.assignment = null;
   onShiftJuniors.delete(jr.id);
   onShiftJuniors.delete(String(jr.id));
+  _inFlightJuniors.delete(jr.id);
+  _inFlightJuniors.delete(String(jr.id));
   dirtyJuniors.add(jr.id);
   _lastSavedHash = '';
   saveStateNow();
+  setTimeout(function(){ lastSaveTime = 0; }, 3000);
   renderCheckinsTable();
   renderOfficer();
   renderBoard();
@@ -1675,6 +1658,8 @@ function adminUndoClockOut(jid){
   jr.checkedIn = true;
   clockedOut[jr.id] = false;
   delete clockedOut[jr.id];
+  _inFlightJuniors.delete(jr.id);
+  _inFlightJuniors.delete(String(jr.id));
   dirtyJuniors.add(jr.id);
   _lastSavedHash = '';
   saveStateNow();
@@ -3518,7 +3503,7 @@ function saveAdultPerm(adultId){
 function adultClockOut(adultId){
   var ad = adults.find(function(a){ return a.id === adultId; });
   if(!ad) return;
-  if(!confirm('Clock out ' + ad.name + '?')) return;
+  // Avoid browser confirm() which can be silently suppressed on HTTPS pages
   var nowStr = getSimTime().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
   var log = ad.shiftLog && ad.shiftLog[ad.shiftLog.length - 1];
   if(log && !log.out){
