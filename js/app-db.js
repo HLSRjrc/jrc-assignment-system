@@ -685,11 +685,14 @@ function renderAdultHours(){
     var logRows = shiftLog.length === 0
       ? '<tr><td colspan="5" style="font-size:11px;color:var(--gray-400);padding:4px 12px">No shifts recorded</td></tr>'
       : shiftLog.map(function(e){
+          var ROLE_LABELS = {vc:'VC on Shift', so:'Shift Officer', mentor:'Mentor'};
+          var roleStr = ROLE_LABELS[e.role] || e.role || 'Mentor';
           return '<tr style="background:#F8F9FA">' +
             '<td colspan="2" style="font-size:11px;padding:3px 12px;color:var(--gray-500)">' +
               (e.date||'') + ' &mdash; ' + (e.shift||'') + (e.in ? ' (In: ' + e.in + (e.out ? ', Out: ' + e.out : '') + ')' : '') +
             '</td>' +
-            '<td colspan="3" style="font-size:11px;padding:3px 8px;color:var(--gray-400)">' + (e.out ? '4 hrs' : 'In progress') + '</td>' +
+            '<td style="font-size:11px;padding:3px 8px;color:var(--gray-500)">' + roleStr + '</td>' +
+            '<td colspan="2" style="font-size:11px;padding:3px 8px;color:var(--gray-400)">' + (e.out ? '4 hrs' : 'In progress') + '</td>' +
           '</tr>';
         }).join('');
 
