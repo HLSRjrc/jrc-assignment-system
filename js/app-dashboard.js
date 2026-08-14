@@ -687,9 +687,14 @@ function renderTabs(activeTab){
       ['board',    'Status Board',              1],
     ],
     scheduling: [
+      ['officer',  'Dashboard',                 1],
+      ['checkins', 'Check-ins',                 1],
+      ['roster',   'Roster',                    1],
+      ['setup',    'Shift Setup',               1],
       ['reqform',  '&#43; Submit Request',      1],
       ['requests', '&#128203; Requests',        1],
-      ['setup',    'Shift Setup',               1],
+      ['board',    'Status Board',              2],
+      ['kiosk',    'Kiosk',                     2],
     ],
     kiosk: [
       ['kiosk',    'Kiosk',                     1],
