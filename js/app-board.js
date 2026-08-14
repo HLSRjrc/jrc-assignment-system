@@ -107,20 +107,25 @@ function manualClockOut(jid, skipConfirm){
   var jr = juniors.find(function(j){ return j.id === jid; });
   if(!jr) return;
   if(!skipConfirm && !confirm('Sign out ' + jr.name + '?')) return;
-  // Remove from slot if assigned
+  var jrShift = getJrActiveShift(jr);
+  // Remove from slot if assigned — scoped to the junior's own shift
   if(jr.assignment){
-    var sl = activeSlots.find(function(s){
-      return String(s.id) === String(jid) || (s.name === jr.assignment && s.shift === currentShift);
-    });
-    // find by assignment name
-    sl = activeSlots.find(function(s){ return s.name === jr.assignment && s.shift === currentShift; });
+    var sl = activeSlots.find(function(s){ return s.name === jr.assignment && s.shift === jrShift; });
     if(sl) sl.assigned = sl.assigned.filter(function(id){ return String(id) !== String(jid); });
+    // Stamp it onto the shift record so reports/hours survive the clock-out
+    if(!jr.shiftAssignments) jr.shiftAssignments = {};
+    jr.shiftAssignments[jrShift] = jr.assignment;
   }
   onShiftJuniors.delete(jid);
   onShiftJuniors.delete(String(jid));
   jr.checkedIn = false;
-  jr.plannedShifts = [];
-  jr.checkInShift = '';
+  // Do NOT wipe plannedShifts/checkInShift — an age-out signing out of their
+  // 8am still has a 12pm and 4pm to come back for. Only clear once nothing
+  // later remains.
+  if(getJrLaterShifts(jr).length === 0){
+    jr.plannedShifts = [];
+    jr.checkInShift  = '';
+  }
   clockedOut[jid] = true;
   dirtyJuniors.add(jr.id);
   renderOfficer();
@@ -202,8 +207,9 @@ function getJuniorStatus(jr){
   // Only use onShiftJuniors — this is cleared on clock-out so it's shift-specific
   if(onShiftJuniors.has(jr.id) || onShiftJuniors.has(String(jr.id))) return 'on-shift';
   // Check slot data only for current shift — prevents old sent slots bleeding into next shift
+  var _jrShift = getJrActiveShift(jr);
   var inSentSlot = activeSlots.some(function(s){
-    if(s.shift !== currentShift) return false; // only current shift slots
+    if(s.shift !== _jrShift) return false; // scoped to THIS junior's shift, not the viewer's tab
     return (onShiftSlots.has(String(s.id)) || onShiftSlots.has(s.id)) &&
            (s.assigned.indexOf(jr.id) >= 0 || s.assigned.indexOf(String(jr.id)) >= 0);
   });
@@ -241,8 +247,7 @@ function renderBoard(){
     var checkedInForShift = juniors.filter(function(j){
       if(!j.checkedIn) return false;
       if(clockedOut[j.id] || clockedOut[String(j.id)]) return false;
-      var jShift = j.checkInShift || currentShift;
-      return jShift === sh;
+      return getJrActiveShift(j) === sh;
     });
     checkedInForShift.forEach(function(j){
       var status = getJuniorStatus(j);
@@ -253,18 +258,22 @@ function renderBoard(){
     });
     // Clocked-out juniors not shown on board (strikethrough is dashboard-only)
 
-    // Age-out pending (future shifts) — bucket into CI column with pending style
-    var isFuture = shiftOrder[sh] > shiftOrder[currentShift];
-    if(isFuture){
-      juniors.forEach(function(j){
-        if(!j.ageout) return;
-        if(!j.plannedShifts || j.plannedShifts.indexOf(sh) < 0) return;
-        if(!j.checkInShift) return;
-        if(j.checkedIn && j.checkInShift === sh) return;
-        if(checkedInForShift.indexOf(j) >= 0) return;
-        ciAll.push({j:j, sh:sh, pending:true});
-      });
-    }
+  });
+
+  // Age-out pending (later shifts) — bucket into CI column with pending style.
+  // A shift is "later" relative to the shift THAT JUNIOR checked in for, not
+  // relative to whatever tab the viewing device happens to be on.
+  var _pendSeen = {};
+  juniors.forEach(function(j){
+    if(!j.ageout || !j.checkInShift) return;
+    getJrLaterShifts(j).forEach(function(sh){
+      var key = j.id + '|' + sh;
+      if(_pendSeen[key]) return;
+      _pendSeen[key] = true;
+      // Already physically here and checked in for that shift — not pending
+      if(j.checkedIn && j.checkInShift === sh) return;
+      ciAll.push({j:j, sh:sh, pending:true});
+    });
   });
 
   // Are multiple shifts represented in any column? (drives shift tag visibility)
@@ -313,14 +322,15 @@ function renderBoard(){
           (late ? ' <span style="font-size:9px;background:#FF6B6B;color:#fff;padding:0 4px;border-radius:3px;margin-left:3px">LATE</span>' : '') +
           '</span>';
       }).join('');
-    // Duplicate for seamless loop
-    var ticker = items + items;
+    // Render ONE copy. The second copy (needed for a seamless marquee loop) is
+    // only added after measuring, in _tuneBoardTicker — otherwise short lists
+    // show every name twice because the duplicate never scrolls out of view.
     return '<div style="border-top:1px solid rgba(255,255,255,.15);padding:5px 0;overflow:hidden;flex-shrink:0;background:rgba(0,0,0,.2)">' +
       '<div style="display:flex;align-items:center">' +
         '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#F5A623;white-space:nowrap;padding:0 12px;flex-shrink:0">&#9711; Later Shifts:</span>' +
-        '<div style="overflow:hidden;flex:1">' +
-          '<div id="board-ticker" style="display:inline-flex;animation:boardTicker 20s linear infinite;white-space:nowrap;font-size:15px">' +
-            ticker +
+        '<div style="overflow:hidden;flex:1" id="board-ticker-track">' +
+          '<div id="board-ticker" style="display:inline-flex;white-space:nowrap;font-size:15px">' +
+            items +
           '</div>' +
         '</div>' +
       '</div>' +
@@ -347,7 +357,7 @@ function renderBoard(){
     shifts.forEach(function(sh){ byShift[sh] = {}; });
     outAll.forEach(function(r){
       var sh = r.sh;
-      var committee = r.j.assignment || (r.j.shiftAssignments && r.j.shiftAssignments[sh]) || 'Unassigned';
+      var committee = getJrCommittee(r.j, sh) || 'Unassigned';
       if(!byShift[sh][committee]) byShift[sh][committee] = [];
       byShift[sh][committee].push(r.j);
     });
@@ -467,13 +477,8 @@ function renderBoard(){
 
   el.innerHTML = html;
 
-  // Force ticker animation restart after DOM insertion
-  var ticker = document.getElementById('board-ticker');
-  if(ticker){
-    ticker.style.animation = 'none';
-    ticker.offsetHeight; // reflow
-    ticker.style.animation = '';
-  }
+  // Only duplicate + animate the ticker when the content actually overflows
+  _tuneBoardTicker();
 
   // Live clock
   updateBoardClock();
@@ -482,6 +487,21 @@ function renderBoard(){
 
   // Auto-scroll CI + Assigned sections (slow ping-pong crawl when overflowing)
   startBoardAutoScroll();
+}
+
+function _tuneBoardTicker(){
+  var track  = document.getElementById('board-ticker-track');
+  var ticker = document.getElementById('board-ticker');
+  if(!track || !ticker) return;
+  ticker.style.animation = 'none';
+  // One copy fits — leave it static so nobody appears twice.
+  if(ticker.scrollWidth <= track.clientWidth + 4) return;
+  // Overflows — append a second copy and run the marquee.
+  var half = ticker.innerHTML;
+  ticker.innerHTML = half + half;
+  var secs = Math.max(12, Math.round(ticker.scrollWidth / 55));
+  ticker.offsetHeight; // force reflow
+  ticker.style.animation = 'boardTicker ' + secs + 's linear infinite';
 }
 
 var _boardScrollTimer = null;
