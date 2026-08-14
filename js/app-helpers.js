@@ -145,16 +145,10 @@ function switchTab(t, el, skipHistory){
   if(t === 'requests') refreshRequests();
   if(t === 'reqform') renderReqForm();
   if(t === 'board'){
-    // No full-screen takeover — board renders in its panel, tabs stay visible
-    // so users can navigate away naturally without needing an escape button
-    document.body.classList.remove('board-tab-active');
-    var esc2 = document.getElementById('board-escape-btn');
-    if(esc2) esc2.style.display = 'none';
+    document.body.classList.add('board-tab-active');
     renderBoard();
   } else {
     document.body.classList.remove('board-tab-active');
-    var esc3 = document.getElementById('board-escape-btn');
-    if(esc3) esc3.style.display = 'none';
   }
   if(t === 'checkins') renderCheckins();
   if(t === 'hours'){ renderHours(); renderAdultHours(); }
