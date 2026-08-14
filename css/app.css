@@ -97,7 +97,7 @@
   --r-lg:  8px;
   --r-xl:  10px;
   --r-2xl: 14px;
-  --r-pill:6px;
+  --r-pill:999px;
 
   /* Motion */
   --dur-fast:  120ms;
@@ -829,7 +829,7 @@ select.finput option { background: #1a2b45; color: #fff; }
 .board-name.late { color: #F87171; font-weight: 800; }
 .board-empty     { font-size: 12px; color: rgba(255,255,255,.2); font-style: italic; padding: 2px 0; }
 .board-col-gap   { height: 8px; }
-.board-shift-pill { display: inline-block; font-size: 9px; font-weight: 800; padding: 0 4px; border-radius: 2px; color: var(--navy); margin-right: 3px; vertical-align: middle; }
+.board-shift-pill { display: inline-block; font-size: 9px; font-weight: 800; padding: 0 4px; border-radius: 3px; color: var(--navy); margin-right: 3px; vertical-align: middle; }
 .board-out-inner   { column-gap: 6px; }
 .board-out-inner.cols1 { column-count: 1; }
 .board-out-inner.cols2 { column-count: 2; }
@@ -1077,16 +1077,7 @@ button:focus-visible, a:focus-visible, .btn:focus-visible, .role-btn:focus-visib
 ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,.2); }
 ::selection { background: rgba(239,118,34,.3); color: #fff; }
 
-/* ── RESPONSIVE ─────────────────────────────────────────────── */
-.stats { grid-template-columns: repeat(2,1fr) !important; }
-.panel { padding: 0 8px 80px; }
-.card  { padding: 16px; }
-#slots-container { display: grid; grid-template-columns: 1fr; gap: 12px; }
-.roster-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-.roster-table { min-width: 600px; }
-.kiosk-inner  { max-width: 100% !important; padding: 20px 16px !important; }
-.login-card   { padding: 20px 20px; }
-.role-btn     { padding: 12px 10px; }
+/* ── RESPONSIVE — see @media blocks below ───────────────────── */
 
 @media(min-width: 768px) {
   .panel  { padding: 0 16px 60px; }
