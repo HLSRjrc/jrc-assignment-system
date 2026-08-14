@@ -87,6 +87,7 @@ function applySimDate(){
       j.plannedShifts   = [];
     });
     clockedOut       = {};
+    clockedOutShifts = {};
     onShiftJuniors   = new Set();
     onShiftSlots     = new Set();
     checkInOrder     = 0;
@@ -280,6 +281,8 @@ function kConfirm(){
   pendingJr.checkInShift     = getShiftFromTime(getSimTime()) || currentShift;
   pendingJr.checkInDate      = currentDate; // stamp today's date — used for stale check-in detection
   pendingJr.checkInTimestamp = getSimTime().getTime(); // epoch ms — used in Check-ins tab
+  // Clock-back-in: clear the global clockedOut so they appear on the board.
+  // Leave clockedOutShifts entries intact — they track history for strikethrough.
   clockedOut[pendingJr.id] = false;
   delete clockedOut[pendingJr.id];
   onShiftJuniors.delete(pendingJr.id);
@@ -342,12 +345,38 @@ function kClockOut(){
     if(!pendingJr.shiftAssignments) pendingJr.shiftAssignments = {};
     pendingJr.shiftAssignments[_outShift] = pendingJr.assignment;
   }
+  // Per-shift stamp so the slot card can strikethrough just this shift's pill
+  if(!clockedOutShifts[pendingJr.id]) clockedOutShifts[pendingJr.id] = {};
+  clockedOutShifts[pendingJr.id][_outShift] = true;
   pendingJr.checkedIn = false;
   // Keep pendingJr.assignment so they stay in the slot card
   clockedOut[pendingJr.id] = true;
   dirtyJuniors.add(pendingJr.id);
   saveStateNow();
   document.getElementById('kdo-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
+  // Inject return reminder for age-outs with later shifts
+  var _kdoReminder = document.getElementById('kdo-reminder');
+  if(_kdoReminder){
+    var _laterNow = getJrLaterShifts(pendingJr);
+    if(_laterNow.length){
+      var _nextSh = _laterNow[0];
+      var _nextCom = pendingJr.shiftAssignments && pendingJr.shiftAssignments[_nextSh];
+      _kdoReminder.innerHTML =
+        '<div style="background:#FFF8E7;border:2px solid #F5A623;border-radius:8px;padding:12px 16px;margin:12px 0;font-size:15px;color:#7B4F00;font-weight:600">' +
+        '&#9200; Come back for the <strong>' + getShiftLabel(_nextSh) + '</strong> shift' +
+        (_nextCom ? ' &mdash; head to <strong>' + _nextCom + '</strong>' : '') + '!' +
+        (_laterNow.length > 1
+          ? '<div style="font-size:13px;font-weight:400;margin-top:4px;color:#A06000">Also working: ' +
+              _laterNow.slice(1).map(function(sh){
+                var c=pendingJr.shiftAssignments&&pendingJr.shiftAssignments[sh];
+                return getShiftLabel(sh)+(c?' &mdash; '+c:'');
+              }).join(', ') + '</div>'
+          : '') +
+        '</div>';
+    } else {
+      _kdoReminder.innerHTML = '';
+    }
+  }
   document.getElementById('k-clockout').style.display = 'none';
   document.getElementById('k-clockout-done').style.display = 'block';
   renderOfficer();
