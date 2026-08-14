@@ -585,7 +585,8 @@ function renderOfficer(search){
     var pillsHtml = s.assigned.map(function(jid){
       var jr = juniors.find(function(j){ return j.id === jid; });
       if(!jr) return '';
-      var isOut = clockedOut[jid] || clockedOut[jr.id];
+      var isOut = (clockedOutShifts[jid] && clockedOutShifts[jid][s.shift]) ||
+                  (clockedOutShifts[jr.id] && clockedOutShifts[jr.id][s.shift]);
       return '<span class="pill' + (jr.ageout ? ' ao' : '') + (jr.hasHat ? ' has-hat' : '') + '" ' +
              'style="' + (isOut ? 'opacity:.5;text-decoration:line-through;' : '') + '" ' +
              'title="' + (jr.notes ? 'Note: ' + jr.notes : '') + (isOut ? ' [Clocked out]' : '') + '">' +
@@ -1113,6 +1114,7 @@ function resetShift(){
   notesState = {};
   notesCollapsed = false;
   clockedOut = {};
+  clockedOutShifts = {};
   onShiftJuniors = new Set();
   onShiftSlots = new Set();
   onShiftSlots = new Set();
