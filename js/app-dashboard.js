@@ -599,7 +599,7 @@ function renderOfficer(search){
              '</span>';
     }).join('');
 
-    var sentBanner = isSent ? '<div style="background:#27AE60;color:#fff;font-size:12px;font-weight:800;text-align:center;padding:5px 10px;border-radius:4px;margin-bottom:8px;letter-spacing:.08em;text-transform:uppercase">&#9650; OUT ON SHIFT</div>' : '';
+    var sentBanner = isSent ? '<div style="background:var(--orange);color:#fff;font-size:12px;font-weight:800;text-align:center;padding:5px 10px;border-radius:4px;margin-bottom:8px;letter-spacing:.08em;text-transform:uppercase">&#9650; OUT ON SHIFT</div>' : '';
 
     var cardStyle = 'slot-card' + (full ? ' full' : '') + (isSent ? ' sent' : '');
 
@@ -643,7 +643,7 @@ function renderOfficer(search){
           (isSent ? '&#9989; Out on Shift &mdash; undo' : '&#128228; Mark Sent') +
           '</button></div>' : '') +
     '<div style="height:4px;border-radius:0 0 8px 8px;background:var(--gray-100);margin:10px -14px -12px;overflow:hidden">' +
-      '<div style="height:100%;width:' + pct + '%;background:' + (full ? '#27AE60' : pct >= 75 ? '#F39C12' : 'var(--navy)') + ';transition:width .4s ease;border-radius:0 0 8px 0"></div>' +
+      '<div style="height:100%;width:' + pct + '%;background:' + (full ? 'var(--orange)' : pct >= 75 ? 'var(--orange-dk)' : 'var(--navy-md)') + ';transition:width .4s ease;border-radius:0 0 8px 0"></div>' +
     '</div>' +
     '</div>';
   }).join('');
@@ -1271,7 +1271,7 @@ function renderCheckins(){
     var statusLabel = {
       'checked-in':  '<span style="color:#4A90D9">&#9679; Checked In</span>',
       'assigned':    '<span style="color:#F0C040">&#9632; Assigned</span>',
-      'on-shift':    '<span style="color:#5CDB95;font-weight:700">&#9650; Out on Shift</span>',
+      'on-shift':    '<span style="color:var(--orange);font-weight:700">&#9650; Out on Shift</span>',
       'checked-out': '<span style="color:#999">&#10003; Clocked Out</span>',
     }[status] || '<span style="color:#999">' + status + '</span>';
     var rowStyle = isStale ? 'background:#FFF5F5;' : isClockedOut ? 'opacity:.55;' : '';
@@ -1459,7 +1459,7 @@ function renderCheckinsTable(){
     var statusLabel = {
       'checked-in':  '<span style="color:#4A90D9">&#9679; Checked In</span>',
       'assigned':    '<span style="color:#F0C040">&#9632; Assigned</span>',
-      'on-shift':    '<span style="color:#5CDB95;font-weight:700">&#9650; Out on Shift</span>',
+      'on-shift':    '<span style="color:var(--orange);font-weight:700">&#9650; Out on Shift</span>',
       'checked-out': '<span style="color:#999">&#10003; Clocked Out</span>',
     }[status] || '<span style="color:#999">' + status + '</span>';
     var rowStyle = isStale ? 'background:#FFF5F5;' : isClockedOut ? 'opacity:.55;' : '';
