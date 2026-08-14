@@ -1274,10 +1274,10 @@ function renderCheckins(){
       'on-shift':    '<span style="color:var(--orange);font-weight:700">&#9650; Out on Shift</span>',
       'checked-out': '<span style="color:#999">&#10003; Clocked Out</span>',
     }[status] || '<span style="color:#999">' + status + '</span>';
-    var rowStyle = isStale ? 'background:#FFF5F5;' : isClockedOut ? 'opacity:.55;' : '';
-    return '<tr style="' + rowStyle + '">' +
-      '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:10px;color:#CC0000;font-weight:700">STALE</span>' : '') + '</td>' +
-      '<td style="padding:8px 12px;color:#667788">' + (j.checkInShift||'—') + '</td>' +
+    var rowStyle = isStale ? 'background:rgba(239,68,68,.1);' : isClockedOut ? 'opacity:.5;' : '';
+    return '<tr style="' + rowStyle + 'border-bottom:1px solid rgba(255,255,255,.06)">' +
+      '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:10px;color:#FCA5A5;font-weight:700">STALE</span>' : '') + '</td>' +
+      '<td style="padding:8px 12px;color:rgba(255,255,255,.5)">' + (j.checkInShift||'—') + '</td>' +
       '<td style="padding:8px 12px">' + fmtTs(j) + '</td>' +
       '<td style="padding:8px 12px">' + statusLabel + '</td>' +
       '<td style="padding:8px 12px">' + (j.assignment||'—') + '</td>' +
@@ -1462,10 +1462,10 @@ function renderCheckinsTable(){
       'on-shift':    '<span style="color:var(--orange);font-weight:700">&#9650; Out on Shift</span>',
       'checked-out': '<span style="color:#999">&#10003; Clocked Out</span>',
     }[status] || '<span style="color:#999">' + status + '</span>';
-    var rowStyle = isStale ? 'background:#FFF5F5;' : isClockedOut ? 'opacity:.55;' : '';
-    return '<tr style="' + rowStyle + '">' +
-      '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:10px;color:#CC0000;font-weight:700">STALE</span>' : '') + '</td>' +
-      '<td style="padding:8px 12px;color:#667788">' + (j.checkInShift||'—') + '</td>' +
+    var rowStyle = isStale ? 'background:rgba(239,68,68,.1);' : isClockedOut ? 'opacity:.5;' : '';
+    return '<tr style="' + rowStyle + 'border-bottom:1px solid rgba(255,255,255,.06)">' +
+      '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:10px;color:#FCA5A5;font-weight:700">STALE</span>' : '') + '</td>' +
+      '<td style="padding:8px 12px;color:rgba(255,255,255,.5)">' + (j.checkInShift||'—') + '</td>' +
       '<td style="padding:8px 12px">' + fmtTs(j) + '</td>' +
       '<td style="padding:8px 12px">' + statusLabel + '</td>' +
       '<td style="padding:8px 12px">' + (j.assignment||'—') + '</td>' +
@@ -1495,7 +1495,7 @@ function renderCheckinsTable(){
     '</tr>';
   }).join('');
 
-  el.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">' +
+  el.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px;color:rgba(255,255,255,.88)">' +
     '<thead><tr style="background:var(--navy);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.07em">' +
       '<th style="padding:8px 12px;text-align:left;font-weight:600">Name</th>' +
       '<th style="padding:8px 12px;text-align:left;font-weight:600">Shift</th>' +
