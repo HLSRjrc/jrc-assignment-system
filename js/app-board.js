@@ -116,6 +116,9 @@ function manualClockOut(jid, skipConfirm){
     if(!jr.shiftAssignments) jr.shiftAssignments = {};
     jr.shiftAssignments[jrShift] = jr.assignment;
   }
+  // Per-shift stamp for strikethrough
+  if(!clockedOutShifts[jid]) clockedOutShifts[jid] = {};
+  clockedOutShifts[jid][jrShift] = true;
   onShiftJuniors.delete(jid);
   onShiftJuniors.delete(String(jid));
   jr.checkedIn = false;
