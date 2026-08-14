@@ -3518,18 +3518,22 @@ function saveAdultPerm(adultId){
 function adultClockOut(adultId){
   var ad = adults.find(function(a){ return a.id === adultId; });
   if(!ad) return;
-  var nowStr = new Date().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
+  if(!confirm('Clock out ' + ad.name + '?')) return;
+  var nowStr = getSimTime().toLocaleTimeString('en-US', {hour:'numeric', minute:'2-digit'});
   var log = ad.shiftLog && ad.shiftLog[ad.shiftLog.length - 1];
   if(log && !log.out){
     log.out = nowStr;
-    log.role = ad.boardRole || 'mentor'; // save role at clock-out time
+    log.role = ad.boardRole || 'mentor';
   }
   ad.clockedIn = false;
   ad.clockInTime = null;
   ad.boardRole = null;
+  _lastSavedHash = '';
   saveStateNow();
   renderOfficer();
-  showAlert(ad.name + ' clocked out at ' + nowStr + '.', 'info');
+  renderBoard();
+  renderCheckinsTable();
+  showAlert(ad.name.split(',')[0].trim() + ' clocked out at ' + nowStr + '.', 'info');
 }
 
 // ============================================================
