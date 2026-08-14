@@ -1652,10 +1652,13 @@ function adminClockOut(jid){
   var jr = juniors.find(function(j){ return j.id === jid; });
   if(!jr) return;
   if(!confirm('Clock out ' + jr.name + '? This will remove them from the queue and any assignment.')) return;
+  // Must set checkedIn false so Neon stores them as not checked in — otherwise
+  // a page refresh pulls checkedIn:true back and they reappear on the tab.
+  jr.checkedIn = false;
   clockedOut[jr.id] = true;
+  if(!clockedOutShifts[jr.id]) clockedOutShifts[jr.id] = {};
+  clockedOutShifts[jr.id][getJrActiveShift(jr)] = true;
   jr.assignment = null;
-  // Note: keep in slot.assigned so they show with strikethrough on dashboard
-  // Only remove from onShiftJuniors (tracking who is physically out)
   onShiftJuniors.delete(jr.id);
   onShiftJuniors.delete(String(jr.id));
   dirtyJuniors.add(jr.id);
@@ -1669,9 +1672,12 @@ function adminClockOut(jid){
 function adminUndoClockOut(jid){
   var jr = juniors.find(function(j){ return j.id === jid; });
   if(!jr) return;
+  jr.checkedIn = true;
   clockedOut[jr.id] = false;
   delete clockedOut[jr.id];
-  saveState();
+  dirtyJuniors.add(jr.id);
+  _lastSavedHash = '';
+  saveStateNow();
   renderCheckinsTable();
   renderOfficer();
   renderBoard();
