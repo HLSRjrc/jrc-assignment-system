@@ -20,7 +20,7 @@ var ROLE_TABS = {
   // Shift Officer — dashboard, roster, checkins, status board, hours, submit request
   officer:    ['officer','kiosk','checkins','roster','board','hours','reqform'],
   // Scheduling Team — submit request + requests tab
-  scheduling: ['reqform','requests'],
+  scheduling: ['officer','checkins','roster','setup','reqform','requests','board','kiosk'],
   // Junior Committeeman — kiosk only
   junior:     ['kiosk'],
   // System roles
@@ -133,7 +133,7 @@ function doPersonalLogin(){
     } else if(role === 'officer'){
       _showRolePicker(['officer','board','kiosk']);
     } else if(role === 'scheduling'){
-      _showRolePicker(['scheduling','kiosk']);
+      _showRolePicker(['scheduling','board','kiosk']);
     } else {
       document.getElementById('personal-login').style.display = 'none';
       loginAs('kiosk');
