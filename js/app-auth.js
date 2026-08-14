@@ -205,8 +205,12 @@ function loginAs(role){
   document.getElementById('main-app').style.display = 'block';
 
   // Show user badge + logout button
-  var badgeName = loggedInAdult ? loggedInAdult.name.split(',')[0].trim() + ' (' + ROLE_LABELS[role] + ')' : ROLE_LABELS[role];
-  document.getElementById('user-badge').textContent = badgeName;
+  var _displayName = loggedInAdult ? loggedInAdult.name.split(',')[0].trim() : '';
+  var _roleLabel    = ROLE_LABELS[role] || role;
+  var badgeEl = document.getElementById('user-badge');
+  var roleLblEl = document.getElementById('user-role-lbl');
+  if(badgeEl)    badgeEl.textContent    = _displayName || _roleLabel;
+  if(roleLblEl)  roleLblEl.textContent  = _displayName ? _roleLabel : '';
   var lwi = document.getElementById('logout-wrap-inner'); if(lwi){ lwi.style.display = 'flex'; }
   var ft = document.getElementById('app-footer'); if(ft) ft.style.display = 'flex';
   var fv = document.getElementById('footer-version'); if(fv) fv.textContent = 'v' + APP_VERSION + '.' + APP_BUILD;
@@ -238,8 +242,9 @@ function applyRoleTabs(role){
   });
   // Kiosk role: hide header controls too (logout stays)
   if(role === 'kiosk'){
+    // Kiosk: show who's logged in but no Sign Out button
+    var lbtn = document.getElementById('logout-btn'); if(lbtn) lbtn.style.display = 'none';
     document.getElementById('logout-wrap').style.display = 'none';
-  var lwi = document.getElementById('logout-wrap-inner'); if(lwi) lwi.style.display = 'none'; // cleaner for kiosk tablets
   }
 }
 
@@ -256,6 +261,7 @@ function doLogout(){
   document.getElementById('login-screen').style.display = 'flex';
   var ft = document.getElementById('app-footer'); if(ft) ft.style.display = 'none';
   var lwi = document.getElementById('logout-wrap-inner'); if(lwi) lwi.style.display = 'none';
+  var lbtn = document.getElementById('logout-btn'); if(lbtn) lbtn.style.display = '';
 
   // Reset login form to personal login
   document.getElementById('personal-login').style.display = 'block';
