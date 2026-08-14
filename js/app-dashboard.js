@@ -1415,14 +1415,17 @@ function renderCheckinsTable(){
   var summary = document.getElementById('checkins-summary');
   if(!el) return; // full panel not rendered yet
 
-  var active       = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id]; });
+  var active         = juniors.filter(function(j){ return j.checkedIn && !clockedOut[j.id]; });
   var clockedOutList = juniors.filter(function(j){ return j.checkedIn && clockedOut[j.id]; });
-  var allCI        = active.concat(clockedOutList);
-  var stale        = allCI.filter(function(j){ return j.checkInDate && j.checkInDate !== currentDate; });
+  var allCI          = active.concat(clockedOutList);
+  var stale          = allCI.filter(function(j){ return j.checkInDate && j.checkInDate !== currentDate; });
+  var activeAdults   = (adults||[]).filter(function(a){ return a.clockedIn && !a.inactive; });
+  var total          = active.length + activeAdults.length;
 
   if(summary){
     summary.innerHTML =
-      '<strong style="color:var(--navy)">' + active.length + '</strong> currently checked in' +
+      '<strong style="color:var(--navy)">' + total + '</strong> currently checked in' +
+      ' (' + active.length + ' juniors, ' + activeAdults.length + ' adults)' +
       (clockedOutList.length > 0 ? ' &bull; <strong>' + clockedOutList.length + '</strong> clocked out this session' : '') +
       (stale.length > 0 ? ' &bull; <strong style="color:#CC0000">' + stale.length + '</strong> stale' : '');
   }
@@ -1472,6 +1475,20 @@ function renderCheckinsTable(){
     '</tr>';
   }).join('');
 
+  // Build adult rows
+  var adultRows = activeAdults.map(function(a){
+    return '<tr style="background:#FFF8F0">' +
+      '<td style="padding:8px 12px;font-weight:600">' + a.name + ' <span style="font-size:10px;background:var(--orange);color:#fff;padding:1px 5px;border-radius:8px">Adult</span></td>' +
+      '<td style="padding:8px 12px;color:#667788">' + (a.clockInShift||'—') + '</td>' +
+      '<td style="padding:8px 12px">' + (a.clockInTime||'—') + '</td>' +
+      '<td style="padding:8px 12px"><span style="color:var(--orange)">&#9679; On Shift</span></td>' +
+      '<td style="padding:8px 12px">—</td>' +
+      '<td style="padding:8px 12px;text-align:right">' +
+        '<button class="btn btn-sm btn-danger" onclick="adultClockOut(\''+ a.id +'\')" style="font-size:11px">Clock Out</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+
   el.innerHTML = '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">' +
     '<thead><tr style="background:var(--navy);color:#fff;font-size:11px;text-transform:uppercase;letter-spacing:.07em">' +
       '<th style="padding:8px 12px;text-align:left;font-weight:600">Name</th>' +
@@ -1481,7 +1498,7 @@ function renderCheckinsTable(){
       '<th style="padding:8px 12px;text-align:left;font-weight:600">Assignment</th>' +
       '<th style="padding:8px 12px;text-align:right;font-weight:600">Action</th>' +
     '</tr></thead>' +
-    '<tbody>' + rows + '</tbody>' +
+    '<tbody>' + adultRows + rows + '</tbody>' +
   '</table></div>';
 }
 
@@ -1602,7 +1619,9 @@ function quickAdultCheckIn(adultId){
   ad.shiftLog.push({shift: adultShift, in: nowStr, out: null, date: currentDate});
   saveStateNow();
   showAlert(ad.name + ' checked in for ' + adultShift + ' shift.', 'success');
-  renderCheckins();
+  // Update table and adult roster rows without collapsing the accordion
+  renderCheckinsTable();
+  renderCIAdultRosterRows();
   renderOfficer();
 }
 
@@ -1651,7 +1670,7 @@ function renderRoster(){
     document.getElementById('r-body').innerHTML = al.map(function(a){
       var permBadge = a.permission
         ? '<span class="badge" style="background:#D4EDDA;color:#155724;font-size:9px;margin-left:4px">' + (PERM_LABELS[a.permission]||a.permission) + '</span>'
-        : '<span style="font-size:10px;color:var(--gray-400);margin-left:4px">Hours only</span>';
+        : '';
       var reportIcon = ' <span style="cursor:pointer;font-size:10px;color:#667788" title="Print member report" onclick="openMemberReport(\'' + a.id + '\',true)">&#128438;</span>';
       var contact = '<div style="font-size:11px">' +
         (a.phone ? '<div>&#128222; ' + a.phone + '</div>' : '') +
@@ -1672,7 +1691,7 @@ function renderRoster(){
         '<td><span class="badge" style="background:var(--navy-lt);color:var(--navy);font-size:9px">' + (a.title||'') + '</span></td>' +
         '<td>' + contact + '</td>' +
         '<td style="font-size:12px;color:var(--gray-400)">' + lastWorked + '</td>' +
-        '<td colspan="2" style="font-size:11px;color:var(--gray-400)">Hours tracking only</td>' +
+        '<td colspan="2"></td>' +
         '<td></td></tr>';
     }).join('');
     return;
@@ -3490,13 +3509,7 @@ function toggleSection(id){
 // ============================================================
 // INDIVIDUAL MEMBER REPORT — printable profile for one junior or adult
 // ============================================================
-function openMemberReport(memberId, isAdult){
-  var member = isAdult
-    ? (adults||[]).find(function(a){ return a.id === memberId; })
-    : juniors.find(function(j){ return j.id === memberId; });
-  if(!member) return;
-
-  // Build modal with checkboxes
+function openMemberReportPicker(){
   var modal = document.getElementById('member-report-modal');
   if(!modal){
     modal = document.createElement('div');
@@ -3506,24 +3519,36 @@ function openMemberReport(memberId, isAdult){
     document.body.appendChild(modal);
   }
 
+  var allMembers = juniors.filter(function(j){ return !j.inactive; })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); });
+  var adultMembers = (adults||[]).filter(function(a){ return !a.inactive; })
+    .sort(function(a,b){ return a.name.localeCompare(b.name); });
+
   modal.innerHTML = '<div style="background:#fff;border-radius:12px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">' +
     '<div style="background:var(--navy);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">' +
-      '<div>' +
-        '<div style="color:#fff;font-weight:700;font-size:16px">' + member.name + '</div>' +
-        '<div style="color:rgba(255,255,255,.6);font-size:12px">Member #' + member.id + ' &mdash; Member Report</div>' +
-      '</div>' +
+      '<div style="color:#fff;font-weight:700;font-size:16px">&#128438; Print Member Record</div>' +
       '<button onclick="closeMemberReport()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;width:30px;height:30px;border-radius:50%;cursor:pointer;line-height:1">&times;</button>' +
     '</div>' +
     '<div style="padding:20px">' +
-      '<div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:12px">Select sections to include in report:</div>' +
-      '<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">' +
+      '<div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px">Select member:</div>' +
+      '<input type="text" id="rpt-member-search" class="finput" placeholder="Type name to search..." style="width:100%;margin-bottom:8px" oninput="filterMemberReportList()">' +
+      '<select id="rpt-member-select" class="finput" size="8" style="width:100%;margin-bottom:16px;height:180px">' +
+        '<optgroup label="Juniors">' +
+          allMembers.map(function(m){ return '<option value="' + m.id + '|junior">' + m.name + ' (' + m.id + ')</option>'; }).join('') +
+        '</optgroup>' +
+        '<optgroup label="Adults">' +
+          adultMembers.map(function(m){ return '<option value="' + m.id + '|adult">' + m.name + ' (' + m.id + ')</option>'; }).join('') +
+        '</optgroup>' +
+      '</select>' +
+      '<div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:8px">Include in report:</div>' +
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">' +
         '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="rpt-inc-contact" checked style="width:16px;height:16px;accent-color:var(--navy)"> Contact Information</label>' +
-        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="rpt-inc-hours" checked style="width:16px;height:16px;accent-color:var(--navy)"> ' + (isAdult ? 'Shifts & Hours' : 'Shifts Worked & Hours') + '</label>' +
-        (isAdult ? '' : '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="rpt-inc-history" style="width:16px;height:16px;accent-color:var(--navy)"> Committee History</label>') +
+        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="rpt-inc-hours" checked style="width:16px;height:16px;accent-color:var(--navy)"> Shifts Worked &amp; Hours</label>' +
+        '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="rpt-inc-history" style="width:16px;height:16px;accent-color:var(--navy)"> Committee History (juniors only)</label>' +
         '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="rpt-inc-notes" style="width:16px;height:16px;accent-color:var(--navy)"> Manager Notes</label>' +
       '</div>' +
       '<div style="display:flex;gap:8px">' +
-        '<button class="btn btn-primary" style="flex:1" onclick="printMemberReport(\'' + memberId + '\',' + (isAdult?'true':'false') + ')">&#128438; Print Report</button>' +
+        '<button class="btn btn-primary" style="flex:1" onclick="printMemberReportFromPicker()">&#128438; Print Report</button>' +
         '<button class="btn" onclick="closeMemberReport()">Cancel</button>' +
       '</div>' +
     '</div>' +
@@ -3532,6 +3557,25 @@ function openMemberReport(memberId, isAdult){
   modal.style.display = 'flex';
 }
 
+function filterMemberReportList(){
+  var q = (document.getElementById('rpt-member-search').value||'').toLowerCase();
+  var sel = document.getElementById('rpt-member-select');
+  if(!sel) return;
+  Array.from(sel.options).forEach(function(opt){
+    opt.style.display = (!q || opt.text.toLowerCase().indexOf(q) >= 0) ? '' : 'none';
+  });
+}
+
+function printMemberReportFromPicker(){
+  var sel = document.getElementById('rpt-member-select');
+  if(!sel || !sel.value){ showAlert('Please select a member first.', 'warn'); return; }
+  var parts = sel.value.split('|');
+  printMemberReport(parts[0], parts[1] === 'adult');
+}
+
+function openMemberReport(memberId, isAdult){
+  openMemberReportPicker();
+}
 function closeMemberReport(){
   var modal = document.getElementById('member-report-modal');
   if(modal) modal.style.display = 'none';
