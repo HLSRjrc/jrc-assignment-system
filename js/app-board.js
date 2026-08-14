@@ -433,14 +433,12 @@ function renderBoard(){
     '</div>';
   }
 
-  // Staff strip — single row, full viewport width, wraps if needed.
-  // OIC and Chairman are fixed text. VC/SO/Mentor are dynamic.
-  // The whole strip sits below the title+clock row via flex-direction:column
-  // on board-header, which is width:100% of the viewport.
-  var staffStrip =
-    '<div id="staff-strip" style="width:100%;border-top:1px solid rgba(255,255,255,.1);margin-top:4px;' +
-         'padding:5px 16px 7px;box-sizing:border-box;display:flex;align-items:center;' +
-         'gap:20px;flex-wrap:wrap">' +
+  // Staff strip layout:
+  //   TV mode  — single row, full screen width, mentors expand to fill remaining space.
+  //   In-app   — two rows: row 1 = OIC/Chair/VC/SO, row 2 = Mentors (always visible, scrolls if needed).
+  var _isTV = document.documentElement.classList.contains('tv-mode');
+  var _row1 =
+    '<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;width:100%">' +
       '<div style="display:flex;align-items:baseline;gap:6px;flex-shrink:0">' +
         '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">OIC:</span>' +
         '<span style="font-size:13px;font-weight:600;color:#fff">David Smith</span>' +
@@ -451,7 +449,7 @@ function renderBoard(){
       '</div>' +
       staffLabel('VC on Shift', vcOnShift, 'staff-vc') +
       staffLabel('Shift Officer', soOnShift, 'staff-so') +
-      (mentors.length
+      (_isTV && mentors.length
         ? '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;overflow:hidden">' +
             '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap;flex-shrink:0">Mentors:</span>' +
             '<div id="staff-mentors-track" style="overflow:hidden;flex:1;min-width:0">' +
@@ -461,6 +459,24 @@ function renderBoard(){
             '</div>' +
           '</div>'
         : '') +
+    '</div>';
+
+  var _mentorRow2 = (!_isTV && mentors.length)
+    ? '<div style="display:flex;align-items:center;gap:8px;padding-top:4px;border-top:1px solid rgba(255,255,255,.06);width:100%;overflow:hidden">' +
+        '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap;flex-shrink:0">Mentors:</span>' +
+        '<div id="staff-mentors-track" style="overflow:hidden;flex:1;min-width:0">' +
+          '<div id="staff-mentors" style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;color:#fff">' +
+            mentors.map(function(a){ return a.name; }).join(' &bull; ') +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    : '';
+
+  var staffStrip =
+    '<div id="staff-strip" style="width:100%;border-top:1px solid rgba(255,255,255,.1);margin-top:4px;' +
+         'padding:5px 16px 7px;box-sizing:border-box">' +
+      _row1 +
+      _mentorRow2 +
     '</div>';
 
   var html = '<div class="board-wrap">' +
