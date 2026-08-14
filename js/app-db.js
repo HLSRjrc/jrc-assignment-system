@@ -27,6 +27,11 @@ function saveStateNow(){
 var lastSaveTime = 0;
 var isSaving = false;
 var _lastSavedHash = '';
+// Juniors changed locally but not yet confirmed written to Neon. Only these
+// are allowed to survive an incoming poll — everything else defers to the
+// server, so a clock-out on the kiosk is no longer undone on the dashboard.
+var _inFlightJuniors = new Set();
+// _simSetLocallyAt is declared in app-data.js alongside the sim setters.
 
 function _stateHash(){
   // Quick fingerprint of the parts that matter — avoids saving unchanged state
@@ -57,6 +62,7 @@ function _doSave(){
            j.last !== 'None' || j.hasHat || j.notes || j.ageout ||
            dirtyJuniors.has(j.id);
   });
+  dirtyJuniors.forEach(function(id){ _inFlightJuniors.add(id); });
   dirtyJuniors.clear();
 
   var payload = {
@@ -104,6 +110,7 @@ function _doSave(){
     }
     console.log('State saved to Neon');
     lastSyncTime = Date.now();
+    _inFlightJuniors.clear();
     _lastSavedHash = _stateHash();
     hideSyncError();
     isSaving = false;
@@ -177,8 +184,12 @@ function loadState(){
     .then(function(r){ return r.json(); })
     .then(function(data){
       _applyState(data);
-      // Re-apply sim state from localStorage — always wins over Neon
-      _restoreSimFromLocalStorage();
+      // Neon is authoritative for sim time so every device agrees what time
+      // it is. localStorage is only a fallback for when Neon has none set.
+      var st = (data && (data.state || data)) || {};
+      if(st.simTimeEnabled === undefined && st.simTargetEpoch === undefined){
+        _restoreSimFromLocalStorage();
+      }
       console.log('State loaded from Neon');
       renderOfficer(); renderRoster(); renderSetup(); updateHeaderDate();
       if(document.documentElement.classList.contains('tv-mode')){ updateHeaderDate(); renderBoard(); }
@@ -190,6 +201,7 @@ function loadState(){
     });
 }
 
+// Fallback only — used when Neon has no sim state, or when Neon is offline.
 function _restoreSimFromLocalStorage(){
   try {
     var simRaw = localStorage.getItem('jrc_simstate');
@@ -407,49 +419,65 @@ function pollForUpdates(){
   if(!DB_AVAILABLE) return;
   if(isSaving) return;
   // Don't poll if we saved very recently — our local state is newer than Neon
-  if(Date.now() - lastSaveTime < 60000) return; // 60s grace after any save — prevents poll from overwriting recent changes
+  // Short grace only — long enough for our own POST to land, not long enough
+  // to blind this device to what other devices are doing. (Was 60s, which on
+  // a kiosk that saves every check-in meant polls effectively never ran.)
+  if(Date.now() - lastSaveTime < 8000) return;
   fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
     .then(function(r){ return r.json(); })
     .then(function(data){
       if(!data || data.error) return;
-      // Preserve critical local state before applying remote data
+
+      // Preserve the officer's chosen shift TAB — that's a per-device UI
+      // choice and must not be yanked around by another device.
+      var localCurrentShift = currentShift;
+      // Sim time set on this device in the last 15s hasn't round-tripped yet.
+      var justSetSimHere = (Date.now() - _simSetLocallyAt) < 15000;
       var localSimEnabled = simTimeEnabled;
       var localSimOffset  = simTimeOffset;
+      var localSimTarget  = simTargetEpoch;
       var localSimDateSet = simDateSet;
-      var localCurrentDate = currentDate;
-      var localCurrentShift = currentShift;
-      // Snapshot local junior state (check-ins, assignments, plannedShifts)
+
+      // Snapshot ONLY juniors with unsaved local changes.
       var localJuniorState = {};
       juniors.forEach(function(j){
-        if(j.checkedIn || j.assignment || (j.plannedShifts && j.plannedShifts.length)){
-          localJuniorState[j.id] = {
-            checkedIn: j.checkedIn, assignment: j.assignment,
-            plannedShifts: j.plannedShifts, shiftAssignments: j.shiftAssignments,
-            checkInShift: j.checkInShift, order: j.order
-          };
-        }
+        if(!dirtyJuniors.has(j.id) && !_inFlightJuniors.has(j.id)) return;
+        localJuniorState[j.id] = {
+          checkedIn: j.checkedIn, assignment: j.assignment,
+          plannedShifts: j.plannedShifts, shiftAssignments: j.shiftAssignments,
+          checkInShift: j.checkInShift, order: j.order,
+          clockedOut: !!(clockedOut[j.id] || clockedOut[String(j.id)])
+        };
       });
+
       _applyState(data);
-      // Restore sim time — always use the offset that was set, never recalculate
-      _restoreSimFromLocalStorage();
-      // Local sim state always wins over Neon (Neon just syncs it to other devices)
-      if(localSimEnabled || localSimDateSet){
+
+      // Sim time is a SYSTEM setting — the server is authoritative so the
+      // kiosk, the dashboard and the TV all agree what time it is. Only a
+      // set we just made here overrides it.
+      if(justSetSimHere){
         simTimeEnabled = localSimEnabled;
-        simTimeOffset  = localSimOffset; // preserve the original offset
+        simTimeOffset  = localSimOffset;
+        simTargetEpoch = localSimTarget;
         simDateSet     = localSimDateSet;
-        if(localCurrentDate)  currentDate  = localCurrentDate;
-        if(localCurrentShift) currentShift = localCurrentShift;
       }
-      // Restore junior active state — local state wins for checked-in juniors
-      juniors.forEach(function(j){
-        var local = localJuniorState[j.id];
-        if(!local) return;
-        if(local.checkedIn) j.checkedIn = local.checkedIn;
-        if(local.assignment) j.assignment = local.assignment;
-        if(local.plannedShifts && local.plannedShifts.length) j.plannedShifts = local.plannedShifts;
-        if(local.shiftAssignments && Object.keys(local.shiftAssignments).length) j.shiftAssignments = local.shiftAssignments;
-        if(local.checkInShift) j.checkInShift = local.checkInShift;
+      // Officer's tab is local
+      if(localCurrentShift) currentShift = localCurrentShift;
+
+      // Reapply unsaved local junior changes — note these write falsy values
+      // too, so a pending clock-out isn't resurrected by stale server data.
+      Object.keys(localJuniorState).forEach(function(jid){
+        var local = localJuniorState[jid];
+        var j = juniors.find(function(x){ return String(x.id) === String(jid); });
+        if(!j) return;
+        j.checkedIn        = local.checkedIn;
+        j.assignment       = local.assignment;
+        j.checkInShift     = local.checkInShift;
         if(local.order) j.order = local.order;
+        if(local.plannedShifts) j.plannedShifts = local.plannedShifts;
+        if(local.shiftAssignments) j.shiftAssignments = local.shiftAssignments;
+        if(local.clockedOut) clockedOut[j.id] = true;
+        else { delete clockedOut[j.id]; delete clockedOut[String(j.id)]; }
       });
       lastSyncTime = Date.now();
       // Re-render current tab
@@ -459,7 +487,7 @@ function pollForUpdates(){
         if(id === 'panel-officer') renderOfficer();
         if(id === 'panel-roster') renderRoster();
         if(id === 'panel-board') renderBoard();
-        if(id === 'panel-kiosk') renderKiosk();
+        if(id === 'panel-kiosk'){ renderKiosk(); updateKioskShiftBanner(); }
       }
       updateHeaderDate();
       // TV mode always re-renders board on every poll
