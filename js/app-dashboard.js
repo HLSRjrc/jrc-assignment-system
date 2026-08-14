@@ -1725,24 +1725,14 @@ function renderRoster(){
         (j.email ? '<div style="color:#4A6CF7">' + j.email + '</div>' : '') +
         '</div>';
     } else {
-      contact = '<div style="display:flex;gap:4px">' +
-        '<input class="finput" style="font-size:11px;padding:2px 5px;width:100px" placeholder="Phone" value="' + (j.phone||'') + '" onchange="juniors[' + ri + '].phone=this.value;renderRoster()">' +
-        '<input class="finput" style="font-size:11px;padding:2px 5px;width:130px" placeholder="Email" value="' + (j.email||'') + '" onchange="juniors[' + ri + '].email=this.value;renderRoster()">' +
-        '</div>';
+      contact = '<div style="font-size:11px;color:var(--gray-400);font-style:italic">No contact info</div>';
     }
-    // Click to edit contact
+    // Display contact read-only — edits via roster upload only
     if(j.phone || j.email){
-      contact = '<div style="cursor:pointer;font-size:11px;line-height:1.6" title="Click to edit" onclick="juniors[' + ri + ']._editContact=true;renderRoster()">' +
-        (j.phone ? '<div>&#128222; ' + j.phone + '</div>' : '<div style="color:var(--gray-400)">No phone</div>') +
-        (j.email ? '<div style="color:#4A6CF7">&#9993; ' + j.email + '</div>' : '<div style="color:var(--gray-400)">No email</div>') +
+      contact = '<div style="font-size:11px;line-height:1.6">' +
+        (j.phone ? '<div>&#128222; ' + j.phone + '</div>' : '') +
+        (j.email ? '<div style="color:#4A6CF7">&#9993; ' + j.email + '</div>' : '') +
         '</div>';
-      if(j._editContact){
-        contact = '<div style="display:flex;flex-direction:column;gap:3px">' +
-          '<input class="finput" style="font-size:11px;padding:2px 5px" placeholder="Phone" value="' + (j.phone||'') + '" onchange="juniors[' + ri + '].phone=this.value">' +
-          '<input class="finput" style="font-size:11px;padding:2px 5px" placeholder="Email" value="' + (j.email||'') + '" onchange="juniors[' + ri + '].email=this.value">' +
-          '<button class="btn btn-sm" style="font-size:10px;padding:1px 6px" onclick="juniors[' + ri + ']._editContact=false;renderRoster()">Done</button>' +
-          '</div>';
-      }
     }
 
     // Shift log — shiftLog: [{date, shift, committee}]
