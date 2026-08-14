@@ -149,6 +149,9 @@ function switchTab(t, el, skipHistory){
     renderBoard();
   } else {
     document.body.classList.remove('board-tab-active');
+    // Kill board timers so they don't keep firing on other tabs
+    try { if(typeof boardTimer !== 'undefined' && boardTimer){ clearInterval(boardTimer); boardTimer = null; } } catch(e){}
+    try { if(typeof _boardScrollTimer !== 'undefined' && _boardScrollTimer){ clearInterval(_boardScrollTimer); _boardScrollTimer = null; } } catch(e){}
   }
   if(t === 'checkins') renderCheckins();
   if(t === 'hours'){ renderHours(); renderAdultHours(); }
