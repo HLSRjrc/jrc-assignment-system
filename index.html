@@ -860,27 +860,62 @@ if(window.location.search.indexOf('partner=1') >= 0){
 
 <!-- HOURS REPORT -->
 <div id="panel-hours" class="panel">
-  <div class="card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div class="section-lbl">Hours Report</div>
-      <div style="display:flex;gap:8px">
-        <input class="finput" id="hours-search" placeholder="Search name..." oninput="renderHours()" style="max-width:180px">
-        <select class="finput" id="hours-sort" onchange="renderHours()" style="max-width:160px">
-          <option value="name">Sort by Name</option>
-          <option value="hours-desc">Most Hours First</option>
-          <option value="hours-asc">Least Hours First</option>
-        </select>
-        <button class="btn" onclick="exportHoursCSV()">&#11015; Export Excel</button>
-      </div>
+
+  <!-- JUNIOR HOURS -->
+  <div class="card" style="margin-bottom:16px">
+    <div onclick="toggleSection('hrs-junior')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:0">
+      <div class="section-lbl" style="margin-bottom:0">&#128101; Junior Hours Report</div>
+      <span id="hrs-junior-arrow" style="font-size:10px;color:#999">&#9650;</span>
     </div>
-    <div id="hours-summary" style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap"></div>
-    <div class="roster-table-wrap"><table class="roster-table" style="width:100%">
-      <thead><tr>
-        <th>Name</th><th>Title</th><th>Total Hours</th><th>Shifts Worked</th><th>No-Shows</th>
-      </tr></thead>
-      <tbody id="hours-body"></tbody>
-    </table>
+    <div id="hrs-junior" style="display:block;margin-top:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input class="finput" id="hours-search" placeholder="Search name..." oninput="renderHours()" style="max-width:180px">
+          <select class="finput" id="hours-sort" onchange="renderHours()" style="max-width:160px">
+            <option value="name">Sort by Name</option>
+            <option value="hours-desc">Most Hours First</option>
+            <option value="hours-asc">Least Hours First</option>
+          </select>
+          <button class="btn" onclick="exportHoursCSV()">&#11015; Export Excel</button>
+        </div>
+      </div>
+      <div id="hours-summary" style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap"></div>
+      <div class="roster-table-wrap"><table class="roster-table" style="width:100%">
+        <thead><tr>
+          <th>Name</th><th>Title</th><th>Total Hours</th><th>Shifts Worked</th><th>No-Shows</th>
+        </tr></thead>
+        <tbody id="hours-body"></tbody>
+      </table></div>
+    </div>
   </div>
+
+  <!-- ADULT HOURS -->
+  <div class="card">
+    <div onclick="toggleSection('hrs-adult')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none;margin-bottom:0">
+      <div class="section-lbl" style="margin-bottom:0">&#128084; Adult Hours Report</div>
+      <span id="hrs-adult-arrow" style="font-size:10px;color:#999">&#9660;</span>
+    </div>
+    <div id="hrs-adult" style="display:none;margin-top:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input class="finput" id="adult-hours-search" placeholder="Search name..." oninput="renderAdultHours()" style="max-width:180px">
+          <select class="finput" id="adult-hours-sort" onchange="renderAdultHours()" style="max-width:160px">
+            <option value="name">Sort by Name</option>
+            <option value="hours-desc">Most Hours First</option>
+            <option value="hours-asc">Least Hours First</option>
+          </select>
+        </div>
+      </div>
+      <div id="adult-hours-summary" style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap"></div>
+      <div class="roster-table-wrap"><table class="roster-table" style="width:100%">
+        <thead><tr>
+          <th>Name</th><th>Title</th><th>Total Hours</th><th>Shifts Worked</th><th>No-Shows</th>
+        </tr></thead>
+        <tbody id="adult-hours-body"></tbody>
+      </table></div>
+    </div>
+  </div>
+
 </div>
 
 </div><!-- /app -->
