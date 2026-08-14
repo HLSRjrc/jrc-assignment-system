@@ -741,19 +741,9 @@ button:focus-visible,a:focus-visible,.btn:focus-visible,.role-btn:focus-visible{
 .tv-mode #board-ticker{font-size:clamp(14px,1.3vw,20px)}
 
 /* Board tab in-app — full screen, no interaction except escape button */
-body.board-tab-active{overflow:hidden}
-body.board-tab-active #main-header,
-body.board-tab-active #tab-bar,
-body.board-tab-active #logout-wrap{display:none !important}
-body.board-tab-active .app{padding:0 !important;max-width:100% !important}
-body.board-tab-active #main-app{padding:0 !important}
-body.board-tab-active #panel-board{
-  position:fixed;top:0;left:0;right:0;bottom:0;
-  z-index:100;padding:0 !important;
-  overflow:hidden;
-}
-body.board-tab-active .board-wrap{height:100vh;overflow:hidden}
-body.board-tab-active .board-body{height:calc(100vh - 62px) !important;grid-template-columns:200px 1fr !important}
+/* board-tab-active: size the board correctly but keep header/tabs visible */
+body.board-tab-active .board-body{height:calc(100vh - 170px) !important;grid-template-columns:200px 1fr !important}
+body.board-tab-active .board-wrap{min-height:calc(100vh - 170px);}
 body.board-tab-active .board-name{font-size:clamp(15px,1.4vw,20px);padding:clamp(1px,.12vh,2px) 2px;line-height:1.2}
 body.board-tab-active .board-col-hdr{font-size:clamp(10px,.9vw,14px)}
 body.board-tab-active .board-committee-label{font-size:clamp(9px,.85vw,12px)}
