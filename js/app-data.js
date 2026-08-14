@@ -18,7 +18,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 22;  // Major version — milestone releases
-var APP_BUILD   = 5;  // Minor build — increments every small change
+var APP_BUILD   = 2;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
@@ -260,8 +260,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
   var hlsrB64 = null; // loaded from /assets/jrc.png
   var loginHlsrB64 = null; // loaded from /assets/jrc.png
-  var h = document.getElementById('hlsr-logo');
-  if(h) h.src = '/assets/jrc.png';
+  // header logos are static in index.html
   var ll = document.getElementById('login-logo');
   if(ll) ll.src = '/assets/jrc.png';
   // Partner mode — triggered by hostname OR legacy ?partner=1 param
