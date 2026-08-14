@@ -1671,7 +1671,7 @@ function renderRoster(){
       var permBadge = a.permission
         ? '<span class="badge" style="background:#D4EDDA;color:#155724;font-size:9px;margin-left:4px">' + (PERM_LABELS[a.permission]||a.permission) + '</span>'
         : '';
-      var reportIcon = ' <span style="cursor:pointer;font-size:10px;color:#667788" title="Print member report" onclick="openMemberReport(\'' + a.id + '\',true)">&#128438;</span>';
+      var reportIcon = '';
       var contact = '<div style="font-size:11px">' +
         (a.phone ? '<div>&#128222; ' + a.phone + '</div>' : '') +
         (a.email ? '<div style="color:#4A6CF7">' + a.email + '</div>' : '') +
@@ -1776,7 +1776,7 @@ function renderRoster(){
       '<td style="font-weight:600;color:var(--navy)">' +
         (j.ageout ? '<span style="color:#F5A623;margin-right:3px">&#11088;</span>' : '') +
         '<span style="cursor:pointer" title="View activity log" onclick="openNoteLog(' + ri + ')">' + j.name + ' <span style="font-size:10px;color:var(--orange)"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"></span></span>' +
-        ' <span style="cursor:pointer;font-size:10px;color:#667788" title="Print member report" onclick="openMemberReport(\'' + j.id + '\',false)">&#128438;</span>' +
+
       '</td>' +
       '<td><span class="badge b-title" style="font-size:9px">' + j.title.replace('Junior ', '') + '</span></td>' +
       '<td>' + contact + '</td>' +
