@@ -765,9 +765,7 @@ body.board-tab-active #board-ticker{font-size:clamp(14px,1.3vw,20px)}
   text-transform:uppercase;backdrop-filter:blur(8px);transition:all .15s;
 }
 #board-escape-btn:hover{background:rgba(239,118,34,.4);color:#fff;border-color:rgba(239,118,34,.5);}
-/* Lockdown all pointer events, then carve out the escape button */
-body.board-tab-active *{pointer-events:none !important;cursor:none !important;user-select:none !important;}
-body.board-tab-active #board-escape-btn{display:block;pointer-events:auto !important;cursor:pointer !important;}
+/* No pointer lockdown in tab mode — user needs to click other tabs to navigate */
 
 /* ================================================================
    LIGHT THEME
@@ -901,3 +899,66 @@ html[data-theme="light"] #theme-toggle { background:rgba(0,46,93,.12);border-col
 html[data-theme="light"] #theme-toggle::after { transform:translateX(14px);background:var(--navy); }
 #theme-toggle-label { font-size:10px;color:rgba(255,255,255,.45);white-space:nowrap;letter-spacing:.04em;font-weight:600;cursor:pointer;user-select:none; }
 html[data-theme="light"] #theme-toggle-label { color:rgba(0,46,93,.5); }
+
+/* ================================================================
+   CHECK-INS TAB — DARK MODE OVERRIDES
+   Many rows/sections use hardcoded light inline styles.
+   These CSS rules override the worst offenders.
+   ================================================================ */
+
+/* Table rows with hardcoded white/cream backgrounds */
+#panel-checkins tr[style*="background:#FFF8F0"],
+#panel-checkins tr[style*="background: #FFF8F0"] {
+  background: rgba(239,118,34,.06) !important;
+}
+#panel-checkins tr[style*="background:#FFF5F5"],
+#panel-checkins tr[style*="background: #FFF5F5"] {
+  background: rgba(239,68,68,.1) !important;
+}
+/* All td text in the table */
+#panel-checkins table td { color: rgba(255,255,255,.85) !important; }
+#panel-checkins table th { color: rgba(255,255,255,.9) !important; }
+/* Table hover */
+#panel-checkins table tr:hover td { background: rgba(255,255,255,.04) !important; }
+
+/* Summary bar */
+#checkins-summary { color: rgba(255,255,255,.6) !important; }
+#checkins-summary strong { color: #fff !important; }
+
+/* Roster section headers */
+#panel-checkins [style*="color:var(--navy)"] {
+  color: rgba(255,255,255,.88) !important;
+}
+#panel-checkins [style*="color:#667788"],
+#panel-checkins [style*="color: #667788"] {
+  color: rgba(255,255,255,.45) !important;
+}
+
+/* Adult roster header background */
+#panel-checkins [style*="background:#FFF8F0"],
+#panel-checkins [style*="background: #FFF8F0"] {
+  background: rgba(239,118,34,.08) !important;
+}
+
+/* Roster drawer backgrounds */
+#ci-roster-body, #ci-adult-roster-body {
+  background: rgba(0,0,0,.2);
+}
+
+/* Light mode — restore */
+html[data-theme="light"] #panel-checkins tr[style*="background:#FFF8F0"],
+html[data-theme="light"] #panel-checkins tr[style*="background: #FFF8F0"] {
+  background: #FFF8F0 !important;
+}
+html[data-theme="light"] #panel-checkins tr[style*="background:#FFF5F5"],
+html[data-theme="light"] #panel-checkins tr[style*="background: #FFF5F5"] {
+  background: #FFF5F5 !important;
+}
+html[data-theme="light"] #panel-checkins table td { color: var(--ink) !important; }
+html[data-theme="light"] #panel-checkins table th { color: var(--navy) !important; }
+html[data-theme="light"] #panel-checkins table tr:hover td { background: var(--gray-50) !important; }
+html[data-theme="light"] #checkins-summary { color: #667788 !important; }
+html[data-theme="light"] #panel-checkins [style*="color:var(--navy)"] { color: var(--navy) !important; }
+html[data-theme="light"] #panel-checkins [style*="color:#667788"] { color: #667788 !important; }
+html[data-theme="light"] #panel-checkins [style*="background:#FFF8F0"] { background: #FFF8F0 !important; }
+html[data-theme="light"] #ci-roster-body, html[data-theme="light"] #ci-adult-roster-body { background: transparent; }
