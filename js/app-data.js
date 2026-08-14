@@ -20,6 +20,65 @@ var checkInOrder = 0;
 var APP_VERSION = 22;  // Major version — milestone releases
 var APP_BUILD   = 14;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
+
+// ============================================================
+// CANONICAL SHIFT HELPERS (restored — required by board/dashboard)
+// A junior's operational state must always be derived from these,
+// never from the officer's currently-selected UI tab.
+// ============================================================
+var clockedOutShifts = {};   // per-shift clock-out map: {jid: {'8am':true}}
+var SHIFT_ORDER = ['8am','12pm','4pm'];
+
+// The shift this junior is physically here for right now.
+function getJrActiveShift(jr){
+  if(!jr) return null;
+  return jr.checkInShift || null;
+}
+
+// The committee for a given shift — shiftAssignments is authoritative,
+// live assignment only counts for the shift they're checked into.
+function getJrCommittee(jr, sh){
+  if(!jr) return '';
+  if(jr.shiftAssignments && jr.shiftAssignments[sh]) return jr.shiftAssignments[sh];
+  if(sh && sh === getJrActiveShift(jr) && jr.assignment) return jr.assignment;
+  return '';
+}
+
+// All shifts this junior is planned for today, deduped, in day order.
+function getJrPlannedShifts(jr){
+  if(!jr) return [];
+  var out = [];
+  var src = jr.plannedShifts || [];
+  src.forEach(function(sh){ if(SHIFT_ORDER.indexOf(sh) >= 0 && out.indexOf(sh) < 0) out.push(sh); });
+  var active = getJrActiveShift(jr);
+  if(active && out.indexOf(active) < 0) out.push(active);
+  if(jr.shiftAssignments){
+    Object.keys(jr.shiftAssignments).forEach(function(sh){
+      if(SHIFT_ORDER.indexOf(sh) >= 0 && out.indexOf(sh) < 0) out.push(sh);
+    });
+  }
+  out.sort(function(a,b){ return SHIFT_ORDER.indexOf(a) - SHIFT_ORDER.indexOf(b); });
+  return out;
+}
+
+// Shifts still ahead of the junior after the one they're checked into.
+function getJrLaterShifts(jr){
+  var active = getJrActiveShift(jr);
+  if(!active) return [];
+  var ai = SHIFT_ORDER.indexOf(active);
+  return getJrPlannedShifts(jr).filter(function(sh){
+    return SHIFT_ORDER.indexOf(sh) > ai;
+  });
+}
+
+// Which shift the operation is in at time t (Date). 8am window until 11:00,
+// 12pm window until 15:00, then 4pm.
+function getOperatingShift(t){
+  var mins = t.getHours() * 60 + t.getMinutes();
+  if(mins < 660)  return '8am';
+  if(mins < 900)  return '12pm';
+  return '4pm';
+}
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
 var simTimeEnabled = false;
