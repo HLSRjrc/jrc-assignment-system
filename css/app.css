@@ -1439,3 +1439,143 @@ html[data-theme="light"] #theme-toggle::after {
   user-select: none;
 }
 html[data-theme="light"] #theme-toggle-label { color: rgba(0,46,93,.5); }
+
+/* ================================================================
+   REQUEST FORM — always light-on-dark readable regardless of theme
+   The reqform card sits on the dark panel surface so its text and
+   inputs need explicit overrides for dark mode.
+   ================================================================ */
+
+/* Form card title & subtitle — hardcoded inline colors need overriding */
+#panel-reqform .card [style*="color:var(--navy)"],
+#panel-reqform .card [style*="color: var(--navy)"] {
+  color: rgba(255,255,255,.92) !important;
+}
+#panel-reqform .card [style*="color:#667788"],
+#panel-reqform .card [style*="color: #667788"] {
+  color: rgba(255,255,255,.5) !important;
+}
+
+/* Inputs inside the reqform card — give them a readable surface */
+#panel-reqform .finput {
+  background: rgba(255,255,255,.06) !important;
+  border-color: rgba(255,255,255,.15) !important;
+  color: rgba(255,255,255,.9) !important;
+}
+#panel-reqform .finput::placeholder {
+  color: rgba(255,255,255,.3) !important;
+}
+#panel-reqform .finput:focus {
+  border-color: rgba(239,118,34,.6) !important;
+}
+
+/* Light mode — restore normal */
+html[data-theme="light"] #panel-reqform .card [style*="color:var(--navy)"],
+html[data-theme="light"] #panel-reqform .card [style*="color: var(--navy)"] {
+  color: var(--navy) !important;
+}
+html[data-theme="light"] #panel-reqform .card [style*="color:#667788"],
+html[data-theme="light"] #panel-reqform .card [style*="color: #667788"] {
+  color: #667788 !important;
+}
+html[data-theme="light"] #panel-reqform .finput {
+  background: #fff !important;
+  border-color: var(--gray-200) !important;
+  color: var(--navy) !important;
+}
+html[data-theme="light"] #panel-reqform .finput::placeholder {
+  color: var(--gray-400) !important;
+}
+
+/* Reqform toggle buttons — inline bg/color styles need overriding */
+#panel-reqform [style*="background:var(--navy)"][style*="color:#fff"],
+#panel-reqform [style*="background: var(--navy)"][style*="color: #fff"] {
+  background: var(--orange) !important;
+  border-color: var(--orange) !important;
+}
+#panel-reqform [style*="background:#fff"][style*="color:var(--navy)"],
+#panel-reqform [style*="background: #fff"][style*="color: var(--navy)"] {
+  background: rgba(255,255,255,.06) !important;
+  border-color: rgba(255,255,255,.15) !important;
+  color: rgba(255,255,255,.7) !important;
+}
+html[data-theme="light"] #panel-reqform [style*="background:var(--navy)"],
+html[data-theme="light"] #panel-reqform [style*="background: var(--navy)"] {
+  background: var(--navy) !important;
+  border-color: var(--navy) !important;
+  color: #fff !important;
+}
+html[data-theme="light"] #panel-reqform [style*="background:#fff"][style*="color:var(--navy)"],
+html[data-theme="light"] #panel-reqform [style*="background: #fff"][style*="color: var(--navy)"] {
+  background: #fff !important;
+  border-color: var(--gray-200) !important;
+  color: var(--navy) !important;
+}
+
+/* ================================================================
+   GLOBAL INLINE COLOR OVERRIDES FOR DARK MODE
+   Many JS-generated and HTML-hardcoded elements use inline
+   style="color:var(--navy)" or style="color:#667788" which are
+   invisible on dark surfaces. Override them globally in dark mode.
+   ================================================================ */
+
+/* Navy text → white */
+.panel [style*="color:var(--navy)"]:not(button):not(.btn),
+.panel [style*="color: var(--navy)"]:not(button):not(.btn) {
+  color: rgba(255,255,255,.88) !important;
+}
+/* Gray text → muted white */
+.panel [style*="color:#667788"],
+.panel [style*="color: #667788"],
+.panel [style*="color:#8899AA"],
+.panel [style*="color: #8899AA"],
+.panel [style*="color:var(--gray-400)"],
+.panel [style*="color: var(--gray-400)"],
+.panel [style*="color:var(--gray-600)"],
+.panel [style*="color: var(--gray-600)"],
+.panel [style*="color:var(--gray-700)"],
+.panel [style*="color: var(--gray-700)"] {
+  color: rgba(255,255,255,.5) !important;
+}
+/* Dark text on white backgrounds (labels, headings in cards) */
+.panel [style*="color:#334455"],
+.panel [style*="color: #334455"],
+.panel [style*="color:#1E293B"],
+.panel [style*="color: #1E293B"] {
+  color: rgba(255,255,255,.85) !important;
+}
+
+/* Light mode — restore all of these to original */
+html[data-theme="light"] .panel [style*="color:var(--navy)"]:not(button):not(.btn),
+html[data-theme="light"] .panel [style*="color: var(--navy)"]:not(button):not(.btn) {
+  color: var(--navy) !important;
+}
+html[data-theme="light"] .panel [style*="color:#667788"],
+html[data-theme="light"] .panel [style*="color: #667788"],
+html[data-theme="light"] .panel [style*="color:#8899AA"],
+html[data-theme="light"] .panel [style*="color: #8899AA"],
+html[data-theme="light"] .panel [style*="color:var(--gray-400)"],
+html[data-theme="light"] .panel [style*="color: var(--gray-400)"] {
+  color: #667788 !important;
+}
+html[data-theme="light"] .panel [style*="color:var(--gray-700)"],
+html[data-theme="light"] .panel [style*="color: var(--gray-700)"] {
+  color: var(--gray-700) !important;
+}
+html[data-theme="light"] .panel [style*="color:#334455"] {
+  color: #334455 !important;
+}
+
+/* White backgrounds on cards/sections inside panels → surface in dark mode */
+.panel > .card [style*="background:#fff"],
+.panel > .card [style*="background: #fff"],
+.panel > .card [style*="background:white"],
+.panel > .card [style*="background:var(--white)"] {
+  background: var(--surface-2) !important;
+}
+html[data-theme="light"] .panel > .card [style*="background:#fff"],
+html[data-theme="light"] .panel > .card [style*="background: #fff"],
+html[data-theme="light"] .panel > .card [style*="background:white"],
+html[data-theme="light"] .panel > .card [style*="background:var(--white)"] {
+  background: #fff !important;
+}
