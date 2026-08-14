@@ -54,9 +54,13 @@ function applySimTime(){
   var ampm = h >= 12 ? 'PM' : 'AM';
   var h12 = h > 12 ? h-12 : (h===0 ? 12 : h);
   var label = h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
-  document.getElementById('sim-time-status').innerHTML = '<strong style="color:var(--orange)">&#9201; Simulated time set: ' + label + '</strong> &mdash; advancing in real time from this point';
+  document.getElementById('sim-time-status').innerHTML = '<strong style="color:var(--orange)">&#9201; Simulated time set: ' + label + '</strong> &mdash; advancing in real time from this point &bull; syncing to all devices';
   // Update the board clock immediately
   updateBoardClock();
+  // Push to Neon so the kiosk tablet and TV board move with us. Without this
+  // the clock only ever changed on the device that set it.
+  _lastSavedHash = '';
+  saveStateNow();
 }
 
 function simUpdate(){} // no-op — status shown after apply
@@ -193,9 +197,25 @@ function kLookup(){
   if(jr.checkedIn && !clockedOut[jr.id]){
     pendingJr = jr;
     document.getElementById('kco-name').innerHTML = (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name;
-    document.getElementById('kco-assignment').textContent = jr.assignment ? 'Currently assigned to: ' + jr.assignment : 'Not yet assigned to a committee';
+    var activeSh  = getJrActiveShift(jr);
+    var activeCom = getJrCommittee(jr, activeSh);
+    document.getElementById('kco-assignment').textContent = activeCom
+      ? 'Currently assigned to: ' + activeCom + ' (' + getShiftLabel(activeSh) + ' shift)'
+      : 'Not yet assigned to a committee';
     var nextEl = document.getElementById('kco-next-shift');
-    if(nextEl) nextEl.textContent = '';
+    if(nextEl){
+      var later = getJrLaterShifts(jr);
+      if(later.length){
+        nextEl.innerHTML = later.map(function(sh){
+          var com = jr.shiftAssignments && jr.shiftAssignments[sh];
+          return '<div style="margin-top:4px">&#9200; You are signed up to come back for the <strong>' +
+                 getShiftLabel(sh) + '</strong> shift' +
+                 (com ? ' at <strong>' + com + '</strong>' : '') + '.</div>';
+        }).join('');
+      } else {
+        nextEl.textContent = '';
+      }
+    }
     document.getElementById('k-entry').style.display = 'none';
     document.getElementById('k-clockout').style.display = 'block';
     return;
@@ -262,12 +282,24 @@ function kConfirm(){
   pendingJr.checkInTimestamp = getSimTime().getTime(); // epoch ms — used in Check-ins tab
   clockedOut[pendingJr.id] = false;
   delete clockedOut[pendingJr.id];
-  // If age-out has a pre-assignment for the current shift, restore it
-  if(pendingJr.ageout && pendingJr.shiftAssignments && pendingJr.shiftAssignments[currentShift]){
-    var preSlot = activeSlots.find(function(s){ return s.name === pendingJr.shiftAssignments[currentShift] && s.shift === currentShift; });
-    if(preSlot && preSlot.assigned.indexOf(pendingJr.id) < 0){
-      preSlot.assigned.push(pendingJr.id);
+  onShiftJuniors.delete(pendingJr.id);
+  onShiftJuniors.delete(String(pendingJr.id));
+
+  // Clear any assignment carried over from a previous shift — jr.assignment
+  // only ever describes the shift they are checked in for right now.
+  var _inShift = pendingJr.checkInShift;
+  var _preCom  = (pendingJr.shiftAssignments && pendingJr.shiftAssignments[_inShift]) || null;
+  pendingJr.assignment = null;
+
+  // If they already picked a committee for THIS shift (age-out multi-shift),
+  // put them straight back into that slot.
+  var _preRestored = false;
+  if(_preCom){
+    var preSlot = activeSlots.find(function(s){ return s.name === _preCom && s.shift === _inShift; });
+    if(preSlot){
+      if(preSlot.assigned.indexOf(pendingJr.id) < 0) preSlot.assigned.push(pendingJr.id);
       assignJr(pendingJr, preSlot.name);
+      _preRestored = true;
     }
   }
   // Reset inputs
@@ -276,11 +308,18 @@ function kConfirm(){
   document.getElementById('kd-name').innerHTML = (pendingJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pendingJr.name;
   // Done screen age-out message
   var aoMsg = '';
-  if(pendingJr.ageout){
-    var shifts = (pendingJr.plannedShifts && pendingJr.plannedShifts.length > 0)
-      ? pendingJr.plannedShifts.map(function(s){ return SL[s]; }).join(', ')
-      : SL[currentShift];
-    aoMsg = '';
+  if(_preRestored){
+    aoMsg = '<div style="background:#E8F5E9;border:2px solid #27AE60;border-radius:7px;padding:10px 14px;margin-top:10px;font-size:15px;color:#155724;font-weight:600">' +
+            '&#10003; You were already signed up for this shift &mdash; head to <strong>' + _preCom + '</strong>.</div>';
+  }
+  var _later = getJrLaterShifts(pendingJr);
+  if(_later.length){
+    aoMsg += '<div style="background:#E8F0FF;border:2px solid #4A6CF7;border-radius:7px;padding:10px 14px;margin-top:8px;font-size:14px;color:#2A3DB5;font-weight:600">' +
+             '&#9200; Also working today: ' +
+             _later.map(function(sh){
+               var c = pendingJr.shiftAssignments && pendingJr.shiftAssignments[sh];
+               return getShiftLabel(sh) + (c ? ' &mdash; ' + c : '');
+             }).join(' &nbsp;&bull;&nbsp; ') + '</div>';
   }
   document.getElementById('kd-ao').innerHTML = aoMsg;
   document.getElementById('k-confirm').style.display = 'none';
@@ -296,6 +335,13 @@ function kClockOut(){
   // They stay on the dashboard card but disappear from status board
   onShiftJuniors.delete(pendingJr.id);
   onShiftJuniors.delete(String(pendingJr.id));
+  // Stamp the committee onto the shift record before clearing live state so
+  // the drop-off report and hours log keep it after they clock back in.
+  var _outShift = getJrActiveShift(pendingJr);
+  if(pendingJr.assignment){
+    if(!pendingJr.shiftAssignments) pendingJr.shiftAssignments = {};
+    pendingJr.shiftAssignments[_outShift] = pendingJr.assignment;
+  }
   pendingJr.checkedIn = false;
   // Keep pendingJr.assignment so they stay in the slot card
   clockedOut[pendingJr.id] = true;
