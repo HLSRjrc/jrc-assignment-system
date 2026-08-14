@@ -514,6 +514,7 @@ function renderBoard(){
   // Live clock
   updateBoardClock();
   if(boardTimer) clearInterval(boardTimer);
+  if(boardTimer) clearInterval(boardTimer);
   boardTimer = setInterval(updateBoardClock, 1000);
 
   // Auto-scroll CI + Assigned sections (slow ping-pong crawl when overflowing)
@@ -567,6 +568,9 @@ function _tuneBoardTicker(){
 var _boardScrollTimer = null;
 function startBoardAutoScroll(){
   if(_boardScrollTimer) clearInterval(_boardScrollTimer);
+  // Auto-scroll is for the unattended TV page only. Running it inside the
+  // in-app board tab forces a reflow every 75ms and freezes the browser.
+  if(!document.documentElement.classList.contains('tv-mode')) return;
   _boardScrollTimer = setInterval(function(){
     // Continuous loop scroll — silently resets to top when reaching bottom
     ['#brd-ci','#brd-ass','.board-out-col'].forEach(function(sel){
