@@ -936,7 +936,7 @@ function handleRosterUpload(event, type){
         if(!importIds[x.id] && !x.inactive) inactiveCount++;
       });
 
-      var permLabel = type === 'adult' ? ' (permissions auto-assigned by title)' : '';
+      var permLabel = type === 'adult' ? ' (existing permissions preserved)' : '';
       document.getElementById(type + '-preview-title').textContent =
         members.length + ' members — ' + newCount + ' new, ' + updateCount + ' updates' +
         (inactiveCount ? ', ' + inactiveCount + ' will be marked inactive' : '') + permLabel;
@@ -944,8 +944,7 @@ function handleRosterUpload(event, type){
       document.getElementById(type + '-preview-list').innerHTML =
         members.slice(0,60).map(function(m){
           var ex = existing.find(function(x){ return x.id === m.id; });
-          var perm = type === 'adult' ? _titleToPermission(m.title) : null;
-          var permBadge = perm ? '<span style="background:#D4EDDA;color:#155724;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:4px">' + perm + '</span>' : '';
+          var permBadge = '';  // permissions not changed by roster upload
           var action = ex ? '<span style="color:#2A7D2A;font-size:10px">update</span> ' : '<span style="color:#4A6CF7;font-size:10px">new</span> ';
           return '<div style="padding:2px 0;border-bottom:1px solid #F0F0F0">' + action +
             '<strong>' + m.name + '</strong> — ' + m.id +
@@ -1036,19 +1035,17 @@ function applyRosterImport(type){
     var added = 0, updated = 0, reactivated = 0, deactivated = 0;
 
     data.forEach(function(m){
-      var perm = _titleToPermission(m.title);
       var ex = adults.find(function(a){ return a.id === m.id; });
       if(ex){
+        // Only update contact/name/title — NEVER overwrite permission or password
         ex.name=m.name; ex.phone=m.phone; ex.email=m.email; ex.title=m.title;
-        if(perm) ex.permission = perm; // only update permission if title maps to one
         if(ex.inactive){ ex.inactive=false; reactivated++; } else updated++;
       } else {
-        var newAdult = {
+        // New adult — add with no permission by default (set manually in Settings)
+        adults.push({
           id:m.id, name:m.name, title:m.title, phone:m.phone, email:m.email,
-          shiftLog:[], noteLog:[], inactive:false
-        };
-        if(perm) newAdult.permission = perm;
-        adults.push(newAdult);
+          shiftLog:[], noteLog:[], inactive:false, permission:null
+        });
         added++;
       }
     });
