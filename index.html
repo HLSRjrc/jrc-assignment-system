@@ -260,6 +260,21 @@ if(window.location.search.indexOf('partner=1') >= 0){
     </div>
 
     <!-- AGE-OUT SHIFT SELECTION SCREEN -->
+    <!-- RETURNING AGE-OUT SCREEN (already has shiftAssignments from earlier) -->
+    <div id="k-ao-return" style="display:none;padding:1rem 0">
+      <div class="confirm-box" style="background:linear-gradient(135deg,#002E5D,#003d7a);color:#fff;border:none">
+        <div style="font-size:13px;opacity:.8;margin-bottom:4px">Welcome Back!</div>
+        <div class="confirm-name" id="kar-name" style="color:#fff"></div>
+      </div>
+      <div id="kar-schedule" style="margin:16px 0"></div>
+      <label style="display:flex;align-items:center;gap:10px;margin-bottom:20px;cursor:pointer">
+        <input type="checkbox" id="k-hat-ret" style="width:24px;height:24px;accent-color:var(--navy)">
+        <span style="font-size:15px;font-weight:600;color:var(--navy)">I have my hat today</span>
+      </label>
+      <button class="kiosk-btn" onclick="kAoReturnConfirm()">Check In &rarr;</button>
+      <button class="btn" style="margin-top:10px;width:100%" onclick="kReset()">Cancel</button>
+    </div>
+
     <div id="k-ao-shifts" style="display:none">
       <div class="confirm-box" style="background:linear-gradient(135deg,#002E5D,#003d7a);color:#fff;border:none">
         <div style="font-size:13px;opacity:.8;margin-bottom:4px">Age-Out Check-In</div>
