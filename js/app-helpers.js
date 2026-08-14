@@ -137,7 +137,7 @@ function switchTab(t, el){
     document.body.classList.remove('board-tab-active');
   }
   if(t === 'checkins') renderCheckins();
-  if(t === 'hours') renderHours();
+  if(t === 'hours'){ renderHours(); renderAdultHours(); }
   if(t === 'simulate'){ renderUserMgmt(); renderStrandedPanel(); renderSimulateMigrationStatus(); if(currentRole==='admin') renderPermsTable(); }
 }
 
