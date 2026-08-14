@@ -680,7 +680,6 @@ function renderTabs(activeTab){
     ],
     officer: [
       ['officer',  'Shift Officer Dashboard',   1],
-      ['setup',    'Shift Setup',               1],
       ['kiosk',    'Kiosk',                     1],
       ['roster',   'Roster',                    1],
       ['checkins', 'Check-ins',                 1],
@@ -690,7 +689,6 @@ function renderTabs(activeTab){
       ['officer',  'Dashboard',                 1],
       ['checkins', 'Check-ins',                 1],
       ['roster',   'Roster',                    1],
-      ['setup',    'Shift Setup',               1],
       ['reqform',  '&#43; Submit Request',      1],
       ['requests', '&#128203; Requests',        1],
       ['board',    'Status Board',              2],
