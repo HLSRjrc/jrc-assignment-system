@@ -641,6 +641,70 @@ function renderHours(){
   }).join('');
 }
 
+function getAdultTotalHours(a){
+  if(!Array.isArray(a.shiftLog)) return 0;
+  return a.shiftLog.reduce(function(s, e){ return s + (e.out ? 4 : 0); }, 0); // 4hrs per completed shift
+}
+
+function renderAdultHours(){
+  var el = document.getElementById('adult-hours-body');
+  var summaryEl = document.getElementById('adult-hours-summary');
+  if(!el) return;
+
+  var q = (document.getElementById('adult-hours-search') ? document.getElementById('adult-hours-search').value : '').toLowerCase();
+  var sort = document.getElementById('adult-hours-sort') ? document.getElementById('adult-hours-sort').value : 'name';
+
+  var list = (adults||[]).filter(function(a){ return !a.inactive && (!q || a.name.toLowerCase().includes(q)); });
+  list.sort(function(a,b){
+    if(sort === 'hours-desc') return getAdultTotalHours(b) - getAdultTotalHours(a);
+    if(sort === 'hours-asc') return getAdultTotalHours(a) - getAdultTotalHours(b);
+    return a.name.localeCompare(b.name);
+  });
+
+  var totalShifts = list.reduce(function(s,a){ return s + (Array.isArray(a.shiftLog) ? a.shiftLog.length : 0); }, 0);
+  var totalHours  = list.reduce(function(s,a){ return s + getAdultTotalHours(a); }, 0);
+  var noShows     = list.reduce(function(s,a){
+    return s + ((a.noteLog||[]).filter(function(e){
+      return e.type==='noshow-nocall'||e.type==='noshow-prior'||e.type==='noshow-dayof';
+    }).length);
+  }, 0);
+
+  if(summaryEl){
+    summaryEl.innerHTML =
+      '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">Total Shifts</div><div class="stat-val">' + totalShifts + '</div></div>' +
+      '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">Total Hours</div><div class="stat-val">' + totalHours + '</div></div>' +
+      '<div class="stat-card" style="flex:1;min-width:120px"><div class="stat-lbl">No-Shows</div><div class="stat-val" style="color:var(--red)">' + noShows + '</div></div>';
+  }
+
+  el.innerHTML = list.map(function(a){
+    var hrs = getAdultTotalHours(a);
+    var shiftLog = Array.isArray(a.shiftLog) ? a.shiftLog : [];
+    var noShowCount = ((a.noteLog||[]).filter(function(e){
+      return e.type==='noshow-nocall'||e.type==='noshow-prior'||e.type==='noshow-dayof';
+    }).length);
+    var logRows = shiftLog.length === 0
+      ? '<tr><td colspan="5" style="font-size:11px;color:var(--gray-400);padding:4px 12px">No shifts recorded</td></tr>'
+      : shiftLog.map(function(e){
+          return '<tr style="background:#F8F9FA">' +
+            '<td colspan="2" style="font-size:11px;padding:3px 12px;color:var(--gray-500)">' +
+              (e.date||'') + ' &mdash; ' + (e.shift||'') + (e.in ? ' (In: ' + e.in + (e.out ? ', Out: ' + e.out : '') + ')' : '') +
+            '</td>' +
+            '<td colspan="3" style="font-size:11px;padding:3px 8px;color:var(--gray-400)">' + (e.out ? '4 hrs' : 'In progress') + '</td>' +
+          '</tr>';
+        }).join('');
+
+    var PERM_LABELS = {admin:'Admin','vc-slt':'VC/SLT',officer:'Shift Officer',scheduling:'Scheduler'};
+    return '<tr style="cursor:pointer" onclick="var s=this.nextElementSibling;s.style.display=s.style.display===\'none\'?\'\':\'none\'">' +
+      '<td style="font-weight:600;color:var(--navy)">' + a.name + '</td>' +
+      '<td style="font-size:12px">' + (a.title||'') + '</td>' +
+      '<td style="font-weight:700;color:' + (hrs >= 8 ? 'var(--green)' : hrs > 0 ? 'var(--navy)' : 'var(--gray-400)') + '">' + hrs + ' hrs</td>' +
+      '<td style="font-size:12px">' + shiftLog.length + '</td>' +
+      '<td style="font-size:12px;color:' + (noShowCount > 0 ? 'var(--red)' : 'var(--gray-400)') + '">' + (noShowCount || '—') + '</td>' +
+    '</tr>' +
+    '<tr style="display:none"><td colspan="5" style="padding:0"><table style="width:100%;border-collapse:collapse">' + logRows + '</table></td></tr>';
+  }).join('');
+}
+
 function updateShiftHours(jri, ei, val){
   if(juniors[jri] && juniors[jri].shiftLog[ei] !== undefined){
     juniors[jri].shiftLog[ei].hours = parseInt(val);
