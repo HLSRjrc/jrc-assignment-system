@@ -61,6 +61,14 @@ function applySimTime(){
 
 function simUpdate(){} // no-op — status shown after apply
 
+// Handle browser back/forward buttons — restore tab from history state
+window.addEventListener('popstate', function(e){
+  var tab = (e.state && e.state.tab) || 'officer';
+  // Only navigate to tabs this role can see
+  if(ROLE_TABS[currentRole] && ROLE_TABS[currentRole].indexOf(tab) < 0) tab = ROLE_TABS[currentRole][0];
+  switchTab(tab, null, true); // skipHistory=true so we don't double-push
+});
+
 function applySimDate(){
   simUpdate(); // refresh status display first
   var d = document.getElementById('sim-date').value;
@@ -116,8 +124,12 @@ function applySimDate(){
 // ============================================================
 
 
-function switchTab(t, el){
+function switchTab(t, el, skipHistory){
   currentTab = t;
+  // Push browser history so the back button cycles tabs instead of leaving the app
+  if(!skipHistory){
+    try { history.pushState({tab:t}, '', '#' + t); } catch(e){}
+  }
   // Close drop-off report when switching tabs
   var rw = document.getElementById('report-wrap');
   if(rw) rw.style.display = 'none';
