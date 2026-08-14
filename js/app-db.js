@@ -68,6 +68,7 @@ function _doSave(){
   var payload = {
     state: {
       clockedOut: clockedOut,
+      clockedOutShifts: clockedOutShifts,
       onShiftJuniors: Array.from(onShiftJuniors),
       onShiftSlots: Array.from(onShiftSlots),
       currentDate: currentDate,
@@ -312,8 +313,9 @@ function _applyState(data){
       return r;
     });
   }
-  if(state.clockedOut)    clockedOut    = state.clockedOut;
-  if(state.onShiftJuniors) onShiftJuniors = new Set(state.onShiftJuniors);
+  if(state.clockedOut)       clockedOut       = state.clockedOut;
+  if(state.clockedOutShifts) clockedOutShifts = state.clockedOutShifts;
+  if(state.onShiftJuniors)   onShiftJuniors   = new Set(state.onShiftJuniors);
   if(state.onShiftSlots)   onShiftSlots   = new Set(state.onShiftSlots);
   if(state.currentDate){
     currentDate = state.currentDate;
@@ -446,7 +448,8 @@ function pollForUpdates(){
           checkedIn: j.checkedIn, assignment: j.assignment,
           plannedShifts: j.plannedShifts, shiftAssignments: j.shiftAssignments,
           checkInShift: j.checkInShift, order: j.order,
-          clockedOut: !!(clockedOut[j.id] || clockedOut[String(j.id)])
+          clockedOut: !!(clockedOut[j.id] || clockedOut[String(j.id)]),
+          clockedOutShifts: clockedOutShifts[j.id] || null
         };
       });
 
@@ -478,6 +481,7 @@ function pollForUpdates(){
         if(local.shiftAssignments) j.shiftAssignments = local.shiftAssignments;
         if(local.clockedOut) clockedOut[j.id] = true;
         else { delete clockedOut[j.id]; delete clockedOut[String(j.id)]; }
+        if(local.clockedOutShifts) clockedOutShifts[j.id] = local.clockedOutShifts;
       });
       lastSyncTime = Date.now();
       // Re-render current tab
