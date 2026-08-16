@@ -109,21 +109,21 @@ function buildReports(slots){
       '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--navy);margin-bottom:14px">Partner Committee Representative</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:18px">' +
         '<div>' +
-          '<div style="font-size:10px;color:#8899AA;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Print Name</div>' +
+          '<div style="font-size:12px;color:#8899AA;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Print Name</div>' +
           '<div style="border-bottom:1.5px solid #334455;height:26px"></div>' +
         '</div>' +
         '<div>' +
-          '<div style="font-size:10px;color:#8899AA;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Phone Number</div>' +
+          '<div style="font-size:12px;color:#8899AA;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Phone Number</div>' +
           '<div style="border-bottom:1.5px solid #334455;height:26px"></div>' +
         '</div>' +
       '</div>' +
       '<div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">' +
         '<div>' +
-          '<div style="font-size:10px;color:#8899AA;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Signature</div>' +
+          '<div style="font-size:12px;color:#8899AA;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Signature</div>' +
           '<div style="border-bottom:1.5px solid #334455;height:32px"></div>' +
         '</div>' +
         '<div>' +
-          '<div style="font-size:10px;color:#8899AA;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Date</div>' +
+          '<div style="font-size:12px;color:#8899AA;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Date</div>' +
           '<div style="border-bottom:1.5px solid #334455;height:32px"></div>' +
         '</div>' +
       '</div>' +
@@ -226,7 +226,7 @@ function renderNotesQueue(){
     var isDismissed = state === 'dismissed';
 
     html += '<div class="notes-item' + (isDismissed ? ' dismissed' : isAssigned && state === 'locked' ? ' locked' : '') + '">' +
-      '<div class="notes-item-name">' + (j.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name +
+      '<div class="notes-item-name">' + (j.hasHat ? '<img src="assets/hat.png" style="height:20px;vertical-align:middle;margin-right:3px"> ' : '') + j.name +
         (isAssigned && state === 'locked' ? ' <span class="locked-tag">&#128274; ' + j.assignment + '</span>' : '') +
         (isDismissed ? ' <span style="font-size:11px;color:#999;font-style:italic">&mdash; dismissed to regular pool</span>' : '') +
       '</div>' +
@@ -279,7 +279,7 @@ function renderNotePick(){
     '<button class="btn btn-sm" onclick="closeNotePick()">Close</button></div>' :
     '<div class="pick-panel">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
-        '<div class="pick-header">' + (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name + ' &mdash; choose assignment</div>' +
+        '<div class="pick-header">' + (jr.hasHat ? '<img src="assets/hat.png" style="height:20px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name + ' &mdash; choose assignment</div>' +
         '<button class="btn btn-sm" onclick="closeNotePick()">Cancel</button>' +
       '</div>' +
       '<div class="pick-sub" style="margin-bottom:8px">' +
@@ -381,7 +381,7 @@ function renderOfficer(search){
     var cnt = activeSlots.filter(function(x){ return x.shift === s; }).length;
     return '<button class="shift-tab' + (currentShift === s ? ' active' : '') + '" onclick="setShift(\'' + s + '\')">' +
       (s === '8am' ? '8am&ndash;12pm' : s === '12pm' ? '12pm&ndash;4pm' : '4pm&ndash;8pm') +
-      (cnt ? ' <span style="font-size:10px;opacity:.7">(' + cnt + ')</span>' : '') +
+      (cnt ? ' <span style="font-size:12px;opacity:.7">(' + cnt + ')</span>' : '') +
     '</button>';
   }).join('');
   document.getElementById('shift-tabs').innerHTML = tabHtml;
@@ -406,12 +406,12 @@ function renderOfficer(search){
         var pill = document.createElement('span');
         pill.style.cssText = 'background:rgba(255,255,255,.15);border-radius:20px;padding:2px 10px;white-space:nowrap;cursor:pointer;user-select:none;display:inline-block';
         var roleBadge = a.boardRole === 'vc'
-          ? ' <span style="background:#4A6CF7;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">VC</span>'
+          ? ' <span style="background:#4A6CF7;color:#fff;font-size:11px;padding:1px 5px;border-radius:8px;margin-left:3px">VC</span>'
           : a.boardRole === 'so'
-          ? ' <span style="background:#F5A623;color:#fff;font-size:9px;padding:1px 5px;border-radius:8px;margin-left:3px">SO</span>'
+          ? ' <span style="background:#F5A623;color:#fff;font-size:11px;padding:1px 5px;border-radius:8px;margin-left:3px">SO</span>'
           : '';
         pill.innerHTML = a.name + roleBadge +
-          (a.clockInShift ? ' <span style="opacity:.6;font-size:10px">' + a.clockInShift + '</span>' : '');
+          (a.clockInShift ? ' <span style="opacity:.6;font-size:12px">' + a.clockInShift + '</span>' : '');
 
         // Dropdown menu
         var menu = document.createElement('div');
@@ -514,8 +514,8 @@ function renderOfficer(search){
         return '<button class="ao-btn' + (assigned ? ' done' : isActive ? ' active' : '') + '" onclick="' + (assigned ? '' : 'openPickForShift(\'' + j.id + '\',\'' + sh + '\')') + '">' +
           '<span class="order-badge">' + (i + 1) + '</span>' +
           (assigned ? '&#10003; ' : '') +
-          (j.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name +
-          ' <span style="font-size:10px;opacity:.75">' + shiftLabel + '</span>' +
+          (j.hasHat ? '<img src="assets/hat.png" style="height:20px;vertical-align:middle;margin-right:3px"> ' : '') + j.name +
+          ' <span style="font-size:12px;opacity:.75">' + shiftLabel + '</span>' +
           (assigned ? ' &rarr; ' + assigned : '') +
         '</button>' +
         '<button onclick="removeFromAoQueue(\'' + j.id + '\')" ' +
@@ -538,7 +538,7 @@ function renderOfficer(search){
       '<div class="pick-panel"><div class="pick-header">No open slots</div><div class="pick-sub">All slots for this shift are full.</div><button class="btn btn-sm" onclick="closePick()">Close</button></div>' :
       '<div class="pick-panel">' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
-          '<div class="pick-header">' + (pickJr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + pickJr.name + ', choose your assignment</div>' +
+          '<div class="pick-header">' + (pickJr.hasHat ? '<img src="assets/hat.png" style="height:20px;vertical-align:middle;margin-right:3px"> ' : '') + pickJr.name + ', choose your assignment</div>' +
           (getJrPlannedShifts(pickJr).length > 1 ? '<div style="font-size:12px;color:#2A3DB5;margin-top:3px">&#9432; Planned shifts: <strong>' + getJrPlannedShifts(pickJr).map(function(s){ return SL[s]; }).join(', ') + '</strong></div>' : '') +
         '</div>' +
           '<button class="btn btn-sm" onclick="closePick()">Cancel</button>' +
@@ -576,7 +576,7 @@ function renderOfficer(search){
         'draggable="true" data-jid="' + j.id + '" ' +
         'title="Last: ' + j.last + (j.notes ? ' | Note: ' + j.notes : '') + ' — drag to assign" ' +
         'ondragstart="onPoolChipDragStart(event)" ondragend="onPoolChipDragEnd(event)">' +
-        (j.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name +
+        (j.hasHat ? '<img src="assets/hat.png" style="height:20px;vertical-align:middle;margin-right:3px"> ' : '') + j.name +
         ' <button onclick="event.stopPropagation();manualClockOut(\'' + j.id + '\')" ' +
         'style="background:none;border:none;cursor:pointer;color:#999;font-size:11px;padding:0 2px;line-height:1;margin-left:2px" ' +
         'title="Sign out" style="color:#CC6600">&#x2715;</button>' +
@@ -608,10 +608,10 @@ function renderOfficer(search){
       return '<span class="pill' + (jr.ageout ? ' ao' : '') + (jr.hasHat ? ' has-hat' : '') + '" ' +
              'style="' + (isOut ? 'opacity:.5;text-decoration:line-through;' : '') + '" ' +
              'title="' + (jr.notes ? 'Note: ' + jr.notes : '') + (isOut ? ' [Clocked out]' : '') + '">' +
-             (jr.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name +
+             (jr.hasHat ? '<img src="assets/hat.png" style="height:20px;vertical-align:middle;margin-right:3px"> ' : '') + jr.name +
              (jr.ageout ? ' <span class="badge b-ageout" style="font-size:11px;padding:1px 4px;background:none;border:none;color:#F5A623">⭐</span>' : '') +
              (jr.notes ? ' <span style="font-size:11px;color:var(--orange);font-weight:700">&#9432;</span>' : '') +
-             (isOut ? ' <span style="font-size:10px;color:#888">(out)</span>' : '') +
+             (isOut ? ' <span style="font-size:12px;color:#888">(out)</span>' : '') +
              ' <button class="pill-x" data-jid="' + jid + '" data-slotid="' + s.id + '" data-sent="' + isSent + '" data-jrid="' + jr.id + '" onclick="pillAction(this)">&#x2715;</button>' +
 
              '</span>';
@@ -629,7 +629,7 @@ function renderOfficer(search){
           '<div class="slot-name">' + s.name + '</div>' +
           '<div class="slot-meta">' +
             '<span class="badge b-shift">' + SL[s.shift] + '</span>' +
-            (s.hat ? '<span class="badge b-hat"><img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> Hat Required</span>' : '') +
+            (s.hat ? '<span class="badge b-hat"><img src="assets/hat.png" style="height:20px;vertical-align:middle;margin-right:3px"> Hat Required</span>' : '') +
             (s.highPriority ? '<span class="badge" style="background:#CC0000;color:#fff">&#9650; HIGH PRIORITY</span>' : '') +
           '</div>' +
         '</div>' +
@@ -651,7 +651,7 @@ function renderOfficer(search){
           '<option value="">+ Assign a junior manually&hellip;</option>' +
           avail.map(function(j){
             var rep = j.last === s.name;
-            return '<option value="' + j.id + '">' + (j.ageout ? '[Age-out] ' : '') + (j.hasHat ? '<img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> ' : '') + j.name + (j.notes ? ' [NOTE]' : '') + ' — last: ' + j.last + (rep ? ' (repeat!)' : '') + '</option>';
+            return '<option value="' + j.id + '">' + (j.ageout ? '[Age-out] ' : '') + (j.hasHat ? '<img src="assets/hat.png" style="height:20px;vertical-align:middle;margin-right:3px"> ' : '') + j.name + (j.notes ? ' [NOTE]' : '') + ' — last: ' + j.last + (rep ? ' (repeat!)' : '') + '</option>';
           }).join('') +
         '</select></div>' : '') +
       (s.assigned.length > 0 ?
@@ -1294,7 +1294,7 @@ function renderCheckins(){
     }[status] || '<span style="color:#999">' + status + '</span>';
     var rowStyle = isStale ? 'background:rgba(239,68,68,.1);' : isClockedOut ? 'opacity:.5;' : '';
     return '<tr style="' + rowStyle + 'border-bottom:1px solid rgba(255,255,255,.06)">' +
-      '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:10px;color:#FCA5A5;font-weight:700">STALE</span>' : '') + '</td>' +
+      '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:12px;color:#FCA5A5;font-weight:700">STALE</span>' : '') + '</td>' +
       '<td style="padding:8px 12px;color:rgba(255,255,255,.5)">' + (j.checkInShift||'—') + '</td>' +
       '<td style="padding:8px 12px">' + fmtTs(j) + '</td>' +
       '<td style="padding:8px 12px">' + statusLabel + '</td>' +
@@ -1482,7 +1482,7 @@ function renderCheckinsTable(){
     }[status] || '<span style="color:#999">' + status + '</span>';
     var rowStyle = isStale ? 'background:rgba(239,68,68,.1);' : isClockedOut ? 'opacity:.5;' : '';
     return '<tr style="' + rowStyle + 'border-bottom:1px solid rgba(255,255,255,.06)">' +
-      '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:10px;color:#FCA5A5;font-weight:700">STALE</span>' : '') + '</td>' +
+      '<td style="padding:8px 12px;font-weight:600">' + j.name + (isStale ? ' <span style="font-size:12px;color:#FCA5A5;font-weight:700">STALE</span>' : '') + '</td>' +
       '<td style="padding:8px 12px;color:rgba(255,255,255,.5)">' + (j.checkInShift||'—') + '</td>' +
       '<td style="padding:8px 12px">' + fmtTs(j) + '</td>' +
       '<td style="padding:8px 12px">' + statusLabel + '</td>' +
@@ -1499,7 +1499,7 @@ function renderCheckinsTable(){
   // Build adult rows
   var adultRows = activeAdults.map(function(a){
     return '<tr style="background:#FFF8F0">' +
-      '<td style="padding:8px 12px;font-weight:600">' + a.name + ' <span style="font-size:10px;background:var(--orange);color:#fff;padding:1px 5px;border-radius:8px">Adult</span></td>' +
+      '<td style="padding:8px 12px;font-weight:600">' + a.name + ' <span style="font-size:12px;background:var(--orange);color:#fff;padding:1px 5px;border-radius:8px">Adult</span></td>' +
       '<td style="padding:8px 12px;color:#667788">' + (a.clockInShift||'—') + '</td>' +
       '<td style="padding:8px 12px">' + (a.clockInTime||'—') + '</td>' +
       '<td style="padding:8px 12px"><span style="color:var(--orange)">&#9679; On Shift</span></td>' +
@@ -1701,7 +1701,7 @@ function renderRoster(){
     var PERM_LABELS = { admin:'Admin', 'vc-slt':'VC/SLT', officer:'Shift Officer', scheduling:'Scheduler' };
     document.getElementById('r-body').innerHTML = al.map(function(a){
       var permBadge = a.permission
-        ? '<span class="badge" style="background:#D4EDDA;color:#155724;font-size:9px;margin-left:4px">' + (PERM_LABELS[a.permission]||a.permission) + '</span>'
+        ? '<span class="badge" style="background:#D4EDDA;color:#155724;font-size:11px;margin-left:4px">' + (PERM_LABELS[a.permission]||a.permission) + '</span>'
         : '';
       var reportIcon = '';
       var contact = '<div style="font-size:11px">' +
@@ -1720,7 +1720,7 @@ function renderRoster(){
       return '<tr>' +
         '<td style="font-size:11px;color:var(--gray-400)">' + a.id + '</td>' +
         '<td style="font-weight:600;color:var(--navy)">' + a.name + permBadge + reportIcon + '</td>' +
-        '<td><span class="badge" style="background:var(--navy-lt);color:var(--navy);font-size:9px">' + (a.title||'') + '</span></td>' +
+        '<td><span class="badge" style="background:var(--navy-lt);color:var(--navy);font-size:11px">' + (a.title||'') + '</span></td>' +
         '<td>' + contact + '</td>' +
         '<td style="font-size:12px;color:var(--gray-400)">' + lastWorked + '</td>' +
         '<td colspan="2"></td>' +
@@ -1776,7 +1776,7 @@ function renderRoster(){
       // Group by date
       var byDate = {};
       log.forEach(function(e){ if(!byDate[e.date]) byDate[e.date]=[]; byDate[e.date].push(e); });
-      logHtml = '<div style="font-size:10px;line-height:1.6;max-height:60px;overflow-y:auto">' +
+      logHtml = '<div style="font-size:12px;line-height:1.6;max-height:60px;overflow-y:auto">' +
         Object.keys(byDate).sort().slice(-5).map(function(d){
           return '<div><span style="color:var(--gray-400)">' + fmtDate(d) + ':</span> ' +
             byDate[d].map(function(e){ return e.committee + ' (' + SL[e.shift] + ')'; }).join(', ') +
@@ -1790,24 +1790,24 @@ function renderRoster(){
     var committees = log.map(function(e){ return e.committee; });
     var uniqueCount = [...new Set(committees)].length;
     if(uniqueCount > 0){
-      logHtml += '<div style="font-size:10px;color:var(--orange);margin-top:2px">' + uniqueCount + ' unique committee' + (uniqueCount!==1?'s':'') + ' &bull; ' + log.length + ' total shift' + (log.length!==1?'s':'') + '</div>';
+      logHtml += '<div style="font-size:12px;color:var(--orange);margin-top:2px">' + uniqueCount + ' unique committee' + (uniqueCount!==1?'s':'') + ' &bull; ' + log.length + ' total shift' + (log.length!==1?'s':'') + '</div>';
     }
 
     return '<tr class="' + (j.ageout ? 'ao-row' : '') + '">' +
       '<td style="font-size:11px;color:var(--gray-400)">' + j.id + '</td>' +
       '<td style="font-weight:600;color:var(--navy)">' +
         (j.ageout ? '<span style="color:#F5A623;margin-right:3px">&#11088;</span>' : '') +
-        '<span style="cursor:pointer" title="View activity log" onclick="openNoteLog(' + ri + ')">' + j.name + ' <span style="font-size:10px;color:var(--orange)"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"></span></span>' +
+        '<span style="cursor:pointer" title="View activity log" onclick="openNoteLog(' + ri + ')">' + j.name + ' <span style="font-size:12px;color:var(--orange)"><img src="assets/edit.png" style="width:16px;height:16px;vertical-align:middle"></span></span>' +
 
       '</td>' +
-      '<td><span class="badge b-title" style="font-size:9px">' + j.title.replace('Junior ', '') + '</span></td>' +
+      '<td><span class="badge b-title" style="font-size:11px">' + j.title.replace('Junior ', '') + '</span></td>' +
       '<td>' + contact + '</td>' +
       '<td style="font-size:12px">' + j.last + '</td>' +
       '<td>' + logHtml + '</td>' +
       '<td style="text-align:center">' +
         '<label style="display:flex;align-items:center;justify-content:center;gap:5px;cursor:pointer">' +
           '<input type="checkbox" ' + (j.ageout ? 'checked' : '') + ' onchange="juniors[' + ri + '].ageout=this.checked;renderRoster()">' +
-          (j.ageout ? '<span class="badge b-ageout" style="font-size:9px">Yes</span>' : '<span style="font-size:11px;color:var(--gray-200)">No</span>') +
+          (j.ageout ? '<span class="badge b-ageout" style="font-size:11px">Yes</span>' : '<span style="font-size:11px;color:var(--gray-200)">No</span>') +
         '</label>' +
       '</td>' +
       '<td><button class="btn btn-sm btn-danger" onclick="if(confirm(\'Remove ' + j.name + '?\'))juniors.splice(' + ri + ',1),renderRoster()">&#x2715;</button></td>' +
@@ -2238,9 +2238,9 @@ function onSetupDateChange(){
       html += '<div class="preview-row' + (isAdded ? ' added' : '') + '" style="display:block;padding:0">';
       // Collapsed header row
       html += '<div style="display:flex;align-items:center;padding:6px 10px;cursor:pointer;gap:8px" onclick="togglePreviewRow(\'' + rowKey + '\')">';
-      html += '<span id="' + rowKey + '-icon" style="font-size:10px;color:#99AABB;flex-shrink:0">&#9654;</span>';
+      html += '<span id="' + rowKey + '-icon" style="font-size:12px;color:#99AABB;flex-shrink:0">&#9654;</span>';
       html += '<div style="flex:1;font-weight:500;font-size:13px">' +
-        (s.hat ? '<img src="assets/hat.png" style="height:14px;vertical-align:middle;margin-right:4px">' : '') +
+        (s.hat ? '<img src="assets/hat.png" style="height:16px;vertical-align:middle;margin-right:4px">' : '') +
         s.name + '</div>';
       html += fillRatio;
       html += '<input type="number" class="finput" style="width:60px;font-size:12px;padding:3px 6px" value="' + s.cap + '" ' +
@@ -2533,7 +2533,7 @@ function renderCullPreview(results, date){
 
     // Table — "Culled To" column is editable
     html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-    html += '<thead><tr style="background:#F8F9FA;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667788">';
+    html += '<thead><tr style="background:#F8F9FA;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#667788">';
     html += '<th style="padding:6px 12px;text-align:left">Committee</th>';
     html += '<th style="padding:6px 10px;text-align:center">Requested</th>';
     html += '<th style="padding:6px 10px;text-align:center">Culled To<span style="font-weight:400;opacity:.7"> (editable)</span></th>';
@@ -2545,7 +2545,7 @@ function renderCullPreview(results, date){
       var rowKey = 'cull-cap-' + sh + '-' + ki;
       html += '<tr style="border-top:1px solid #F0F0F0' + (trimmed ? ';background:#FFFDF0' : '') + '">';
       html += '<td style="padding:6px 12px;font-weight:500">' + s.name +
-        (s.highPriority ? ' <span style="font-size:9px;background:#CC0000;color:#fff;padding:1px 4px;border-radius:3px">PRIORITY</span>' : '') + '</td>';
+        (s.highPriority ? ' <span style="font-size:11px;background:#CC0000;color:#fff;padding:1px 4px;border-radius:3px">PRIORITY</span>' : '') + '</td>';
       html += '<td style="padding:6px 10px;text-align:center;color:#667788">' + s.originalCap + '</td>';
       // Editable number input
       html += '<td style="padding:4px 10px;text-align:center">' +
@@ -2818,9 +2818,9 @@ function renderSetupApproved(){
     var rows = byShift[sh];
     if(!rows.length) return;
     apHtml += '<div style="margin-bottom:12px">';
-    apHtml += '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:' + shiftColors[sh] + ';margin-bottom:6px">' + shiftNames[sh] + ' Shift (' + rows.length + ' committees, ' + rows.reduce(function(a,r){return a+r.cap;},0) + ' spots requested)</div>';
+    apHtml += '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:' + shiftColors[sh] + ';margin-bottom:6px">' + shiftNames[sh] + ' Shift (' + rows.length + ' committees, ' + rows.reduce(function(a,r){return a+r.cap;},0) + ' spots requested)</div>';
     apHtml += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-    apHtml += '<thead><tr style="background:#F5F6F8;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#667788"><th style="padding:5px 10px;text-align:left;font-weight:600">Committee</th><th style="padding:5px 10px;text-align:center;font-weight:600">Spots</th><th style="padding:5px 10px;text-align:center;font-weight:600">Priority</th></tr></thead>';
+    apHtml += '<thead><tr style="background:#F5F6F8;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#667788"><th style="padding:5px 10px;text-align:left;font-weight:600">Committee</th><th style="padding:5px 10px;text-align:center;font-weight:600">Spots</th><th style="padding:5px 10px;text-align:center;font-weight:600">Priority</th></tr></thead>';
     apHtml += '<tbody>';
     rows.forEach(function(r){
       apHtml += '<tr style="border-top:1px solid #F0F0F0' + (r.isPriority ? ';background:#FFF8F8' : '') + '">';
@@ -3160,7 +3160,7 @@ function renderSetup(){
               (s.chair ? '<span style="color:#667788">Chair: ' + s.chair + (s.chairPhone ? ' ' + s.chairPhone : '') + '</span><br>' : '') +
               '<span style="color:#667788">' + (s.location||'No location entered') + '</span>' +
             '</div>' +
-            '<button class="btn btn-sm" style="flex-shrink:0" onclick="editCustomSlot(' + sid + ')"><img src="assets/edit.png" style="width:13px;height:13px;vertical-align:middle"> Edit</button>' +
+            '<button class="btn btn-sm" style="flex-shrink:0" onclick="editCustomSlot(' + sid + ')"><img src="assets/edit.png" style="width:16px;height:16px;vertical-align:middle"> Edit</button>' +
           '</div>';
       } else {
         // Edit state — show full form with Save button
@@ -3171,7 +3171,7 @@ function renderSetup(){
             '</div>' +
             '<div style="margin-bottom:10px">' +
               '<label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:13px;font-weight:700;color:var(--navy)">' +
-              '<input type="checkbox" ' + (s.hat ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--navy)" onchange="activeSlots[' + i + '].hat=this.checked"> <img src="assets/hat.png" style="height:18px;vertical-align:middle;margin-right:3px"> Hat required for this assignment' +
+              '<input type="checkbox" ' + (s.hat ? 'checked' : '') + ' style="width:18px;height:18px;accent-color:var(--navy)" onchange="activeSlots[' + i + '].hat=this.checked"> <img src="assets/hat.png" style="height:20px;vertical-align:middle;margin-right:3px"> Hat required for this assignment' +
               '</label></div>' +
               '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
               '<div>' +
@@ -3713,8 +3713,8 @@ function printMemberReport(memberId, isAdult){
     html += '<div style="margin-bottom:20px">' +
       '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8899AA;margin-bottom:8px">Contact Information</div>' +
       '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-        (member.phone ? '<div style="background:#F8F9FA;border-radius:6px;padding:8px 12px"><div style="font-size:10px;color:#8899AA;margin-bottom:2px">Phone</div><div style="font-size:13px">' + member.phone + '</div></div>' : '') +
-        (member.email ? '<div style="background:#F8F9FA;border-radius:6px;padding:8px 12px"><div style="font-size:10px;color:#8899AA;margin-bottom:2px">Email</div><div style="font-size:13px">' + member.email + '</div></div>' : '') +
+        (member.phone ? '<div style="background:#F8F9FA;border-radius:6px;padding:8px 12px"><div style="font-size:12px;color:#8899AA;margin-bottom:2px">Phone</div><div style="font-size:13px">' + member.phone + '</div></div>' : '') +
+        (member.email ? '<div style="background:#F8F9FA;border-radius:6px;padding:8px 12px"><div style="font-size:12px;color:#8899AA;margin-bottom:2px">Email</div><div style="font-size:13px">' + member.email + '</div></div>' : '') +
       '</div>' +
     '</div>';
   }
@@ -3724,8 +3724,8 @@ function printMemberReport(memberId, isAdult){
     html += '<div style="margin-bottom:20px">' +
       '<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#8899AA;margin-bottom:8px">Shifts & Hours</div>' +
       '<div style="display:flex;gap:12px;margin-bottom:10px">' +
-        '<div style="background:#F0F4FF;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:22px;font-weight:700;color:#002E5D">' + totalHrs + '</div><div style="font-size:10px;color:#667788">Total Hours</div></div>' +
-        '<div style="background:#F0F4FF;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:22px;font-weight:700;color:#002E5D">' + shiftLog.filter(function(e){ return !e.noshow; }).length + '</div><div style="font-size:10px;color:#667788">Shifts Worked</div></div>' +
+        '<div style="background:#F0F4FF;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:22px;font-weight:700;color:#002E5D">' + totalHrs + '</div><div style="font-size:12px;color:#667788">Total Hours</div></div>' +
+        '<div style="background:#F0F4FF;border-radius:6px;padding:10px 16px;text-align:center"><div style="font-size:22px;font-weight:700;color:#002E5D">' + shiftLog.filter(function(e){ return !e.noshow; }).length + '</div><div style="font-size:12px;color:#667788">Shifts Worked</div></div>' +
       '</div>' +
       (shiftLog.length ? '<table style="width:100%;border-collapse:collapse;font-size:12px">' +
         '<thead><tr style="background:#002E5D;color:#fff">' +
@@ -3781,7 +3781,7 @@ function printMemberReport(memberId, isAdult){
     '</div>';
   }
 
-  html += '<div style="font-size:10px;color:#8899AA;text-align:center;margin-top:20px;padding-top:12px;border-top:1px solid #eee">JRC Assignment System &mdash; jrc.hlsr.app &mdash; Confidential</div>';
+  html += '<div style="font-size:12px;color:#8899AA;text-align:center;margin-top:20px;padding-top:12px;border-top:1px solid #eee">JRC Assignment System &mdash; jrc.hlsr.app &mdash; Confidential</div>';
   html += '</div>';
 
   // Print via iframe
