@@ -1331,3 +1331,37 @@ html[data-theme="light"] #panel-reqform [style*="background:#F8F9FA"],
 html[data-theme="light"] #panel-reqform [style*="background:#fff"] { background: revert !important; }
 html[data-theme="light"] #r-body td, html[data-theme="light"] #a-body td { color: var(--navy); }
 html[data-theme="light"] #hours-body td, html[data-theme="light"] #adult-hours-body td { color: var(--navy); }
+
+/* ================================================================
+   LOGIN VIDEO BACKGROUND
+   ================================================================ */
+.login-video-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+  pointer-events: none;
+}
+.login-video-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    135deg,
+    rgba(0,10,25,.75) 0%,
+    rgba(0,20,50,.65) 50%,
+    rgba(0,10,30,.75) 100%
+  );
+  pointer-events: none;
+}
+/* Login card sits above video + overlay */
+.login-screen .login-card {
+  position: relative;
+  z-index: 2;
+}
+/* Login screen no longer needs its own bg gradient — video covers it */
+.login-screen {
+  background: #000C1E;
+}
