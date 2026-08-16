@@ -4,6 +4,24 @@
 // OFFICER DASHBOARD
 // ============================================================
 
+// Slot capacity progress bar fill — orange in light theme, white in dark.
+// Injected here rather than in the CSS file. Covers all three fill states
+// (normal, .warn at 75%, .done at capacity) so the color stays consistent
+// as the bar fills toward 100%.
+(function _jrcProgFillColor(){
+  if(document.getElementById('jrc-progfill-style')) return;
+  var st = document.createElement('style');
+  st.id = 'jrc-progfill-style';
+  st.textContent =
+    '.prog-bar > .prog-fill,' +
+    '.prog-bar > .prog-fill.warn,' +
+    '.prog-bar > .prog-fill.done{background:var(--orange)}' +
+    '[data-theme="dark"] .prog-bar > .prog-fill,' +
+    '[data-theme="dark"] .prog-bar > .prog-fill.warn,' +
+    '[data-theme="dark"] .prog-bar > .prog-fill.done{background:#fff}';
+  document.head.appendChild(st);
+})();
+
 
 function printDropOffReport(slotId){
   var sl = activeSlots.find(function(s){ return String(s.id) === String(slotId); });
@@ -639,7 +657,7 @@ function renderOfficer(search){
       (s.assigned.length > 0 ?
         '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">' +
           '<button class="btn btn-sm" style="border-color:#4A6CF7;color:#4A6CF7" onclick="printDropOffReport(' + s.id + ')">&#128438; Drop-Off Report</button>' +
-          '<button class="btn btn-sm" style="' + (isSent ? 'background:var(--green);color:#fff;border-color:var(--green)' : 'border-color:var(--navy);color:var(--navy)') + '" onclick="' + (isSent ? 'undoSent' : 'markSent') + '(' + s.id + ')" title="' + (isSent ? 'Click to undo' : 'Mark juniors as out on shift') + '">' +
+          '<button class="btn btn-sm" style="' + (isSent ? 'background:var(--orange);color:#fff;border-color:var(--orange)' : 'border-color:var(--navy);color:var(--navy)') + '" onclick="' + (isSent ? 'undoSent' : 'markSent') + '(' + s.id + ')" title="' + (isSent ? 'Click to undo' : 'Mark juniors as out on shift') + '">' +
           (isSent ? '&#9989; Out on Shift &mdash; undo' : '&#128228; Mark Sent') +
           '</button></div>' : '') +
     '<div style="height:4px;border-radius:0 0 8px 8px;background:var(--gray-100);margin:10px -14px -12px;overflow:hidden">' +
