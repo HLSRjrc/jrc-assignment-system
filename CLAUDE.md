@@ -1,3 +1,4 @@
+[CLAUDE.md](https://github.com/user-attachments/files/31121629/CLAUDE.md)
 # JRC Assignment System — Claude Project Context
 
 ## Project Overview
