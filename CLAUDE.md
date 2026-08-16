@@ -1,6 +1,3 @@
-[CLAUDE (3).md](https://github.com/user-attachments/files/31088894/CLAUDE.3.md)
-[CLAUDE (1).md](https://github.com/user-attachments/files/31045784/CLAUDE.1.md)
-[CLAUDE.md](https://github.com/user-attachments/files/29980801/CLAUDE.md)
 # JRC Assignment System — Claude Project Context
 
 ## Project Overview
@@ -21,7 +18,7 @@ This is the **JRC Assignment System** for the Houston Livestock Show & Rodeo (HL
 - **Database:** Neon PostgreSQL (separate dev/prod databases)
 - **Deployment:** GitHub Actions → Netlify auto-deploy from `main` branch
 - **Domain:** Porkbun (hlsr.app)
-- **Brand colors:** Navy `#002E5D`, Orange `#EF7622`, Font: DM Sans
+- **Brand colors:** Navy `#002E5D`, Orange `#EF7622`, Font: DM Sans — see **Brand Assets** below for logo rules and the orange contrast caveat
 
 ---
 
@@ -351,6 +348,84 @@ The original app.css had mobile-only rules (`.stats{repeat(2,1fr)!important}`,
 `#slots-container{1fr}`) sitting OUTSIDE any @media query — collapsing desktop
 grids at all widths. If layout "loses all spacing," check for bare responsive
 rules outside @media blocks first.
+## Brand Assets
+
+### Logo rule (non-negotiable)
+When the JRC mark is **not** shown in full colour, use the **all-white outline
+version only** — `jrc-logo-white.png`.
+
+Never produce or use a partial-colour variant on dark backgrounds — no gold/orange
+star, no gold committee bar, no "keep the brand colour, flip the ink" duotone. If it
+is not full colour, it is all-white outline. Nothing in between.
+
+Full-colour usage (`jrc-logo-color.png`, `jrc.png`) stays as-is on light backgrounds.
+
+### Dark mode does NOT swap image files
+`css/app.css` (~line 980) recolours the navy marks with a CSS filter, so one source
+file serves both themes:
+
+```css
+img[src*="hat.png"]           { filter: brightness(0) invert(1); opacity:.85; }
+img[src*="edit.png"],
+img[src*="edit2.png"]         { filter: brightness(0) invert(1); opacity:.75; }
+img[src*="jrc-logo-navy.png"] { filter: brightness(0) invert(1); opacity:.9;  }
+
+html[data-theme="light"] img[src*="hat.png"],
+html[data-theme="light"] img[src*="edit.png"],
+html[data-theme="light"] img[src*="edit2.png"],
+html[data-theme="light"] img[src*="jrc-logo-navy.png"] { filter:none; opacity:1; }
+```
+
+`brightness(0) invert(1)` forces every opaque pixel to pure white and preserves the
+alpha channel.
+
+**Consequence:** separate `*-white.png` files are redundant. Do NOT "fix" a
+dark-mode icon by generating a white PNG — check this filter block first. Adding
+white variants creates two sources of truth that drift.
+
+### Known gap — icon filters are not print-safe
+These four `img[src*=...]` rules are not scoped to `.panel`, unlike the
+inline-colour overrides further down which are deliberately scoped so reports and
+print views are unaffected. There is also no `@media print` reset.
+
+No print path emits these icons today — `buildReports`, `printReport`,
+`openMemberReport`, `printMemberReportFromPicker` all contain zero references — so
+this is latent, not live. The first report that includes a hat or pencil icon will
+print pure white on white paper.
+
+```css
+@media print {
+  img[src*="hat.png"], img[src*="edit.png"],
+  img[src*="edit2.png"], img[src*="jrc-logo-navy.png"] {
+    filter: none !important;
+    opacity: 1 !important;
+  }
+}
+```
+
+### Asset reference map (V24)
+| File | Referenced in | Count |
+|---|---|---|
+| `assets/hat.png` | `app-dashboard.js`, `app-helpers.js`, `app-requests.js` | 38 |
+| `assets/edit.png` | `app-dashboard.js`, `app-requests.js` | 8 |
+| `/assets/jrc-logo-navy.png` | `index.html` | 4 |
+| `/assets/jrc.png` | `index.html`, JS | 3 |
+| `/assets/jrc-logo-color.png` | `index.html` | 1 |
+| `/assets/hlsr-logo-login.png` | JS | 1 |
+| `/assets/hlsr-header.webp` | JS | 1 |
+
+Icon paths are hardcoded in JS template strings. Prefer CSS overrides over editing
+those strings — editing them risks the esbuild quote/regex landmines above.
+
+### Orange contrast caveat (unresolved)
+White text on brand orange `#EF7622` measures **2.88:1** — fails WCAG AA, and it
+occurs on ~120 nodes. Either darken to `#BF560E` (4.61:1 with white) or keep the
+exact brand orange and use near-black ink `#1A1205` (6.43:1). Needs a brand
+decision; do not silently pick one.
+
+---
+
+
 
 ---
 
