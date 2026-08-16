@@ -322,7 +322,7 @@ function renderBoard(){
         var late = r.lateBreak;
         return '<span style="margin-right:32px;color:' + (late?'#FF6B6B':'#F5A623') + ';white-space:nowrap">' +
           shiftPill(r.sh) + fmtNameShort(r.j.name) +
-          (late ? ' <span style="font-size:9px;background:#FF6B6B;color:#fff;padding:0 4px;border-radius:3px;margin-left:3px">LATE</span>' : '') +
+          (late ? ' <span style="font-size:11px;background:#FF6B6B;color:#fff;padding:0 4px;border-radius:3px;margin-left:3px">LATE</span>' : '') +
           '</span>';
       }).join('');
     // Render ONE copy. The second copy (needed for a seamless marquee loop) is
@@ -330,7 +330,7 @@ function renderBoard(){
     // show every name twice because the duplicate never scrolls out of view.
     return '<div style="border-top:1px solid rgba(255,255,255,.15);padding:5px 0;overflow:hidden;flex-shrink:0;background:rgba(0,0,0,.2)">' +
       '<div style="display:flex;align-items:center">' +
-        '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#F5A623;white-space:nowrap;padding:0 12px;flex-shrink:0">&#9711; Later Shifts:</span>' +
+        '<span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#F5A623;white-space:nowrap;padding:0 12px;flex-shrink:0">&#9711; Later Shifts:</span>' +
         '<div style="overflow:hidden;flex:1" id="board-ticker-track">' +
           '<div id="board-ticker" style="display:inline-flex;white-space:nowrap;font-size:15px">' +
             items +
@@ -424,7 +424,7 @@ function renderBoard(){
     if(!people.length) return '';
     var names = people.map(function(a){ return a.name; }).join(' &bull; ');
     return '<div style="display:flex;align-items:center;gap:8px;flex-shrink:0">' +
-      '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap">' + label + ':</span>' +
+      '<span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap">' + label + ':</span>' +
       '<div id="' + cellId + '-track" style="overflow:hidden;max-width:260px">' +
         '<div id="' + cellId + '" style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;color:#fff">' +
           names +
@@ -440,18 +440,18 @@ function renderBoard(){
   var _row1 =
     '<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;width:100%">' +
       '<div style="display:flex;align-items:baseline;gap:6px;flex-shrink:0">' +
-        '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">OIC:</span>' +
+        '<span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">OIC:</span>' +
         '<span style="font-size:13px;font-weight:600;color:#fff">David Smith</span>' +
       '</div>' +
       '<div style="display:flex;align-items:baseline;gap:6px;flex-shrink:0">' +
-        '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Chairman:</span>' +
+        '<span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD">Chairman:</span>' +
         '<span style="font-size:13px;font-weight:600;color:#fff">David Wick</span>' +
       '</div>' +
       staffLabel('VC on Shift', vcOnShift, 'staff-vc') +
       staffLabel('Shift Officer', soOnShift, 'staff-so') +
       (_isTV && mentors.length
         ? '<div style="display:flex;align-items:center;gap:8px;flex:1;min-width:200px;overflow:hidden">' +
-            '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap;flex-shrink:0">Mentors:</span>' +
+            '<span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap;flex-shrink:0">Mentors:</span>' +
             '<div id="staff-mentors-track" style="overflow:hidden;flex:1;min-width:0">' +
               '<div id="staff-mentors" style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;color:#fff">' +
                 mentors.map(function(a){ return a.name; }).join(' &bull; ') +
@@ -463,7 +463,7 @@ function renderBoard(){
 
   var _mentorRow2 = (!_isTV && mentors.length)
     ? '<div style="display:flex;align-items:center;gap:8px;padding-top:4px;border-top:1px solid rgba(255,255,255,.06);width:100%;overflow:hidden">' +
-        '<span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap;flex-shrink:0">Mentors:</span>' +
+        '<span style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#99BBDD;white-space:nowrap;flex-shrink:0">Mentors:</span>' +
         '<div id="staff-mentors-track" style="overflow:hidden;flex:1;min-width:0">' +
           '<div id="staff-mentors" style="display:inline-block;white-space:nowrap;font-size:13px;font-weight:600;color:#fff">' +
             mentors.map(function(a){ return a.name; }).join(' &bull; ') +
