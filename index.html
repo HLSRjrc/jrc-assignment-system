@@ -33,9 +33,18 @@ if(window.location.search.indexOf('partner=1') >= 0){
 <!-- LOGIN SCREEN -->
 <div id="login-screen" class="login-screen">
   <!-- Video background -->
-  <video class="login-video-bg" autoplay muted loop playsinline preload="auto">
+  <video class="login-video-bg" id="login-video" autoplay muted loop playsinline preload="auto">
     <source src="/assets/login-loop.mp4" type="video/mp4">
   </video>
+  <script>
+    (function(){
+      var v = document.getElementById('login-video');
+      if(!v) return;
+      v.muted = true;
+      var p = v.play();
+      if(p && p.catch) p.catch(function(){ /* autoplay blocked — video stays hidden */ });
+    })();
+  </script>
   <!-- Dark overlay so login card stays readable -->
   <div class="login-video-overlay"></div>
   <div class="login-card">
