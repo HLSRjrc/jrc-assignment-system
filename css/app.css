@@ -1204,3 +1204,130 @@ html[data-theme="light"] .badge { font-size: 10px !important; }
 html[data-theme="light"] .hist-pill { color: #667788 !important; }
 html[data-theme="light"] .board-name { font-size: 15px; }
 html[data-theme="light"] .board-shift-pill { font-size: 9px !important; }
+
+/* ================================================================
+   EXTENDED DARK MODE OVERRIDES — requests, roster, hours panels
+   Covers color:var(--navy) and remaining hardcoded colors that
+   the earlier .panel block missed.
+   ================================================================ */
+
+/* color:var(--navy) resolves to #002E5D — invisible on dark.
+   Override it to white in all panels and the login area. */
+.panel [style*="color:var(--navy)"],
+.panel [style*="color: var(--navy)"],
+#panel-hours [style*="color:var(--navy)"],
+#panel-roster [style*="color:var(--navy)"],
+#panel-requests [style*="color:var(--navy)"],
+#panel-reqform [style*="color:var(--navy)"] {
+  color: rgba(255,255,255,.9) !important;
+}
+
+/* Links with color:var(--navy) */
+.panel a[style*="color:var(--navy)"],
+.panel a[style*="color: var(--navy)"] {
+  color: #93C5FD !important; /* light blue — visible and recognizable as a link */
+}
+
+/* Table headers in hours/roster/settings using color:var(--navy) */
+.panel th[style*="color:var(--navy)"],
+.panel th[style*="color: var(--navy)"] {
+  color: rgba(255,255,255,.7) !important;
+}
+
+/* Table cells with font-weight:600 and color:var(--navy) (name columns) */
+.panel td[style*="color:var(--navy)"],
+.panel td[style*="color: var(--navy)"] {
+  color: rgba(255,255,255,.9) !important;
+}
+
+/* Gray borders using var(--gray-150) in table headers — remap to dark border */
+.panel th[style*="border-bottom:2px solid var(--gray-150)"],
+.panel th[style*="border-bottom: 2px solid var(--gray-150)"] {
+  border-bottom-color: rgba(255,255,255,.12) !important;
+}
+
+/* Remaining problem colors in requests/db modules */
+/* #721c24 (dark crimson error) → soft red */
+.panel [style*="color:#721c24"] {
+  color: #FCA5A5 !important;
+}
+/* #99BBDD (muted blue in board header) — already readable, leave */
+/* #001F40 (very dark navy) → white */
+.panel [style*="color:#001F40"] {
+  color: rgba(255,255,255,.9) !important;
+}
+
+/* F8F9FA / F8FAFC backgrounds (roster, hours table rows) → dark surface */
+.panel [style*="background:#F8FAFC"],
+.panel [style*="background:#F8F9FA"],
+.panel [style*="background:#FAFBFC"] {
+  background: rgba(255,255,255,.04) !important;
+}
+
+/* Partner request form — reqform sits outside normal .panel in partner mode */
+#panel-reqform [style*="color:var(--navy)"],
+#panel-reqform [style*="color: var(--navy)"] {
+  color: rgba(255,255,255,.9) !important;
+}
+#panel-reqform [style*="color:#667788"],
+#panel-reqform [style*="color:#8899AA"],
+#panel-reqform [style*="color:#99AABB"],
+#panel-reqform [style*="color:#999"] {
+  color: rgba(255,255,255,.6) !important;
+}
+#panel-reqform [style*="background:#F8F9FA"],
+#panel-reqform [style*="background:#fff"],
+#panel-reqform [style*="background:#FFF"] {
+  background: rgba(255,255,255,.05) !important;
+}
+
+/* Request submitted success message */
+#panel-reqform [style*="color:var(--navy)"][style*="font-size:18px"] {
+  color: #fff !important;
+}
+
+/* Roster name column specifically (font-weight:600 names in dark table) */
+#r-body td, #a-body td {
+  color: rgba(255,255,255,.88);
+}
+
+/* Hours table */
+#hours-body td, #adult-hours-body td {
+  color: rgba(255,255,255,.88);
+}
+
+/* ── LIGHT MODE RESTORES ─────────────────────────────────────── */
+html[data-theme="light"] .panel [style*="color:var(--navy)"],
+html[data-theme="light"] .panel [style*="color: var(--navy)"],
+html[data-theme="light"] #panel-hours [style*="color:var(--navy)"],
+html[data-theme="light"] #panel-roster [style*="color:var(--navy)"],
+html[data-theme="light"] #panel-requests [style*="color:var(--navy)"],
+html[data-theme="light"] #panel-reqform [style*="color:var(--navy)"] {
+  color: var(--navy) !important;
+}
+html[data-theme="light"] .panel a[style*="color:var(--navy)"] {
+  color: var(--navy) !important;
+}
+html[data-theme="light"] .panel th[style*="color:var(--navy)"] {
+  color: var(--navy) !important;
+}
+html[data-theme="light"] .panel td[style*="color:var(--navy)"] {
+  color: var(--navy) !important;
+}
+html[data-theme="light"] .panel th[style*="border-bottom:2px solid var(--gray-150)"] {
+  border-bottom-color: var(--gray-150) !important;
+}
+html[data-theme="light"] .panel [style*="color:#721c24"] {
+  color: #721c24 !important;
+}
+html[data-theme="light"] .panel [style*="background:#F8FAFC"],
+html[data-theme="light"] .panel [style*="background:#F8F9FA"],
+html[data-theme="light"] .panel [style*="background:#FAFBFC"] {
+  background: revert !important;
+}
+html[data-theme="light"] #panel-reqform [style*="color:var(--navy)"] { color: var(--navy) !important; }
+html[data-theme="light"] #panel-reqform [style*="color:#667788"] { color: #667788 !important; }
+html[data-theme="light"] #panel-reqform [style*="background:#F8F9FA"],
+html[data-theme="light"] #panel-reqform [style*="background:#fff"] { background: revert !important; }
+html[data-theme="light"] #r-body td, html[data-theme="light"] #a-body td { color: var(--navy); }
+html[data-theme="light"] #hours-body td, html[data-theme="light"] #adult-hours-body td { color: var(--navy); }
