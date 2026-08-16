@@ -18,7 +18,7 @@ var lockedJuniors = new Set(); // jid strings
 var activeNotePick = null;
 var checkInOrder = 0;
 var APP_VERSION = 22;  // Major version — milestone releases
-var APP_BUILD   = 22;  // Minor build — increments every small change
+var APP_BUILD   = 21;  // Minor build — increments every small change
 var clockedOut = {}; // jid -> true when clocked out after a shift
 
 // ============================================================
