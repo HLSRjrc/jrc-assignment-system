@@ -27,7 +27,57 @@ function updateHeaderDate(){
   }
   var subEl = document.getElementById('hdr-date-sub');
   if(subEl) subEl.textContent = simTimeEnabled ? '⏱ Sim time active' : '';
+  renderSimStatus();
   updateHeaderClock();
+}
+
+/* BUG FIX: the Settings sim-time status line was never rendered on page load.
+   #sim-status kept the literal text hardcoded in index.html ("Not set — using
+   real time") for the whole session, because only applySimDate() ever wrote to
+   it, and only when someone clicked Apply. So Settings reported real time while
+   the header said "Sim time active", and the date field showed the real today
+   instead of the simulated one.
+
+   Called from updateHeaderDate(), which already runs on every load and refresh
+   path, so no other module changes. Bails out unless the text actually differs. */
+var _lastSimStatus = null;
+function renderSimStatus(){
+  var el = document.getElementById('sim-status');
+  if(!el) return;
+
+  var html;
+  if(simTimeEnabled){
+    var t = getSimTime();
+    var h = t.getHours(), m = t.getMinutes();
+    var ampm = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12 || 12;
+    var label = h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+    html = '<strong style="color:var(--orange)">&#9201; Simulated time active: '
+         + fmtDate(currentDate) + ' at ' + label
+         + '</strong> &mdash; advancing in real time from this point';
+  } else {
+    html = '<span style="color:var(--green);font-weight:600">&#10003; Using current real time</span>';
+  }
+
+  if(html !== _lastSimStatus){
+    el.innerHTML = html;
+    _lastSimStatus = html;
+  }
+
+  // Keep the Settings controls showing the value actually in effect, so an
+  // officer opening the panel to correct a wrong date sees the truth.
+  if(simTimeEnabled){
+    var st = getSimTime();
+    var dEl = document.getElementById('sim-date');
+    if(dEl && !dEl.matches(':focus') && currentDate) dEl.value = currentDate;
+    var hEl = document.getElementById('sim-hour');
+    var mEl = document.getElementById('sim-min');
+    var aEl = document.getElementById('sim-ampm');
+    var hh = st.getHours();
+    if(hEl && !hEl.matches(':focus')) hEl.value = (hh % 12 || 12);
+    if(mEl && !mEl.matches(':focus')) mEl.value = st.getMinutes();
+    if(aEl && !aEl.matches(':focus')) aEl.value = hh >= 12 ? 'pm' : 'am';
+  }
 }
 
 function updateHeaderClock(){
@@ -54,7 +104,10 @@ function applySimTime(){
   var ampm = h >= 12 ? 'PM' : 'AM';
   var h12 = h > 12 ? h-12 : (h===0 ? 12 : h);
   var label = h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
-  document.getElementById('sim-time-status').innerHTML = '<strong style="color:var(--orange)">&#9201; Simulated time set: ' + label + '</strong> &mdash; advancing in real time from this point';
+  // BUG: this targeted 'sim-time-status', which does not exist in
+  // index.html. getElementById returned null and .innerHTML threw a
+  // TypeError, which killed the updateBoardClock() call below.
+  renderSimStatus();
   // Update the board clock immediately
   updateBoardClock();
 }
