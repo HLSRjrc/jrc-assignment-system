@@ -79,6 +79,81 @@ function getOperatingShift(t){
   if(mins < 900)  return '12pm';
   return '4pm';
 }
+/* ─────────────────────────────────────────────────────────────────────────
+   TAB PERMISSIONS — SINGLE SOURCE OF TRUTH
+   Add to js/app-data.js (loads first, so app-auth.js and app-dashboard.js
+   can both read it). Replaces ROLE_TABS in app-auth.js and TAB_DEFS in
+   app-dashboard.js — delete both of those.
+
+   A = admin   V = slt (VC team)   O = officer (shift officer)   S = scheduling
+   ───────────────────────────────────────────────────────────────────────── */
+
+// Catalogue: [tabId, label, navRow]. Order here = left-to-right order on screen.
+var TAB_CATALOG = [
+  ['board',    'Status Board',    1],
+  ['officer',  'Dashboard',       1],
+  ['kiosk',    'Kiosk',           1],
+  ['checkins', 'Check-ins',       2],
+  ['roster',   'Roster',          2],
+  ['hours',    'Hours Report',    2],
+  ['reqform',  'Submit Request',  3],
+  ['requests', 'Requests',        3],
+  ['setup',    'Shift Setup',     3],
+  ['simulate', 'Settings',        3]
+];
+
+// Who may see each tab. This is the whole permission model — edit only here.
+var TAB_ACCESS = {
+  kiosk:    ['admin','slt','officer','scheduling'],  // A V O S
+  officer:  ['admin','slt','officer','scheduling'],  // A V O S
+  setup:    ['admin','slt'],                         // A V
+  board:    ['admin','slt','officer','scheduling'],  // A V O S
+  checkins: ['admin','slt','officer','scheduling'],  // A V O S
+  roster:   ['admin','slt','officer','scheduling'],  // A V O S
+  requests: ['admin','slt','scheduling'],            // A V S
+  reqform:  ['admin','slt','scheduling'],            // A V S
+  simulate: ['admin'],                               // A
+  hours:    ['admin','slt','officer','scheduling']   // A V O S
+};
+
+// Tab each role lands on after sign-in. Explicit so catalogue order can change
+// without silently relocating anyone's landing page.
+var ROLE_LANDING = {
+  admin: 'officer', slt: 'officer', officer: 'officer', scheduling: 'officer',
+  kiosk: 'kiosk',   board: 'board'
+};
+
+// Derived — do not edit. TAB_DEFS drives renderTabs(); ROLE_TABS drives the
+// permission checks in app-auth.js / app-helpers.js / app-db.js. Deriving both
+// from one table is what stops them drifting apart again.
+var TAB_DEFS = (function () {
+  var out = {};
+  ['admin', 'slt', 'officer', 'scheduling'].forEach(function (role) {
+    out[role] = TAB_CATALOG.filter(function (t) {
+      return TAB_ACCESS[t[0]].indexOf(role) >= 0;
+    });
+  });
+  // System roles render a single tab and no real navigation.
+  out.kiosk = TAB_CATALOG.filter(function (t) { return t[0] === 'kiosk'; });
+  out.board = TAB_CATALOG.filter(function (t) { return t[0] === 'board'; });
+  return out;
+})();
+
+var ROLE_TABS = (function () {
+  var out = {};
+  Object.keys(TAB_DEFS).forEach(function (role) {
+    var ids = TAB_DEFS[role].map(function (t) { return t[0]; });
+    var land = ROLE_LANDING[role];
+    // landing tab first, so ROLE_TABS[role][0] stays the post-login destination
+    if (land && ids.indexOf(land) > 0) {
+      ids = [land].concat(ids.filter(function (id) { return id !== land; }));
+    }
+    out[role] = ids;
+  });
+  return out;
+})();
+
+
 var dirtyJuniors = new Set(); // track juniors modified this session
 var simTimeOffset = 0;    // ms offset from real time
 var simTimeEnabled = false;
