@@ -1365,3 +1365,110 @@ html[data-theme="light"] #hours-body td, html[data-theme="light"] #adult-hours-b
 .login-screen {
   background: #000C1E;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   V24 CONTRAST FIXES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --orange-ink:#002E5D;       /* brand navy — ink for orange surfaces        */
+  --orange-grad-lt:#F28A2E;   /* gradient light end; keeps navy above 4.5:1  */
+}
+
+/* ── Orange surfaces get navy ink ─────────────────────────────────────────
+   White on #EF7622 is 2.88:1 and fails WCAG AA. Brand navy on it is 4.70:1.
+   The old gradients ran #EF7622 -> #C85F10 and navy on that dark end is only
+   3.29:1, so they now run #F28A2E -> #EF7622: 5.46:1 light end, 4.70:1 dark
+   end, passing across the whole sweep.
+   Navy ink on the dark page background is 1.28:1 — every rule below is tied
+   to an actually-orange background. Do not generalise it. */
+.btn-orange,
+.shift-tab.active,
+.ao-btn.active,
+.order-badge{
+  background:linear-gradient(135deg,var(--orange-grad-lt),var(--orange)) !important;
+  color:var(--orange-ink) !important;
+  border-color:transparent !important;
+}
+html[data-theme="light"] .btn-orange,
+html[data-theme="light"] .shift-tab.active,
+html[data-theme="light"] .ao-btn.active,
+html[data-theme="light"] .order-badge{
+  background:var(--orange) !important;
+  color:var(--orange-ink) !important;
+}
+.btn-orange *,
+.shift-tab.active *,
+.ao-btn.active *,
+.order-badge *{ color:inherit !important; }
+
+.panel [style*="background:var(--orange)"],
+.panel [style*="background: var(--orange)"]{ color:var(--orange-ink) !important; }
+.panel [style*="background:var(--orange)"] *,
+.panel [style*="background: var(--orange)"] *{ color:inherit !important; }
+
+/* Left alone on purpose: .b-title, .ao-btn:hover, .pick-btn.repeat,
+   .slot-card.sent, #board-escape-btn:hover use translucent orange over the
+   dark page, so their effective background is dark navy. Navy ink would be
+   invisible there. */
+
+/* ── BUG: Priority pill invisible ────────────────────────────────────────
+   app-requests.js emits background:#FAFAFA for the "Priority" toggle on every
+   request row. The override map covers #FAFBFC, #F8F9FA and #F5F6F8 but not
+   #FAFAFA, so the pill rendered white-on-white in dark mode. */
+.panel [style*="background:#FAFAFA"],
+.panel [style*="background:#fafafa"],
+.panel [style*="background:#E8F0FF"],
+.panel [style*="background:#e8f0ff"],
+.panel [style*="background:#F8D7DA"],
+.panel [style*="background:#FDEDED"],
+.panel [style*="background:#F5C6CB"]{
+  background:rgba(255,255,255,.05) !important;
+}
+html[data-theme="light"] .panel [style*="background:#FAFAFA"],
+html[data-theme="light"] .panel [style*="background:#fafafa"],
+html[data-theme="light"] .panel [style*="background:#E8F0FF"],
+html[data-theme="light"] .panel [style*="background:#e8f0ff"],
+html[data-theme="light"] .panel [style*="background:#F8D7DA"],
+html[data-theme="light"] .panel [style*="background:#FDEDED"],
+html[data-theme="light"] .panel [style*="background:#F5C6CB"]{
+  background:revert !important;
+}
+
+/* ── BUG: rgb() serialisation gap ────────────────────────────────────────
+   When JS sets a style via the DOM API — btn.style.background = '#fff' — the
+   browser rewrites the attribute as background: rgb(255, 255, 255). The hex
+   is gone, so every [style*="background:#fff"] selector in this file stops
+   matching that element.
+
+   setReqType() in app-requests.js does this to the "Pre-Show" button. Its
+   colour keeps var() form so it IS caught and turned white, but the
+   background serialises to rgb() and is NOT caught, so it stays white.
+   White on white: the button renders as a blank rectangle in dark mode. */
+.panel [style*="rgb(255, 255, 255)"],
+.panel [style*="rgb(250, 250, 250)"],
+.panel [style*="rgb(248, 249, 250)"],
+.panel [style*="rgb(232, 238, 245)"]{
+  background:rgba(255,255,255,.05) !important;
+}
+html[data-theme="light"] .panel [style*="rgb(255, 255, 255)"],
+html[data-theme="light"] .panel [style*="rgb(250, 250, 250)"],
+html[data-theme="light"] .panel [style*="rgb(248, 249, 250)"],
+html[data-theme="light"] .panel [style*="rgb(232, 238, 245)"]{
+  background:revert !important;
+}
+
+/* ── Print guard for the icon filters ────────────────────────────────────
+   The img[src*=] filters near line 980 are not scoped to .panel and have no
+   print reset, unlike the colour overrides. No print path emits these icons
+   today, so this prevents a latent white-on-white print rather than fixing a
+   live fault. */
+@media print{
+  img[src*="hat.png"], img[src*="edit.png"],
+  img[src*="edit2.png"], img[src*="jrc-logo-navy.png"]{
+    filter:none !important; opacity:1 !important;
+  }
+  .btn-orange,.shift-tab.active,.ao-btn.active,.order-badge{
+    background:var(--orange) !important; color:var(--orange-ink) !important;
+  }
+}
