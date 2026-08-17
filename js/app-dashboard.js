@@ -675,60 +675,7 @@ function renderTabs(activeTab){
   bar.style.flexWrap = 'wrap';
   bar.style.gap = '0';
 
-  // Tab definitions per role — [id, label, row]
-  var TAB_DEFS = {
-    // Row 1: Status Board, Dashboard, Kiosk
-    // Row 2: Check Ins, Roster, Hours Report
-    // Row 3: Submit Request, Requests, Shift Setup, Settings
-    // A=admin, V=slt, O=officer, S=scheduling
-    admin: [
-      ['board',    'Status Board',    1],
-      ['officer',  'Dashboard',       1],
-      ['kiosk',    'Kiosk',           1],
-      ['checkins', 'Check-ins',       2],
-      ['roster',   'Roster',          2],
-      ['hours',    'Hours Report',    2],
-      ['reqform',  'Submit Request',  3],
-      ['requests', 'Requests',        3],
-      ['setup',    'Shift Setup',     3],
-      ['simulate', 'Settings',        3],
-    ],
-    slt: [
-      ['board',    'Status Board',    1],
-      ['officer',  'Dashboard',       1],
-      ['kiosk',    'Kiosk',           1],
-      ['checkins', 'Check-ins',       2],
-      ['roster',   'Roster',          2],
-      ['hours',    'Hours Report',    2],
-      ['reqform',  'Submit Request',  3],
-      ['requests', 'Requests',        3],
-      ['setup',    'Shift Setup',     3],
-    ],
-    officer: [
-      ['board',    'Status Board',    1],
-      ['officer',  'Dashboard',       1],
-      ['kiosk',    'Kiosk',           1],
-      ['checkins', 'Check-ins',       2],
-      ['roster',   'Roster',          2],
-      ['hours',    'Hours Report',    2],
-    ],
-    scheduling: [
-      ['board',    'Status Board',    1],
-      ['officer',  'Dashboard',       1],
-      ['kiosk',    'Kiosk',           1],
-      ['checkins', 'Check-ins',       2],
-      ['roster',   'Roster',          2],
-      ['hours',    'Hours Report',    2],
-      ['reqform',  'Submit Request',  3],
-      ['requests', 'Requests',        3],
-    ],
-    kiosk: [
-      ['kiosk',    'Kiosk',           1],
-    ],
-    board: [
-      ['board',    'Status Board',    1],
-    ],
-  };
+  // TAB_DEFS now lives in app-data.js, derived from TAB_ACCESS.
 
   var defs = TAB_DEFS[currentRole] || [];
   var row1 = defs.filter(function(d){ return d[2]===1; });
