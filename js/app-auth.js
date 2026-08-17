@@ -11,22 +11,8 @@
 var API_TOKEN  = '__API_SECRET__'; // replaced at build time by netlify
 var ROLE_LABELS = { admin:'Administrator', slt:'VC / SLT', officer:'Shift Officer', scheduling:'Scheduling Team', junior:'Junior Committeeman', kiosk:'Kiosk Mode', board:'Status Board' };
 
-// Tabs each role can see
-var ROLE_TABS = {
-  // Admin — every tab
-  admin:      ['officer','kiosk','checkins','roster','setup','requests','reqform','simulate','board','hours'],
-  // SLT/VC — everything except settings (simulate)
-  slt:        ['officer','kiosk','checkins','roster','setup','requests','reqform','board','hours'],
-  // Shift Officer — dashboard, roster, checkins, status board, hours, submit request
-  officer:    ['officer','kiosk','checkins','roster','board','hours','reqform'],
-  // Scheduling Team — submit request + requests tab
-  scheduling: ['officer','checkins','roster','setup','reqform','requests','board','kiosk'],
-  // Junior Committeeman — kiosk only
-  junior:     ['kiosk'],
-  // System roles
-  kiosk:      ['kiosk'],
-  board:      ['board']
-};
+// ROLE_TABS now lives in app-data.js, derived from TAB_ACCESS.
+// Do not redeclare it here — one table only.
 
 var currentRole = null;
 var currentTab = 'kiosk';
