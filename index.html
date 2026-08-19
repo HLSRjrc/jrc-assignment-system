@@ -23,7 +23,15 @@ if(window.location.search.indexOf('partner=1') >= 0){
   <script>
     // Apply saved theme before first paint to avoid flash
     (function(){
-      var t = localStorage.getItem('jrc_theme') || 'dark';
+      // jrcpartner.hlsr.app is a public-facing form for outside committee
+      // chairmen — it always opens in light mode regardless of any saved
+      // preference. Checks the hostname as well as the query flag, because
+      // the netlify redirect that appends ?partner=1 is force=false.
+      var isPartner = window.location.search.indexOf('partner=1') >= 0
+                   || window.location.hostname === 'jrcpartner.hlsr.app';
+      // Deliberately not written back to localStorage, so a JRC user's own
+      // dark-mode preference survives a trip through the partner portal.
+      var t = isPartner ? 'light' : (localStorage.getItem('jrc_theme') || 'dark');
       document.documentElement.setAttribute('data-theme', t);
     })();
   </script>
