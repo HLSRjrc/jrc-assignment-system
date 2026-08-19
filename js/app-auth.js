@@ -18,6 +18,9 @@ var currentRole = null;
 var currentTab = 'kiosk';
 
 function enterPartnerMode(){
+  // Partner form always renders light, matching jrcpartner.hlsr.app. Not
+  // persisted to localStorage so the user's own theme preference survives.
+  document.documentElement.setAttribute('data-theme', 'light');
   // Hide everything except the partner form
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('main-app').style.display = 'block';
