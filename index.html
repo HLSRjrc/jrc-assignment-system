@@ -8,9 +8,9 @@
 <script>
 // Run immediately before page renders to prevent flash
 // Hostname as well as the query flag: the netlify redirect that appends
-// ?partner=1 is force=false, so a direct hit or a bookmark can arrive
-// without it — and then .partner-mode never applied, which left the navy
-// background and the orbs off on jrcpartner.hlsr.app.
+// ?partner=1 is force=false, so a direct hit or a bookmark can arrive without
+// it, and then .partner-mode never applied — which is why the navy background
+// and the orbs were missing on jrcpartner.hlsr.app.
 if(window.location.search.indexOf('partner=1') >= 0 ||
    window.location.hostname === 'jrcpartner.hlsr.app'){
   document.documentElement.classList.add('partner-mode');
@@ -28,14 +28,11 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
   <script>
     // Apply saved theme before first paint to avoid flash
     (function(){
-      // jrcpartner.hlsr.app is a public-facing form for outside committee
-      // chairmen — it always opens in light mode regardless of any saved
-      // preference. Checks the hostname as well as the query flag, because
-      // the netlify redirect that appends ?partner=1 is force=false.
+      // jrcpartner.hlsr.app always opens light regardless of saved preference.
+      // Not written back to localStorage, so a JRC user's own dark-mode
+      // preference survives a trip through the partner portal.
       var isPartner = window.location.search.indexOf('partner=1') >= 0
                    || window.location.hostname === 'jrcpartner.hlsr.app';
-      // Deliberately not written back to localStorage, so a JRC user's own
-      // dark-mode preference survives a trip through the partner portal.
       var t = isPartner ? 'light' : (localStorage.getItem('jrc_theme') || 'dark');
       document.documentElement.setAttribute('data-theme', t);
     })();
@@ -197,21 +194,21 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
 <div class="app" id="main-app" style="display:none">
 <!-- Partner orb background (shown only in partner mode) -->
 <div id="partner-orbs" style="display:none;position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden">
-  <div class="orb" style="width:12px;height:12px;left:27%;bottom:-20px;animation-duration:11.4s;animation-delay:-8.4s;opacity:0.59"></div>
-  <div class="orb" style="width:11px;height:11px;left:77%;bottom:-20px;animation-duration:7.5s;animation-delay:-10.4s;opacity:0.74"></div>
-  <div class="orb" style="width:6px;height:6px;left:91%;bottom:-20px;animation-duration:8.8s;animation-delay:-3.3s;opacity:0.5"></div>
-  <div class="orb" style="width:9px;height:9px;left:15%;bottom:-20px;animation-duration:5.8s;animation-delay:-1.2s;opacity:0.78"></div>
-  <div class="orb" style="width:13px;height:13px;left:35%;bottom:-20px;animation-duration:12.3s;animation-delay:-8.8s;opacity:0.64"></div>
-  <div class="orb" style="width:10px;height:10px;left:12%;bottom:-20px;animation-duration:10.0s;animation-delay:-10.0s;opacity:0.68"></div>
-  <div class="orb" style="width:9px;height:9px;left:75%;bottom:-20px;animation-duration:6.7s;animation-delay:-0.8s;opacity:0.7"></div>
-  <div class="orb" style="width:8px;height:8px;left:12%;bottom:-20px;animation-duration:12.7s;animation-delay:-10.4s;opacity:0.57"></div>
-  <div class="orb" style="width:11px;height:11px;left:83%;bottom:-20px;animation-duration:12.5s;animation-delay:-2.0s;opacity:0.56"></div>
-  <div class="orb" style="width:14px;height:14px;left:36%;bottom:-20px;animation-duration:11.3s;animation-delay:-8.2s;opacity:0.43"></div>
-  <div class="orb" style="width:14px;height:14px;left:23%;bottom:-20px;animation-duration:9.8s;animation-delay:-2.9s;opacity:0.61"></div>
-  <div class="orb" style="width:8px;height:8px;left:83%;bottom:-20px;animation-duration:11.2s;animation-delay:-2.6s;opacity:0.55"></div>
-  <div class="orb" style="width:4px;height:4px;left:31%;bottom:-20px;animation-duration:12.4s;animation-delay:-9.7s;opacity:0.58"></div>
-  <div class="orb" style="width:5px;height:5px;left:29%;bottom:-20px;animation-duration:13.2s;animation-delay:-6.8s;opacity:0.72"></div>
-  <div class="orb" style="width:7px;height:7px;left:85%;bottom:-20px;animation-duration:9.5s;animation-delay:-10.6s;opacity:0.69"></div>
+  <div class="orb" style="width:31px;height:31px;left:27%;bottom:-20px;animation-duration:11.4s;animation-delay:-8.4s;opacity:0.73"></div>
+  <div class="orb" style="width:29px;height:29px;left:77%;bottom:-20px;animation-duration:7.5s;animation-delay:-10.4s;opacity:0.88"></div>
+  <div class="orb" style="width:16px;height:16px;left:91%;bottom:-20px;animation-duration:8.8s;animation-delay:-3.3s;opacity:0.64"></div>
+  <div class="orb" style="width:23px;height:23px;left:15%;bottom:-20px;animation-duration:5.8s;animation-delay:-1.2s;opacity:0.92"></div>
+  <div class="orb" style="width:34px;height:34px;left:35%;bottom:-20px;animation-duration:12.3s;animation-delay:-8.8s;opacity:0.78"></div>
+  <div class="orb" style="width:26px;height:26px;left:12%;bottom:-20px;animation-duration:10.0s;animation-delay:-10.0s;opacity:0.82"></div>
+  <div class="orb" style="width:23px;height:23px;left:75%;bottom:-20px;animation-duration:6.7s;animation-delay:-0.8s;opacity:0.84"></div>
+  <div class="orb" style="width:21px;height:21px;left:12%;bottom:-20px;animation-duration:12.7s;animation-delay:-10.4s;opacity:0.71"></div>
+  <div class="orb" style="width:29px;height:29px;left:83%;bottom:-20px;animation-duration:12.5s;animation-delay:-2.0s;opacity:0.70"></div>
+  <div class="orb" style="width:36px;height:36px;left:36%;bottom:-20px;animation-duration:11.3s;animation-delay:-8.2s;opacity:0.57"></div>
+  <div class="orb" style="width:36px;height:36px;left:23%;bottom:-20px;animation-duration:9.8s;animation-delay:-2.9s;opacity:0.75"></div>
+  <div class="orb" style="width:21px;height:21px;left:83%;bottom:-20px;animation-duration:11.2s;animation-delay:-2.6s;opacity:0.69"></div>
+  <div class="orb" style="width:10px;height:10px;left:31%;bottom:-20px;animation-duration:12.4s;animation-delay:-9.7s;opacity:0.72"></div>
+  <div class="orb" style="width:13px;height:13px;left:29%;bottom:-20px;animation-duration:13.2s;animation-delay:-6.8s;opacity:0.86"></div>
+  <div class="orb" style="width:18px;height:18px;left:85%;bottom:-20px;animation-duration:9.5s;animation-delay:-10.6s;opacity:0.83"></div>
 </div>
 
 <!-- HEADER -->
