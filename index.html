@@ -7,7 +7,12 @@
 <title>JRC Assignment System</title>
 <script>
 // Run immediately before page renders to prevent flash
-if(window.location.search.indexOf('partner=1') >= 0){
+// Hostname as well as the query flag: the netlify redirect that appends
+// ?partner=1 is force=false, so a direct hit or a bookmark can arrive
+// without it — and then .partner-mode never applied, which left the navy
+// background and the orbs off on jrcpartner.hlsr.app.
+if(window.location.search.indexOf('partner=1') >= 0 ||
+   window.location.hostname === 'jrcpartner.hlsr.app'){
   document.documentElement.classList.add('partner-mode');
 }
 </script>
