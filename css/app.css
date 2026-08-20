@@ -1445,16 +1445,29 @@ html[data-theme="light"] .panel [style*="background:#F5C6CB"]{
    colour keeps var() form so it IS caught and turned white, but the
    background serialises to rgb() and is NOT caught, so it stays white.
    White on white: the button renders as a blank rectangle in dark mode. */
-.panel [style*="rgb(255, 255, 255)"],
-.panel [style*="rgb(250, 250, 250)"],
-.panel [style*="rgb(248, 249, 250)"],
-.panel [style*="rgb(232, 238, 245)"]{
+/* NOTE: these must say "background: rgb(...)", never a bare "rgb(...)".
+   A bare match also catches color: rgb(255, 255, 255), which setReqType()
+   writes onto the Showtime button — and then the light-mode revert below
+   wiped that button's navy background, leaving white text on the browser's
+   default grey. Same substring collision as border-color vs color. */
+.panel [style*="background: rgb(255, 255, 255)"],
+.panel [style*="background:rgb(255, 255, 255)"],
+.panel [style*="background: rgb(250, 250, 250)"],
+.panel [style*="background:rgb(250, 250, 250)"],
+.panel [style*="background: rgb(248, 249, 250)"],
+.panel [style*="background:rgb(248, 249, 250)"],
+.panel [style*="background: rgb(232, 238, 245)"],
+.panel [style*="background:rgb(232, 238, 245)"]{
   background:rgba(255,255,255,.05) !important;
 }
-html[data-theme="light"] .panel [style*="rgb(255, 255, 255)"],
-html[data-theme="light"] .panel [style*="rgb(250, 250, 250)"],
-html[data-theme="light"] .panel [style*="rgb(248, 249, 250)"],
-html[data-theme="light"] .panel [style*="rgb(232, 238, 245)"]{
+html[data-theme="light"] .panel [style*="background: rgb(255, 255, 255)"],
+html[data-theme="light"] .panel [style*="background:rgb(255, 255, 255)"],
+html[data-theme="light"] .panel [style*="background: rgb(250, 250, 250)"],
+html[data-theme="light"] .panel [style*="background:rgb(250, 250, 250)"],
+html[data-theme="light"] .panel [style*="background: rgb(248, 249, 250)"],
+html[data-theme="light"] .panel [style*="background:rgb(248, 249, 250)"],
+html[data-theme="light"] .panel [style*="background: rgb(232, 238, 245)"],
+html[data-theme="light"] .panel [style*="background:rgb(232, 238, 245)"]{
   background:revert !important;
 }
 
@@ -1610,3 +1623,35 @@ html[data-theme="light"] .panel [style*="background:var(--white)"]{
 @supports not ((backdrop-filter:blur(1px)) or (-webkit-backdrop-filter:blur(1px))){
   .partner-mode #panel-reqform .card{ background:rgba(255,255,255,.94) !important; }
 }
+
+
+/* ── Showtime / Pre-Show toggle: pin both states ──────────────────────────
+   setReqType() rewrites these through the DOM API, so their inline styles
+   serialise to rgb() form and slip past hex-based selectors. Pinning both
+   states here means neither can end up with unreadable ink. */
+.partner-mode #rf-btn-showtime,
+.partner-mode #rf-btn-preshow,
+#panel-reqform #rf-btn-showtime,
+#panel-reqform #rf-btn-preshow{
+  color:var(--navy) !important;
+  background:rgba(255,255,255,.92) !important;
+  border:2px solid var(--gray-200) !important;
+}
+.partner-mode #rf-btn-showtime[style*="var(--navy)"],
+#panel-reqform #rf-btn-showtime[style*="var(--navy)"],
+.partner-mode #rf-btn-preshow[style*="var(--navy)"],
+#panel-reqform #rf-btn-preshow[style*="var(--navy)"]{
+  background:var(--orange) !important;
+  border-color:var(--orange) !important;
+  color:var(--navy) !important;
+}
+.partner-mode #rf-btn-showtime *,
+.partner-mode #rf-btn-preshow *,
+#panel-reqform #rf-btn-showtime *,
+#panel-reqform #rf-btn-preshow *{ color:inherit !important; opacity:1 !important; }
+
+/* Bigger, softer orbs on the partner page. The `rise` keyframes animate
+   transform, so a CSS scale() here would be overridden — the sizes are
+   scaled in the markup instead. This only widens the blur so the larger
+   dots read as glows rather than hard circles. */
+#partner-orbs .orb{ filter:blur(6px); }
