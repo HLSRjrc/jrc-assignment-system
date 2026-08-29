@@ -133,7 +133,7 @@ function _doSave(){
       fetch('/.netlify/functions/state', {
         method: 'POST',
         headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
-        body: JSON.stringify({committeeRequests: chunk, batchMode: start > 0})
+        body: JSON.stringify({committeeRequests: chunk, batchMode: true})
       }).then(function(r){
         if(r.ok && start + CREQ_CHUNK < committeeRequests.length){
           _saveReqChunk(start + CREQ_CHUNK);
@@ -396,7 +396,7 @@ var headerClockTimer = null;
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
   var isTV = document.documentElement.classList.contains('tv-mode');
-  var interval = 10000; // 10s for all modes
+  var interval = isTV ? 10000 : 60000; // TV: 10s for live board; normal: 60s to spare Neon
   pollTimer = setInterval(function(){
     if(!document.hidden) pollForUpdates();
   }, interval);
@@ -800,7 +800,7 @@ function exportHoursCSV(){
         j.id, j.name, j.title||'', j.ageout?'Yes':'No',
         ds, '', '', '', '', '',
         NOTE_LABELS[e.type]||e.type||'Note',
-        (e.by?'['+e.by+'] ':''+(e.text||''))
+        (e.by?'['+e.by+'] ':'')+( e.text||'')
       ]);
     });
 
