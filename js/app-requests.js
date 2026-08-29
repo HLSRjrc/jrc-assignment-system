@@ -229,6 +229,34 @@ function submitRequest(){
     msg.scrollIntoView({behavior:'smooth',block:'nearest'});
     return;
   }
+
+  // Minimum length checks — catch single-character entries that pass the empty check
+  if(name.length < 2){
+    msg.innerHTML = '<div class="alert alert-danger">Committee name must be at least 2 characters.</div>';
+    document.getElementById('rf-name').focus();
+    return;
+  }
+  if(chair.length < 2){
+    msg.innerHTML = '<div class="alert alert-danger">Chairman name must be at least 2 characters.</div>';
+    document.getElementById('rf-chair').focus();
+    return;
+  }
+  if(liaison.length < 2){
+    msg.innerHTML = '<div class="alert alert-danger">Day of contact name must be at least 2 characters.</div>';
+    document.getElementById('rf-liaison').focus();
+    return;
+  }
+  if(location.length < 5){
+    msg.innerHTML = '<div class="alert alert-danger">Location must be at least 5 characters — please describe where juniors should report.</div>';
+    document.getElementById('rf-location').focus();
+    return;
+  }
+  if(duties.length < 10){
+    msg.innerHTML = '<div class="alert alert-danger">Please describe what juniors will be doing (at least 10 characters).</div>';
+    document.getElementById('rf-duties').focus();
+    return;
+  }
+
   var cpDigits = chairPhone.replace(/\D/g,'');
   var lpDigits = liaisonPhone.replace(/\D/g,'');
   if(cpDigits.length !== 10){
