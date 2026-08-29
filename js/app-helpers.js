@@ -254,6 +254,8 @@ function kLookup(){
   }
   if(!jr){
     document.getElementById('k-msg').textContent = 'Member ID not found. Please see a Shift Officer for help.';
+    var _kid = document.getElementById('kid');
+    if(_kid){ _kid.value = ''; _kid.focus(); } // clear bad entry so next junior doesn't have to
     return;
   }
   // Already checked in and NOT clocked out → show clock-out screen
