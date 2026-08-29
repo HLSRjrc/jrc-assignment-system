@@ -204,6 +204,7 @@ function undoSent(slotId){
 
 
 function getJuniorStatus(jr){
+  if(!jr) return null; // defensive — matches the null guard on the canonical shift helpers
   // clockedOut ALWAYS takes precedence regardless of checkedIn flag
   if(clockedOut && (clockedOut[jr.id] || clockedOut[String(jr.id)])) return 'checked-out';
   if(!jr.checkedIn) return null;
