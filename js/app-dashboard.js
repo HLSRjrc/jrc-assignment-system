@@ -750,7 +750,7 @@ function pickSlot(jid, slotId){
 
     // If slot is full, check if we can bump a regular junior (only if slot not sent)
     if(sl.assigned.length >= sl.capacity){
-      if(sl.sent) return; // locked — slot already sent out
+      if(onShiftSlots.has(String(sl.id))) return; // locked — slot already sent out (sl.sent was always undefined; onShiftSlots is authoritative)
       // Find a regular (non-age-out) junior in this slot who is NOT locked
       var bumpable = sl.assigned.map(function(id){
         return juniors.find(function(j){ return j.id === id; });
@@ -1871,10 +1871,13 @@ function clearAllSlots(){
     if(!confirm('Some slots already have juniors assigned. Clear everything?')) return;
   }
   activeSlots = [];
+  onShiftJuniors = new Set(); // clear sent-out tracking so getJuniorStatus is consistent
+  onShiftSlots   = new Set(); // same — slot.sent was always undefined; this is authoritative
   // Also clear assignments on juniors
   juniors.forEach(function(j){ j.assignment = null; j.prevLast = null; });
   document.getElementById('bulk-result').textContent = 'All slots cleared.';
-  saveState();
+  _lastSavedHash = ''; // force save even if hash didn't change
+  saveStateNow();      // immediate — critical state change
   renderSetup();
 }
 
