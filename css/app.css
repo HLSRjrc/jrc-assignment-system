@@ -1655,3 +1655,178 @@ html[data-theme="light"] .panel [style*="background:var(--white)"]{
    scaled in the markup instead. This only widens the blur so the larger
    dots read as glows rather than hard circles. */
 #partner-orbs .orb{ filter:blur(6px); }
+
+/* ================================================================
+   MODAL DARK MODE — #9
+   note-log-modal and member-report-modal are built with hardcoded
+   light-mode inline styles. These rules override the outer container
+   and inner surfaces so they match the dark design system.
+   Light-mode restores follow each block.
+   ================================================================ */
+
+/* ── Note Log Modal ──────────────────────────────────────────── */
+#note-log-modal > div {
+  background: #122445 !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6) !important;
+}
+/* Outer log container (scrollable entries) */
+#note-log-modal > div > div:nth-child(2) {
+  background: #122445 !important;
+}
+/* Entry cards: background:#F8FAFC → dark surface */
+#note-log-modal [style*="background:#F8FAFC"],
+#note-log-modal [style*="background:#F8FAFC"] {
+  background: rgba(255,255,255,.06) !important;
+  border-left-color: inherit;
+}
+/* "No entries yet" muted text */
+#note-log-modal [style*="color:#aaa"] {
+  color: rgba(255,255,255,.4) !important;
+}
+/* Author / date timestamp text */
+#note-log-modal [style*="color:#8899AA"] {
+  color: rgba(255,255,255,.45) !important;
+}
+/* Entry body text */
+#note-log-modal [style*="color:#334455"] {
+  color: rgba(255,255,255,.88) !important;
+}
+/* Bottom form strip */
+#note-log-modal [style*="border-top:1px solid #eee"],
+#note-log-modal [style*="border-top: 1px solid #eee"] {
+  background: rgba(0,0,0,.3) !important;
+  border-top-color: rgba(255,255,255,.1) !important;
+}
+/* Label text inside form strip */
+#note-log-modal [style*="color:#667788"] {
+  color: rgba(255,255,255,.5) !important;
+}
+/* Link inside form strip */
+#note-log-modal a[style*="color:var(--navy)"] {
+  color: #93C5FD !important;
+}
+
+/* Light mode: restore */
+html[data-theme="light"] #note-log-modal > div { background: #fff !important; }
+html[data-theme="light"] #note-log-modal > div > div:nth-child(2) { background: #fff !important; }
+html[data-theme="light"] #note-log-modal [style*="background:#F8FAFC"] { background: #F8FAFC !important; }
+html[data-theme="light"] #note-log-modal [style*="color:#aaa"] { color: #aaa !important; }
+html[data-theme="light"] #note-log-modal [style*="color:#8899AA"] { color: #8899AA !important; }
+html[data-theme="light"] #note-log-modal [style*="color:#334455"] { color: #334455 !important; }
+html[data-theme="light"] #note-log-modal [style*="border-top:1px solid #eee"] { background: #F8FAFC !important; border-top-color: #eee !important; }
+html[data-theme="light"] #note-log-modal [style*="color:#667788"] { color: #667788 !important; }
+
+/* ── Member Report Picker Modal ──────────────────────────────── */
+#member-report-modal > div {
+  background: #122445 !important;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6) !important;
+}
+/* Inner body (padding:20px) */
+#member-report-modal [style*="padding:20px"] {
+  background: #122445 !important;
+}
+/* "Select member:" label */
+#member-report-modal [style*="color:var(--navy)"] {
+  color: rgba(255,255,255,.9) !important;
+}
+/* Label text */
+#member-report-modal label[style*="font-size:13px"] {
+  color: rgba(255,255,255,.85) !important;
+}
+
+/* Light mode: restore */
+html[data-theme="light"] #member-report-modal > div { background: #fff !important; }
+html[data-theme="light"] #member-report-modal [style*="padding:20px"] { background: #fff !important; }
+html[data-theme="light"] #member-report-modal [style*="color:var(--navy)"] { color: var(--navy) !important; }
+html[data-theme="light"] #member-report-modal label[style*="font-size:13px"] { color: var(--gray-700) !important; }
+
+/* ================================================================
+   CLASS-BASED DARK MODE GAPS — #10
+   These CSS classes use light-mode values (var(--white), var(--navy),
+   var(--gray-*)) with no dark-mode override. The [style*=] map in
+   app.css only catches inline styles; class-based rules need their
+   own dark-mode selectors.
+   ================================================================ */
+
+/* ── Shift Preview (night-before planner) ────────────────────── */
+.shift-preview {
+  background: rgba(0,30,60,.6) !important;
+  border-color: rgba(255,255,255,.1) !important;
+}
+.shift-preview-header {
+  border-bottom-color: rgba(255,255,255,.08) !important;
+}
+.shift-preview-title { color: rgba(255,255,255,.9) !important; }
+.shift-preview-count { color: rgba(255,255,255,.45) !important; }
+.shift-block { border-bottom-color: rgba(255,255,255,.06) !important; }
+.shift-block-header {
+  background: rgba(0,0,0,.25) !important;
+  border-bottom-color: rgba(255,255,255,.06) !important;
+}
+.shift-block-title { color: rgba(255,255,255,.8) !important; }
+.shift-block-meta  { color: rgba(255,255,255,.4) !important; }
+.preview-row { border-bottom-color: rgba(255,255,255,.04) !important; }
+.preview-row:hover { background: rgba(255,255,255,.04) !important; }
+.preview-row.added { background: rgba(34,197,94,.07) !important; }
+.preview-name { color: rgba(255,255,255,.88) !important; }
+.btn-add-one { border-color: rgba(255,255,255,.2) !important; color: rgba(255,255,255,.7) !important; }
+.btn-add-one.added { border-color: var(--green) !important; color: #86EFAC !important; background: rgba(34,197,94,.08) !important; }
+
+/* Light mode: restore */
+html[data-theme="light"] .shift-preview { background: var(--white) !important; border-color: var(--gray-200) !important; }
+html[data-theme="light"] .shift-preview-header { border-bottom-color: var(--gray-200) !important; }
+html[data-theme="light"] .shift-preview-title { color: var(--navy) !important; }
+html[data-theme="light"] .shift-preview-count { color: var(--gray-400) !important; }
+html[data-theme="light"] .shift-block { border-bottom-color: var(--gray-100) !important; }
+html[data-theme="light"] .shift-block-header { background: var(--gray-50) !important; border-bottom-color: var(--gray-100) !important; }
+html[data-theme="light"] .shift-block-title { color: var(--navy) !important; }
+html[data-theme="light"] .shift-block-meta  { color: var(--gray-400) !important; }
+html[data-theme="light"] .preview-row { border-bottom-color: var(--gray-50) !important; }
+html[data-theme="light"] .preview-row:hover { background: var(--gray-50) !important; }
+html[data-theme="light"] .preview-row.added { background: #F0FAF0 !important; }
+html[data-theme="light"] .preview-name { color: var(--navy) !important; }
+html[data-theme="light"] .btn-add-one { border-color: var(--navy) !important; color: var(--navy) !important; }
+html[data-theme="light"] .btn-add-one.added { border-color: var(--green) !important; color: #155724 !important; background: #F0FAF0 !important; }
+
+/* ── Notes item: locked state ────────────────────────────────── */
+.notes-item.locked {
+  border-color: var(--green) !important;
+  background: rgba(34,197,94,.08) !important;
+}
+.locked-tag {
+  color: #86EFAC !important;
+  background: rgba(34,197,94,.12) !important;
+  border-color: rgba(34,197,94,.3) !important;
+}
+
+/* Light mode: restore */
+html[data-theme="light"] .notes-item.locked { background: #F0FAF0 !important; }
+html[data-theme="light"] .locked-tag { color: #155724 !important; background: #D4EDDA !important; border-color: #97C459 !important; }
+
+/* ── Lock / Dismiss action buttons ───────────────────────────── */
+.btn-lock {
+  background: rgba(34,197,94,.12) !important;
+  color: #86EFAC !important;
+  border-color: rgba(34,197,94,.3) !important;
+}
+.btn-lock:hover { background: rgba(34,197,94,.2) !important; }
+.btn-dismiss {
+  background: rgba(239,68,68,.1) !important;
+  color: #FCA5A5 !important;
+  border-color: rgba(239,68,68,.25) !important;
+}
+.btn-dismiss:hover { background: rgba(239,68,68,.18) !important; }
+
+/* Light mode: restore */
+html[data-theme="light"] .btn-lock { background: #D4EDDA !important; color: #155724 !important; border-color: #97C459 !important; }
+html[data-theme="light"] .btn-lock:hover { background: #C3E6CB !important; }
+html[data-theme="light"] .btn-dismiss { background: #F8D7DA !important; color: var(--red) !important; border-color: #F5C6CB !important; }
+html[data-theme="light"] .btn-dismiss:hover { background: #F5C6CB !important; }
+
+/* ── Request name dropdown ───────────────────────────────────── */
+.req-name-option { color: rgba(255,255,255,.8) !important; }
+.req-name-option:hover { background: rgba(255,255,255,.06) !important; }
+
+/* Light mode: restore */
+html[data-theme="light"] .req-name-option { color: var(--gray-700) !important; }
+html[data-theme="light"] .req-name-option:hover { background: var(--gray-50) !important; }
