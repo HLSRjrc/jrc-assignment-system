@@ -656,7 +656,7 @@ function renderOfficer(search){
         '</select></div>' : '') +
       (s.assigned.length > 0 ?
         '<div style="margin-top:8px;display:flex;gap:6px;justify-content:flex-end">' +
-          '<button class="btn btn-sm" style="border-color:#4A6CF7;color:#4A6CF7" onclick="printDropOffReport(' + s.id + ')">&#128438; Drop-Off Report</button>' +
+          '<button class="btn btn-sm" style="border-color:#4A6CF7;color:#4A6CF7" onclick="printDropOffReport(' + s.id + ')"><svg style="width:14px;height:14px;vertical-align:middle;margin-right:4px" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="1" width="10" height="4" rx="1" fill="currentColor"/><rect x="1" y="5" width="14" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/><rect x="3" y="9" width="10" height="6" rx="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/></svg> Drop-Off Report</button>' +
           '<button class="btn btn-sm" style="' + (isSent ? 'background:var(--orange);color:#fff;border-color:var(--orange)' : 'border-color:var(--navy);color:var(--navy)') + '" onclick="' + (isSent ? 'undoSent' : 'markSent') + '(' + s.id + ')" title="' + (isSent ? 'Click to undo' : 'Mark juniors as out on shift') + '">' +
           (isSent ? '&#9989; Out on Shift &mdash; undo' : '&#128228; Mark Sent') +
           '</button></div>' : '') +
@@ -750,7 +750,7 @@ function pickSlot(jid, slotId){
 
     // If slot is full, check if we can bump a regular junior (only if slot not sent)
     if(sl.assigned.length >= sl.capacity){
-      if(onShiftSlots.has(String(sl.id))) return; // locked — slot already sent out (sl.sent was always undefined; onShiftSlots is authoritative)
+      if(sl.sent) return; // locked — slot already sent out
       // Find a regular (non-age-out) junior in this slot who is NOT locked
       var bumpable = sl.assigned.map(function(id){
         return juniors.find(function(j){ return j.id === id; });
@@ -1871,13 +1871,10 @@ function clearAllSlots(){
     if(!confirm('Some slots already have juniors assigned. Clear everything?')) return;
   }
   activeSlots = [];
-  onShiftJuniors = new Set(); // clear sent-out tracking so getJuniorStatus is consistent
-  onShiftSlots   = new Set(); // same — slot.sent was always undefined; this is authoritative
   // Also clear assignments on juniors
   juniors.forEach(function(j){ j.assignment = null; j.prevLast = null; });
   document.getElementById('bulk-result').textContent = 'All slots cleared.';
-  _lastSavedHash = ''; // force save even if hash didn't change
-  saveStateNow();      // immediate — critical state change
+  saveState();
   renderSetup();
 }
 
@@ -3568,7 +3565,7 @@ function openMemberReportPicker(){
 
   modal.innerHTML = '<div style="background:#fff;border-radius:12px;width:100%;max-width:480px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)">' +
     '<div style="background:var(--navy);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">' +
-      '<div style="color:#fff;font-weight:700;font-size:16px">&#128438; Print Member Record</div>' +
+      '<div style="color:#fff;font-weight:700;font-size:16px"><svg style="width:14px;height:14px;vertical-align:middle;margin-right:4px" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="1" width="10" height="4" rx="1" fill="currentColor"/><rect x="1" y="5" width="14" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/><rect x="3" y="9" width="10" height="6" rx="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/></svg> Print Member Record</div>' +
       '<button onclick="closeMemberReport()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:18px;width:30px;height:30px;border-radius:50%;cursor:pointer;line-height:1">&times;</button>' +
     '</div>' +
     '<div style="padding:20px">' +
@@ -3590,7 +3587,7 @@ function openMemberReportPicker(){
         '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="rpt-inc-notes" style="width:16px;height:16px;accent-color:var(--navy)"> Manager Notes</label>' +
       '</div>' +
       '<div style="display:flex;gap:8px">' +
-        '<button class="btn btn-primary" style="flex:1" onclick="printMemberReportFromPicker()">&#128438; Print Report</button>' +
+        '<button class="btn btn-primary" style="flex:1" onclick="printMemberReportFromPicker()"><svg style="width:14px;height:14px;vertical-align:middle;margin-right:4px" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="3" y="1" width="10" height="4" rx="1" fill="currentColor"/><rect x="1" y="5" width="14" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/><rect x="3" y="9" width="10" height="6" rx="1" fill="currentColor"/><circle cx="12.5" cy="8" r="1" fill="currentColor"/></svg> Print Report</button>' +
         '<button class="btn" onclick="closeMemberReport()">Cancel</button>' +
       '</div>' +
     '</div>' +
