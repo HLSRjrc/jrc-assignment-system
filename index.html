@@ -249,7 +249,7 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
     <div id="k-entry">
       <div class="kiosk-title">Jr. Rodeo Check-In</div>
       <div class="kiosk-sub" id="k-shift-lbl">Enter your 7-digit member ID</div>
-      <input class="kiosk-input" id="kid" type="tel" maxlength="7" placeholder="0000000" onkeydown="if(event.key==='Enter')kLookup()">
+      <input class="kiosk-input" id="kid" type="tel" inputmode="numeric" maxlength="7" placeholder="0000000" autofocus onkeydown="if(event.key==='Enter')kLookup()">
       <button class="kiosk-btn btn-primary" onclick="kLookup()">Check In</button>
       <div id="k-msg" style="font-size:13px;color:var(--red);min-height:20px;margin-top:6px;font-weight:600"></div>
     </div>
@@ -927,9 +927,9 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input class="finput" id="hours-search" placeholder="Search name..." oninput="renderHours()" style="max-width:180px">
           <select class="finput" id="hours-sort" onchange="renderHours()" style="max-width:160px">
-            <option value="name">Sort by Name</option>
-            <option value="hours-desc">Most Hours First</option>
+            <option value="hours-desc" selected>Most Hours First</option>
             <option value="hours-asc">Least Hours First</option>
+            <option value="name">Sort by Name</option>
           </select>
           <button class="btn" onclick="exportHoursCSV()">&#11015; Export Excel</button>
         </div>
@@ -955,9 +955,9 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input class="finput" id="adult-hours-search" placeholder="Search name..." oninput="renderAdultHours()" style="max-width:180px">
           <select class="finput" id="adult-hours-sort" onchange="renderAdultHours()" style="max-width:160px">
-            <option value="name">Sort by Name</option>
-            <option value="hours-desc">Most Hours First</option>
+            <option value="hours-desc" selected>Most Hours First</option>
             <option value="hours-asc">Least Hours First</option>
+            <option value="name">Sort by Name</option>
           </select>
         </div>
       </div>
