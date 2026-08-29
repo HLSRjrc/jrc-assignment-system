@@ -133,7 +133,7 @@ function _doSave(){
       fetch('/.netlify/functions/state', {
         method: 'POST',
         headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
-        body: JSON.stringify({committeeRequests: chunk, batchMode: true})
+        body: JSON.stringify({committeeRequests: chunk, batchMode: start > 0})
       }).then(function(r){
         if(r.ok && start + CREQ_CHUNK < committeeRequests.length){
           _saveReqChunk(start + CREQ_CHUNK);
@@ -145,6 +145,7 @@ function _doSave(){
 }
 
 var _lastReqHash = '';
+var _lastEtag = ''; // ETag from last successful GET — sent as If-None-Match on polls
 
 var syncErrorShown = false;
 function showSyncError(msg){
@@ -182,7 +183,11 @@ function saveRosterToNeon(callback){
 function loadState(){
   if(!DB_AVAILABLE){ _loadFromLocalStorage(); return; }
   fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
-    .then(function(r){ return r.json(); })
+    .then(function(r){
+      var etag = r.headers.get('ETag') || r.headers.get('etag');
+      if(etag) _lastEtag = etag;
+      return r.json();
+    })
     .then(function(data){
       _applyState(data);
       // Neon is authoritative for sim time so every device agrees what time
@@ -396,7 +401,7 @@ var headerClockTimer = null;
 function startPolling(){
   if(pollTimer) clearInterval(pollTimer);
   var isTV = document.documentElement.classList.contains('tv-mode');
-  var interval = isTV ? 10000 : 60000; // TV: 10s for live board; normal: 60s to spare Neon
+  var interval = 10000; // 10s for all modes
   pollTimer = setInterval(function(){
     if(!document.hidden) pollForUpdates();
   }, interval);
@@ -425,10 +430,19 @@ function pollForUpdates(){
   // to blind this device to what other devices are doing. (Was 60s, which on
   // a kiosk that saves every check-in meant polls effectively never ran.)
   if(Date.now() - lastSaveTime < 8000) return;
-  fetch('/.netlify/functions/state',{headers:{'x-api-token':API_TOKEN}})
-    .then(function(r){ return r.json(); })
+  var _pollHeaders = {'x-api-token':API_TOKEN};
+  if(_lastEtag) _pollHeaders['If-None-Match'] = _lastEtag;
+  fetch('/.netlify/functions/state',{headers:_pollHeaders})
+    .then(function(r){
+      // 304 Not Modified — nothing changed, skip re-render
+      if(r.status === 304) return null;
+      var etag = r.headers.get('ETag') || r.headers.get('etag');
+      if(etag) _lastEtag = etag;
+      return r.json();
+    })
     .then(function(data){
-      if(!data || data.error) return;
+      if(!data) return; // 304 — no-op
+      if(data.error) return;
 
       // Preserve the officer's chosen shift TAB — that's a per-device UI
       // choice and must not be yanked around by another device.
@@ -800,7 +814,7 @@ function exportHoursCSV(){
         j.id, j.name, j.title||'', j.ageout?'Yes':'No',
         ds, '', '', '', '', '',
         NOTE_LABELS[e.type]||e.type||'Note',
-        (e.by?'['+e.by+'] ':'')+( e.text||'')
+        (e.by?'['+e.by+'] ':''+(e.text||''))
       ]);
     });
 
