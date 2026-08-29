@@ -249,7 +249,7 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
     <div id="k-entry">
       <div class="kiosk-title">Jr. Rodeo Check-In</div>
       <div class="kiosk-sub" id="k-shift-lbl">Enter your 7-digit member ID</div>
-      <input class="kiosk-input" id="kid" type="tel" inputmode="numeric" maxlength="7" placeholder="0000000" autofocus onkeydown="if(event.key==='Enter')kLookup()">
+      <input class="kiosk-input" id="kid" type="tel" maxlength="7" placeholder="0000000" onkeydown="if(event.key==='Enter')kLookup()">
       <button class="kiosk-btn btn-primary" onclick="kLookup()">Check In</button>
       <div id="k-msg" style="font-size:13px;color:var(--red);min-height:20px;margin-top:6px;font-weight:600"></div>
     </div>
@@ -797,15 +797,15 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
 
     <div class="section-lbl" style="margin-bottom:10px">Committee Information</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div style="grid-column:1/-1"><div class="form-lbl">Committee Name *</div><input class="finput" id="rf-name" placeholder="e.g. Mutton Bustin'"></div>
-      <div><div class="form-lbl">Committee Chairman Name *</div><input class="finput" id="rf-chair"></div>
-      <div><div class="form-lbl">Chairman Phone *</div><input class="finput" id="rf-chair-phone" type="tel" placeholder="xxx-xxx-xxxx" oninput="validatePhone(this)">
+      <div style="grid-column:1/-1"><div class="form-lbl">Committee Name *</div><input class="finput" id="rf-name" placeholder="e.g. Mutton Bustin'" autocomplete="organization"></div>
+      <div><div class="form-lbl">Committee Chairman Name *</div><input class="finput" id="rf-chair" type="text" autocomplete="name"></div>
+      <div><div class="form-lbl">Chairman Phone *</div><input class="finput" id="rf-chair-phone" type="tel" placeholder="xxx-xxx-xxxx" autocomplete="tel" oninput="validatePhone(this)">
       <div class="phone-err" id="rf-chair-phone-err">Phone number must be 10 digits</div></div>
-      <div style="grid-column:1/-1"><div class="form-lbl">Chairman Email *</div><input class="finput" id="rf-chair-email" type="email"></div>
-      <div><div class="form-lbl">Day of Contact Name *</div><input class="finput" id="rf-liaison"></div>
-      <div><div class="form-lbl">Liaison Phone *</div><input class="finput" id="rf-liaison-phone" type="tel" placeholder="xxx-xxx-xxxx" oninput="validatePhone(this)">
+      <div style="grid-column:1/-1"><div class="form-lbl">Chairman Email *</div><input class="finput" id="rf-chair-email" type="email" autocomplete="email"></div>
+      <div><div class="form-lbl">Day of Contact Name *</div><input class="finput" id="rf-liaison" type="text" autocomplete="name"></div>
+      <div><div class="form-lbl">Liaison Phone *</div><input class="finput" id="rf-liaison-phone" type="tel" placeholder="xxx-xxx-xxxx" autocomplete="tel" oninput="validatePhone(this)">
       <div class="phone-err" id="rf-liaison-phone-err">Phone number must be 10 digits</div></div>
-      <div style="grid-column:1/-1"><div class="form-lbl">Day of Contact Email *</div><input class="finput" id="rf-liaison-email" type="email"></div>
+      <div style="grid-column:1/-1"><div class="form-lbl">Day of Contact Email *</div><input class="finput" id="rf-liaison-email" type="email" autocomplete="email"></div>
     </div>
 
     <div class="section-lbl" style="margin-bottom:10px">Event Details</div>
@@ -927,9 +927,9 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input class="finput" id="hours-search" placeholder="Search name..." oninput="renderHours()" style="max-width:180px">
           <select class="finput" id="hours-sort" onchange="renderHours()" style="max-width:160px">
-            <option value="hours-desc" selected>Most Hours First</option>
-            <option value="hours-asc">Least Hours First</option>
             <option value="name">Sort by Name</option>
+            <option value="hours-desc">Most Hours First</option>
+            <option value="hours-asc">Least Hours First</option>
           </select>
           <button class="btn" onclick="exportHoursCSV()">&#11015; Export Excel</button>
         </div>
@@ -955,9 +955,9 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input class="finput" id="adult-hours-search" placeholder="Search name..." oninput="renderAdultHours()" style="max-width:180px">
           <select class="finput" id="adult-hours-sort" onchange="renderAdultHours()" style="max-width:160px">
-            <option value="hours-desc" selected>Most Hours First</option>
-            <option value="hours-asc">Least Hours First</option>
             <option value="name">Sort by Name</option>
+            <option value="hours-desc">Most Hours First</option>
+            <option value="hours-asc">Least Hours First</option>
           </select>
         </div>
       </div>
