@@ -133,6 +133,26 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+// ── ETAG CACHE ───────────────────────────────────────────────────────────────
+// Stores the last ETag returned for the GET response so 304 can be issued
+// without re-reading Neon when nothing has changed.
+// Key: 'state' (single shared cache — all clients see the same DB)
+// Value: { etag: string, body: string }
+let _etagCache = null;
+
+function _hashBody(str) {
+  // FNV-1a 32-bit — fast, good distribution, no crypto needed for ETags
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h * 16777619) >>> 0;
+  }
+  return '"' + h.toString(16) + '"'; // quoted per RFC 7232
+}
+
+// Invalidate ETag whenever a POST or DELETE succeeds — next GET will recompute
+function _invalidateEtag() { _etagCache = null; }
+
 // ── HANDLER ──────────────────────────────────────────────────────────────────
 exports.handler = async (event) => {
   const origin = (event.headers && (event.headers.origin || event.headers.Origin)) || '';
@@ -177,6 +197,17 @@ exports.handler = async (event) => {
 
     // ── GET — load full state ─────────────────────────────────────────────────
     if (event.httpMethod === 'GET') {
+      const clientEtag = event.headers && (event.headers['if-none-match'] || event.headers['If-None-Match']);
+
+      // If cached ETag matches what client already has, skip Neon entirely
+      if (_etagCache && clientEtag && clientEtag === _etagCache.etag) {
+        return {
+          statusCode: 304,
+          headers: { ...headers, 'ETag': _etagCache.etag, 'Cache-Control': 'no-cache' },
+          body: ''
+        };
+      }
+
       const [stateRows, juniorRows, adultRows, slotRows, reqRows] = await Promise.all([
         sql`SELECT key, value FROM app_state`,
         sql`SELECT * FROM juniors ORDER BY name`,
@@ -193,17 +224,31 @@ exports.handler = async (event) => {
       // server-side. Clients never need to read it; they send it for verification.
       // Removed: config: { boardPin: process.env.BOARD_ACCESS_CODE || '' }
 
+      const responseBody = JSON.stringify({
+        state,
+        juniors: juniorRows,
+        adults: adultRows,
+        activeSlots: slotRows,
+        committeeRequests: reqRows
+        // config intentionally omitted — no sensitive env vars to clients
+      });
+
+      const etag = _hashBody(responseBody);
+      _etagCache = { etag, body: responseBody };
+
+      // If we just computed the same ETag the client already has, still 304
+      if (clientEtag && clientEtag === etag) {
+        return {
+          statusCode: 304,
+          headers: { ...headers, 'ETag': etag, 'Cache-Control': 'no-cache' },
+          body: ''
+        };
+      }
+
       return {
         statusCode: 200,
-        headers,
-        body: JSON.stringify({
-          state,
-          juniors: juniorRows,
-          adults: adultRows,
-          activeSlots: slotRows,
-          committeeRequests: reqRows
-          // config intentionally omitted — no sensitive env vars to clients
-        })
+        headers: { ...headers, 'ETag': etag, 'Cache-Control': 'no-cache' },
+        body: responseBody
       };
     }
 
@@ -384,6 +429,7 @@ exports.handler = async (event) => {
           sql`DELETE FROM committee_requests WHERE id = ${did}`
         ));
         if (!body.committeeRequests || !body.committeeRequests.length) {
+          _invalidateEtag();
           return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
         }
       }
@@ -413,6 +459,7 @@ exports.handler = async (event) => {
         }
       }
 
+      _invalidateEtag(); // new data written — next GET must recompute
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
 
@@ -426,6 +473,7 @@ exports.handler = async (event) => {
               check_in_shift='', shift_assignments='{}', planned_shifts='[]',
               updated_at=NOW()`
       ]);
+      _invalidateEtag(); // state cleared — next GET must recompute
       return { statusCode: 200, headers, body: JSON.stringify({ success: true }) };
     }
 
