@@ -1830,3 +1830,19 @@ html[data-theme="light"] .btn-dismiss:hover { background: #F5C6CB !important; }
 /* Light mode: restore */
 html[data-theme="light"] .req-name-option { color: var(--gray-700) !important; }
 html[data-theme="light"] .req-name-option:hover { background: var(--gray-50) !important; }
+
+/* ── BUG: age-out roster rows flash white-on-white on hover ───────────────
+   .tbl tr.ao-row:hover td sets background:var(--surface-2,#F8F9FA) — a
+   near-white fill inherited from the light-mode design. Roster text is white
+   in dark mode, so hovering an age-out row made the name unreadable. Regular
+   juniors were fine because they use the normal .tbl tr:hover td rule
+   (rgba(255,255,255,.03)).
+
+   Age-out rows now get the same subtle hover as every other row in dark mode,
+   and keep the pale highlight in light mode where it reads correctly. */
+.tbl tr.ao-row:hover td{
+  background:rgba(255,255,255,.05) !important;
+}
+html[data-theme="light"] .tbl tr.ao-row:hover td{
+  background:var(--gray-50) !important;
+}
