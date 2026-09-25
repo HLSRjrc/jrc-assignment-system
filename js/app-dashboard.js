@@ -708,7 +708,7 @@ function removeFromAoQueue(jid){
     var sl = activeSlots.find(function(s){ return s.name === jr.assignment && s.shift === currentShift; });
     if(sl) sl.assigned = sl.assigned.filter(function(id){ return id !== jr.id; });
   }
-  jr.checkedIn      = false;
+  jr.checkedIn      = false; jr.hasHat = false; // hat is per-shift: cleared whenever a junior is signed out
   jr.assignment     = null;
   jr.order          = 0;
   jr.checkInShift   = '';
@@ -1066,7 +1066,7 @@ function resetShift(){
       if(j.history.length > 0 && j.history[j.history.length - 1] === j.assignment) j.history.pop();
       j.assignment = null; j.prevLast = null;
     }
-    j.checkedIn      = false;
+    j.checkedIn      = false; j.hasHat = false; // hat is per-shift: cleared whenever a junior is signed out
     j.order          = 0;
     j.checkInShift   = '';
     j.plannedShifts  = [];
@@ -1109,7 +1109,7 @@ function clearStrandedCheckins(){
   }
   if(!confirm('Clear ' + stranded.length + ' stranded check-in' + (stranded.length !== 1 ? 's' : '') + ' from dates other than ' + currentDate + '?')) return;
   stranded.forEach(function(j){
-    j.checkedIn    = false;
+    j.checkedIn    = false; j.hasHat = false; // hat is per-shift: cleared whenever a junior is signed out
     j.assignment   = null;
     j.checkInShift = '';
     j.checkInDate  = '';
@@ -1599,7 +1599,7 @@ function quickAdultCheckIn(adultId){
 function adminClockOut(jid){
   var jr = juniors.find(function(j){ return j.id === jid; });
   if(!jr) return;
-  jr.checkedIn = false;
+  jr.checkedIn = false; jr.hasHat = false; // hat is per-shift: cleared whenever a junior is signed out
   clockedOut[jr.id] = true;
   if(!clockedOutShifts[jr.id]) clockedOutShifts[jr.id] = {};
   clockedOutShifts[jr.id][getJrActiveShift(jr)] = true;
@@ -3055,7 +3055,7 @@ function simClockOut(){
     var t = setTimeout(function(){
       if(!_simCORunning) return;
       clockedOut[jr.id] = true;
-      jr.checkedIn = false;
+      jr.checkedIn = false; jr.hasHat = false; // hat is per-shift: cleared whenever a junior is signed out
       jr.assignment = null;
       activeSlots.forEach(function(s){
         s.assigned = s.assigned.filter(function(id){ return String(id) !== String(jr.id); });
