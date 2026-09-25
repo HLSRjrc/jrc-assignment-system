@@ -360,6 +360,18 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
       <button class="kiosk-btn" onclick="kReset()">Done</button>
     </div>
 
+    <!-- OUTSIDE CHECK-IN HOURS SCREEN -->
+    <!-- kLookup() shows this when the time is outside every check-in window;
+         kReset() hides it. It was referenced by the JS but missing here, so the
+         kiosk crashed and went blank after an ID was entered outside the windows. -->
+    <div id="k-outside" style="display:none;padding:1rem 0">
+      <div class="check-icon" style="background:var(--orange);box-shadow:none;font-weight:800">!</div>
+      <div style="font-size:22px;font-weight:700;color:var(--navy);margin-bottom:6px">Check-in isn&apos;t open right now</div>
+      <div style="font-size:14px;color:#667788;margin-bottom:6px">Check-in is open 7:00&ndash;9:59am for the 8am shift, 11:00am&ndash;12:59pm for the 12pm shift, and 2:30&ndash;4:59pm for the 4pm shift.</div>
+      <div style="font-size:13px;color:#8899AA;margin-bottom:1.5rem">Please see a Shift Officer if you need help.</div>
+      <button class="kiosk-btn" onclick="kReset()">OK</button>
+    </div>
+
   </div>
 </div>
 
