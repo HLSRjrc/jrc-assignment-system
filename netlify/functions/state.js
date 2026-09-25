@@ -446,9 +446,8 @@ exports.handler = async (event) => {
           const err = validateRequest(r);
           if (err) return { statusCode: 400, headers, body: JSON.stringify({ error: err }) };
         }
-        if (!body.batchMode) {
-          await sql`DELETE FROM committee_requests`;
-        }
+        // Table-wipe path permanently disabled: all request writes are upserts.
+        // Requests can only be removed one at a time via the explicit deleteIds path.
         if (body.committeeRequests.length > 0) {
           await Promise.all(body.committeeRequests.map(r =>
             sql`INSERT INTO committee_requests (id, status, name, data, updated_at)
