@@ -121,7 +121,7 @@ function manualClockOut(jid, skipConfirm){
   clockedOutShifts[jid][jrShift] = true;
   onShiftJuniors.delete(jid);
   onShiftJuniors.delete(String(jid));
-  jr.checkedIn = false;
+  jr.checkedIn = false; jr.hasHat = false; // hat is per-shift: cleared whenever a junior is signed out
   // Do NOT wipe plannedShifts/checkInShift — an age-out signing out of their
   // 8am still has a 12pm and 4pm to come back for. Only clear once nothing
   // later remains.
