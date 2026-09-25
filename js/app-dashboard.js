@@ -1067,7 +1067,6 @@ function resetShift(){
       j.assignment = null; j.prevLast = null;
     }
     j.checkedIn      = false;
-    j.hasHat         = false; // clear hat on shift reset — hat status is per-day
     j.order          = 0;
     j.checkInShift   = '';
     j.plannedShifts  = [];
@@ -1601,7 +1600,6 @@ function adminClockOut(jid){
   var jr = juniors.find(function(j){ return j.id === jid; });
   if(!jr) return;
   jr.checkedIn = false;
-  jr.hasHat = false; // clear hat on clock-out — hat status is per-day, not persistent
   clockedOut[jr.id] = true;
   if(!clockedOutShifts[jr.id]) clockedOutShifts[jr.id] = {};
   clockedOutShifts[jr.id][getJrActiveShift(jr)] = true;
