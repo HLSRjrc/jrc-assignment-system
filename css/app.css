@@ -1846,3 +1846,95 @@ html[data-theme="light"] .req-name-option:hover { background: var(--gray-50) !im
 html[data-theme="light"] .tbl tr.ao-row:hover td{
   background:var(--gray-50) !important;
 }
+
+/* ── Age-out shift selection screen — dark mode ───────────────────────────
+   The three shift label rows use background:var(--navy-lt) and color:var(--navy)
+   which are light-mode values. In dark mode the background is near-white and
+   the text is dark navy — both unreadable against the dark kiosk surface.    */
+
+/* Heading: "Which shifts are you working today?" */
+.kao-heading { color: rgba(255,255,255,.92) !important; }
+
+/* Subtext below heading */
+.kao-subtext { color: rgba(255,255,255,.55) !important; }
+
+/* Shift option rows */
+.kao-shift-label {
+  background: rgba(0,46,93,.5) !important;
+  border-color: rgba(255,255,255,.2) !important;
+}
+/* Shift time text inside each row */
+.kao-shift-label [style*="color:var(--navy)"] {
+  color: rgba(255,255,255,.92) !important;
+}
+/* Subtext inside each row ("Morning shift" etc.) */
+.kao-shift-label [style*="color:#667788"] {
+  color: rgba(255,255,255,.5) !important;
+}
+/* Checked state — highlight the selected row */
+.kao-shift-label:has(input:checked) {
+  background: rgba(0,46,93,.85) !important;
+  border-color: var(--orange) !important;
+}
+
+/* Light mode: restore */
+html[data-theme="light"] .kao-heading { color: var(--navy) !important; }
+html[data-theme="light"] .kao-subtext { color: #667788 !important; }
+html[data-theme="light"] .kao-shift-label { background: var(--navy-lt) !important; border-color: var(--navy) !important; }
+html[data-theme="light"] .kao-shift-label [style*="color:var(--navy)"] { color: var(--navy) !important; }
+html[data-theme="light"] .kao-shift-label [style*="color:#667788"] { color: #667788 !important; }
+html[data-theme="light"] .kao-shift-label:has(input:checked) { background: var(--navy-lt) !important; border-color: var(--navy) !important; }
+
+/* ── Kiosk confirmation screen cards — dark mode ──────────────────────────
+   The "Are you wearing a cowboy hat?" and "Additional information" cards
+   use background:var(--navy-lt) with color:var(--navy) text — light-mode
+   values that render as white-on-white in dark mode.                       */
+
+/* Card backgrounds — force dark surface, override var(--navy-lt) inline style */
+.kc-card,
+.kc-card[style*="background:var(--navy-lt)"],
+.kc-card[style*="background: var(--navy-lt)"] {
+  background: rgba(255,255,255,.07) !important;
+  border-color: rgba(255,255,255,.18) !important;
+}
+/* Headings inside cards */
+.kc-card * {
+  color: rgba(255,255,255,.88) !important;
+}
+/* Muted subtext specifically */
+.kc-card [style*="color:#667788"],
+.kc-card [style*="font-size:13px"] {
+  color: rgba(255,255,255,.55) !important;
+}
+/* Textarea */
+.kc-card textarea {
+  background: rgba(255,255,255,.08) !important;
+  color: rgba(255,255,255,.88) !important;
+  border-color: rgba(255,255,255,.15) !important;
+}
+.kc-card textarea::placeholder {
+  color: rgba(255,255,255,.35) !important;
+}
+/* Checkbox — make it visible */
+.kc-card input[type="checkbox"] {
+  accent-color: var(--orange) !important;
+  width: 24px !important;
+  height: 24px !important;
+  outline: 2px solid rgba(255,255,255,.4);
+  outline-offset: 2px;
+}
+/* "Is this you?" subtext */
+.kc-subtext { color: rgba(255,255,255,.55) !important; }
+
+/* Light mode: restore */
+html[data-theme="light"] .kc-card,
+html[data-theme="light"] .kc-card[style*="background:var(--navy-lt)"] {
+  background: var(--navy-lt) !important;
+  border-color: var(--navy) !important;
+}
+html[data-theme="light"] .kc-card * { color: var(--navy) !important; }
+html[data-theme="light"] .kc-card [style*="color:#667788"] { color: #667788 !important; }
+html[data-theme="light"] .kc-card [style*="font-size:13px"] { color: #667788 !important; }
+html[data-theme="light"] .kc-card textarea { background: var(--white) !important; color: var(--gray-700) !important; border-color: var(--gray-200) !important; }
+html[data-theme="light"] .kc-card input[type="checkbox"] { outline: none; }
+html[data-theme="light"] .kc-subtext { color: #667788 !important; }
