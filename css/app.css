@@ -329,7 +329,7 @@ select.finput option{background:#1a2b45;color:#fff;}
 
 /* Names */
 .board-name{font-size:15px;padding:1px 2px;color:#fff;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.board-name.out{color:var(--orange);font-weight:700;line-height:1.15}
+.board-name.out{color:#fff;font-weight:700;line-height:1.15} /* names white; .board-name.late below turns them red */
 .board-name.pending{color:#F5A623;font-style:italic}
 .board-name.late{color:#FF6B6B;font-weight:700}
 .board-empty{font-size:12px;color:rgba(255,255,255,.3);font-style:italic;padding:2px 0}
@@ -347,7 +347,7 @@ select.finput option{background:#1a2b45;color:#fff;}
 .board-out-inner.cols5{column-count:5}
 .board-committee-group{break-inside:avoid;margin-bottom:3px}
 .board-committee-label{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--orange);margin-bottom:0;display:flex;align-items:center;gap:4px}
-.board-committee-label.late{color:#FF6B6B}
+/* .board-committee-label.late intentionally has no rule: committee labels stay orange when late, only names go red */
 .board-shift-divider{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#99BBDD;margin:4px 0 2px;padding-bottom:1px;border-bottom:1px solid rgba(255,255,255,.12);break-after:avoid}
 
 
