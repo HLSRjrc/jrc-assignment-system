@@ -260,8 +260,8 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div class="confirm-detail" id="kc-last"></div>
         <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap" id="kc-badges"></div>
       </div>
-      <div class="kc-subtext" style="font-size:13px;color:#667788;margin-bottom:14px">Is this you?</div>
-      <div class="kc-card" style="background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:16px;margin-bottom:12px;text-align:left">
+      <div style="font-size:13px;color:#667788;margin-bottom:14px">Is this you?</div>
+      <div style="background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:16px;margin-bottom:12px;text-align:left">
         <label style="display:flex;align-items:center;gap:14px;cursor:pointer">
           <input type="checkbox" id="k-hat" style="width:24px;height:24px;cursor:pointer;accent-color:var(--navy);flex-shrink:0">
           <div>
@@ -270,7 +270,7 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
           </div>
         </label>
       </div>
-      <div class="kc-card" style="background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:16px;margin-bottom:14px;text-align:left">
+      <div style="background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:16px;margin-bottom:14px;text-align:left">
         <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:8px">Additional information for the Shift Officer?</div>
         <textarea id="k-notes" rows="3" placeholder="e.g. I have a medical accommodation" style="width:100%;font-size:13px;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:6px;background:var(--white);color:var(--gray-700);resize:none;font-family:var(--font)"></textarea>
       </div>
@@ -306,8 +306,8 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div style="font-size:13px;opacity:.8;margin-bottom:4px">Age-Out Check-In</div>
         <div class="confirm-name" id="kao-name" style="color:#fff"></div>
       </div>
-      <div class="kao-heading" style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px">Which shifts are you working today?</div>
-      <div class="kao-subtext" style="font-size:13px;color:#667788;margin-bottom:16px">Select all that apply &mdash; the Shift Officer will assign you to a committee for each one.</div>
+      <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px" class="kao-heading">Which shifts are you working today?</div>
+      <div style="font-size:13px;color:#667788;margin-bottom:16px" class="kao-subtext">Select all that apply &mdash; the Shift Officer will assign you to a committee for each one.</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
         <label class="kao-shift-label" style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
           <input type="checkbox" id="kao-shift-8am" style="width:24px;height:24px;accent-color:var(--navy);flex-shrink:0">
