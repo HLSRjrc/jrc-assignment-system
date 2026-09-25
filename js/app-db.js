@@ -248,7 +248,7 @@ function _applyState(data){
         name:            row.name            || '',
         title:           row.title           || 'Committeeman',
         ageout:          row.ageout          || false,
-        hasHat:          row.has_hat         || false,
+        hasHat:          (row.has_hat && row.checked_in) || false, // hat only counts while checked in
         notes:           row.notes           || '',
         phone:           row.phone           || '',
         email:           row.email           || '',
