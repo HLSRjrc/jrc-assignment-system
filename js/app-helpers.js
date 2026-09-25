@@ -136,7 +136,7 @@ function applySimDate(){
   // If date changed, clear all day-specific session data
   if(d !== currentDate){
     juniors.forEach(function(j){
-      j.checkedIn       = false;
+      j.checkedIn       = false; j.hasHat = false; // hat is per-shift: cleared whenever a junior is signed out
       j.assignment      = null;
       j.order           = 0;
       j.checkInShift    = '';
@@ -365,7 +365,7 @@ function kClockOut(){
   // They stay on the dashboard card but disappear from status board
   onShiftJuniors.delete(pendingJr.id);
   onShiftJuniors.delete(String(pendingJr.id));
-  pendingJr.checkedIn = false;
+  pendingJr.checkedIn = false; pendingJr.hasHat = false; // hat is per-shift: cleared whenever a junior is signed out
   // Keep pendingJr.assignment so they stay in the slot card
   clockedOut[pendingJr.id] = true;
   dirtyJuniors.add(pendingJr.id);
@@ -387,6 +387,8 @@ function kReset(){
   function _style(id, val){ var el = document.getElementById(id); if(el) el.style.display = val; }
   _set('kid', 'value', '');
   _set('k-msg', 'textContent', '');
+  _set('k-hat', 'checked', false);   // next junior starts with the hat box unchecked
+  _set('k-notes', 'value', '');       // and an empty note box
   _set('k-shift-lbl', 'textContent', 'Enter your 7-digit member ID — ' + (SL[currentShift]||''));
   _style('k-entry', 'block');
   _style('k-confirm', 'none');
