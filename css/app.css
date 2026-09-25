@@ -1890,20 +1890,23 @@ html[data-theme="light"] .kao-shift-label:has(input:checked) { background: var(-
    use background:var(--navy-lt) with color:var(--navy) text — light-mode
    values that render as white-on-white in dark mode.                       */
 
-/* Card backgrounds */
-.kc-card {
-  background: rgba(0,46,93,.5) !important;
-  border-color: rgba(255,255,255,.2) !important;
+/* Card backgrounds — force dark surface, override var(--navy-lt) inline style */
+.kc-card,
+.kc-card[style*="background:var(--navy-lt)"],
+.kc-card[style*="background: var(--navy-lt)"] {
+  background: rgba(255,255,255,.07) !important;
+  border-color: rgba(255,255,255,.18) !important;
 }
-/* "Are you wearing a cowboy hat?" and "Additional information" headings */
-.kc-card [style*="color:var(--navy)"] {
-  color: rgba(255,255,255,.92) !important;
+/* Headings inside cards */
+.kc-card * {
+  color: rgba(255,255,255,.88) !important;
 }
-/* Subtext inside cards */
-.kc-card [style*="color:#667788"] {
-  color: rgba(255,255,255,.5) !important;
+/* Muted subtext specifically */
+.kc-card [style*="color:#667788"],
+.kc-card [style*="font-size:13px"] {
+  color: rgba(255,255,255,.55) !important;
 }
-/* Textarea inside Additional Info card */
+/* Textarea */
 .kc-card textarea {
   background: rgba(255,255,255,.08) !important;
   color: rgba(255,255,255,.88) !important;
@@ -1912,12 +1915,26 @@ html[data-theme="light"] .kao-shift-label:has(input:checked) { background: var(-
 .kc-card textarea::placeholder {
   color: rgba(255,255,255,.35) !important;
 }
-/* "Is this you?" subtext above the cards */
+/* Checkbox — make it visible */
+.kc-card input[type="checkbox"] {
+  accent-color: var(--orange) !important;
+  width: 24px !important;
+  height: 24px !important;
+  outline: 2px solid rgba(255,255,255,.4);
+  outline-offset: 2px;
+}
+/* "Is this you?" subtext */
 .kc-subtext { color: rgba(255,255,255,.55) !important; }
 
 /* Light mode: restore */
-html[data-theme="light"] .kc-card { background: var(--navy-lt) !important; border-color: var(--navy) !important; }
-html[data-theme="light"] .kc-card [style*="color:var(--navy)"] { color: var(--navy) !important; }
+html[data-theme="light"] .kc-card,
+html[data-theme="light"] .kc-card[style*="background:var(--navy-lt)"] {
+  background: var(--navy-lt) !important;
+  border-color: var(--navy) !important;
+}
+html[data-theme="light"] .kc-card * { color: var(--navy) !important; }
 html[data-theme="light"] .kc-card [style*="color:#667788"] { color: #667788 !important; }
+html[data-theme="light"] .kc-card [style*="font-size:13px"] { color: #667788 !important; }
 html[data-theme="light"] .kc-card textarea { background: var(--white) !important; color: var(--gray-700) !important; border-color: var(--gray-200) !important; }
+html[data-theme="light"] .kc-card input[type="checkbox"] { outline: none; }
 html[data-theme="light"] .kc-subtext { color: #667788 !important; }
