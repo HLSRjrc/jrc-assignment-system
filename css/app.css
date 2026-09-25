@@ -1846,3 +1846,49 @@ html[data-theme="light"] .req-name-option:hover { background: var(--gray-50) !im
 html[data-theme="light"] .tbl tr.ao-row:hover td{
   background:var(--gray-50) !important;
 }
+
+/* ── BUG: kiosk check-in boxes unreadable in dark mode ───────────────────
+   After a junior enters their member ID, the "Are you wearing a cowboy
+   hat?" box, the "Additional information for the Shift Officer?" box, and
+   the three shift choices on the age-out screen use
+       style="background:var(--navy-lt);border:1.5px solid var(--navy)"
+   --navy-lt is #E8EEF5 in both themes; nothing remaps it for dark mode.
+   Meanwhile the .panel rules above correctly turn their color:var(--navy)
+   and color:#667788 text white. Result: white text on a pale box (1.1:1).
+
+   Fix, scoped to the kiosk only: give those boxes the same translucent
+   surface the kiosk buttons use, a visible border, readable typed text in
+   the notes box, and an orange checkbox so a checked hat box is visible on
+   navy. Light mode is restored to its exact original values below. */
+#panel-kiosk [style*="background:var(--navy-lt)"]{
+  background:rgba(255,255,255,.06) !important;
+  border-color:rgba(255,255,255,.16) !important;
+}
+#panel-kiosk #k-notes{
+  background:#0E1C33 !important;   /* solid, not translucent: renders the same in every browser */
+  color:rgba(255,255,255,.9) !important;
+  border-color:rgba(255,255,255,.16) !important;
+}
+#panel-kiosk #k-notes::placeholder{
+  color:rgba(255,255,255,.5);
+}
+#panel-kiosk input[type="checkbox"]{
+  accent-color:var(--orange) !important;
+}
+
+/* Light mode: restore */
+html[data-theme="light"] #panel-kiosk [style*="background:var(--navy-lt)"]{
+  background:var(--navy-lt) !important;
+  border-color:var(--navy) !important;
+}
+html[data-theme="light"] #panel-kiosk #k-notes{
+  background:var(--white) !important;
+  color:var(--gray-700) !important;
+  border-color:var(--gray-200) !important;
+}
+html[data-theme="light"] #panel-kiosk #k-notes::placeholder{
+  color:revert;
+}
+html[data-theme="light"] #panel-kiosk input[type="checkbox"]{
+  accent-color:var(--navy) !important;
+}
