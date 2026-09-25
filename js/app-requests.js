@@ -319,6 +319,16 @@ function submitRequest(){
     }
   } } // end showtime; end preshow block
 
+  // Email format check — same rule the server enforces, so nothing is silently rejected
+  var EMAIL_RE = /^[^\s@]{1,64}@[^\s@]{1,255}\.[^\s@]{2,}$/;
+  var badEmail = [['rf-chair-email', chairEmail, 'Chairman'], ['rf-liaison-email', liaisonEmail, 'Day of Contact']]
+    .filter(function(e){ return e[1] && !EMAIL_RE.test(e[1]); });
+  if(badEmail.length){
+    badEmail.forEach(function(e){ var el = document.getElementById(e[0]); if(el){ el.style.borderColor = '#CC0000'; el.focus(); } });
+    msg.innerHTML = '<div class="alert alert-danger">Please check the ' + badEmail.map(function(e){ return e[2]; }).join(' and ') + ' email address &mdash; it should look like name@example.com.</div>';
+    return;
+  }
+
   var req = {
     id: Date.now(),
     submittedAt: new Date().toISOString(),
@@ -329,40 +339,45 @@ function submitRequest(){
     all20:all20, preshow:preshow, shifts:shifts,
     schedulingNotes: ''
   };
-  committeeRequests.unshift(req);
-
-  // Save to Neon immediately
-  var reqMsg = document.getElementById('rf-submit-msg');
+  // Save to Neon FIRST. Only show success and send emails once the save is confirmed.
+  var submitBtn = document.querySelector('#panel-reqform button[onclick="submitRequest()"]');
+  if(submitBtn){ submitBtn.disabled = true; }
+  msg.innerHTML = '<div class="alert alert-info">Submitting&hellip;</div>';
   fetch('/.netlify/functions/state', {
     method: 'POST',
     headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
     body: JSON.stringify({committeeRequests:[req], batchMode:true})
   }).then(function(r){
     if(!r.ok){
-      r.text().then(function(t){
-        console.error('[JRC] Request save HTTP error:', r.status, t);
-        if(reqMsg) reqMsg.innerHTML += '<div style="color:#CC0000;font-size:12px;margin-top:4px">Warning: save error ' + r.status + ' — ' + t.slice(0,80) + '</div>';
+      return r.text().then(function(t){
+        var why = t; try { why = JSON.parse(t).error || t; } catch(e){}
+        throw new Error(why || ('HTTP ' + r.status));
       });
-    } else {
-      console.log('[JRC] Request saved to Neon ok, id:', req.id);
     }
+    console.log('[JRC] Request saved to Neon ok, id:', req.id);
+    committeeRequests.unshift(req);
+    _submitRequestSucceeded(req, chairEmail, msg);
   }).catch(function(e){
-    console.warn('[JRC] Request save failed:', e.message);
-    if(reqMsg) reqMsg.innerHTML += '<div style="color:#CC0000;font-size:12px;margin-top:4px">Warning: could not connect to save request.</div>';
+    console.error('[JRC] Request NOT saved:', e.message);
+    if(submitBtn){ submitBtn.disabled = false; }
+    msg.innerHTML = '<div class="alert alert-danger"><strong>Your request was NOT submitted.</strong> ' +
+      String(e.message).replace(/</g,'&lt;') + '. Please fix this and try again. If it keeps happening, contact the JRC scheduling team.</div>';
   });
+}
 
-  // Send confirmation emails (fire-and-forget — don't block the success UX)
+function _submitRequestSucceeded(req, chairEmail, msg){
+  var submitBtn = document.querySelector('#panel-reqform button[onclick="submitRequest()"]');
+  if(submitBtn){ submitBtn.disabled = false; }
+
+  // Confirmation emails — sent only after the request is confirmed saved
   fetch('/.netlify/functions/send-email', {
     method: 'POST',
     headers: {'Content-Type':'application/json','x-api-token':API_TOKEN},
     body: JSON.stringify({request: req})
   }).then(function(r){
     return r.json().then(function(d){
-      if(!r.ok || !d.ok){
-        console.warn('[JRC] Email send issue:', d);
-      } else {
-        console.log('[JRC] Confirmation emails sent ok');
-      }
+      if(!r.ok || !d.ok){ console.warn('[JRC] Email send issue:', d); }
+      else { console.log('[JRC] Confirmation emails sent ok'); }
     });
   }).catch(function(e){
     console.warn('[JRC] Email send failed (non-blocking):', e.message);
