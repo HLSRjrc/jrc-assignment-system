@@ -59,7 +59,7 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
   <div class="orb" style="width:5px;height:5px;left:29%;bottom:-20px;animation-duration:13.2s;animation-delay:-6.8s;opacity:0.72"></div>
   <div class="orb" style="width:7px;height:7px;left:85%;bottom:-20px;animation-duration:9.5s;animation-delay:-10.6s;opacity:0.69"></div>
   <div class="login-card">
-    <img src="/assets/jrc.png" style="max-width:160px;width:100%;height:auto;display:block;margin:0 auto 20px" alt="JRC">
+    <img src="/assets/orange%20white.png" style="max-width:280px;width:100%;height:auto;display:block;margin:0 auto 20px" alt="Houston Livestock Show and Rodeo">
 
     <!-- Personal Login Form (shown first) -->
     <div id="personal-login">
@@ -249,7 +249,7 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
     <div id="k-entry">
       <div class="kiosk-title">Jr. Rodeo Check-In</div>
       <div class="kiosk-sub" id="k-shift-lbl">Enter your 7-digit member ID</div>
-      <input class="kiosk-input" id="kid" type="tel" inputmode="numeric" maxlength="7" placeholder="0000000" autofocus onkeydown="if(event.key==='Enter')kLookup()">
+      <input class="kiosk-input" id="kid" type="tel" maxlength="7" placeholder="0000000" onkeydown="if(event.key==='Enter')kLookup()">
       <button class="kiosk-btn btn-primary" onclick="kLookup()">Check In</button>
       <div id="k-msg" style="font-size:13px;color:var(--red);min-height:20px;margin-top:6px;font-weight:600"></div>
     </div>
@@ -260,8 +260,8 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div class="confirm-detail" id="kc-last"></div>
         <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap" id="kc-badges"></div>
       </div>
-      <div class="kc-subtext" style="font-size:13px;color:#667788;margin-bottom:14px">Is this you?</div>
-      <div class="kc-card" style="background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:16px;margin-bottom:12px;text-align:left">
+      <div style="font-size:13px;color:#667788;margin-bottom:14px">Is this you?</div>
+      <div style="background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:16px;margin-bottom:12px;text-align:left">
         <label style="display:flex;align-items:center;gap:14px;cursor:pointer">
           <input type="checkbox" id="k-hat" style="width:24px;height:24px;cursor:pointer;accent-color:var(--navy);flex-shrink:0">
           <div>
@@ -270,7 +270,7 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
           </div>
         </label>
       </div>
-      <div class="kc-card" style="background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:16px;margin-bottom:14px;text-align:left">
+      <div style="background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:16px;margin-bottom:14px;text-align:left">
         <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:8px">Additional information for the Shift Officer?</div>
         <textarea id="k-notes" rows="3" placeholder="e.g. I have a medical accommodation" style="width:100%;font-size:13px;padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:6px;background:var(--white);color:var(--gray-700);resize:none;font-family:var(--font)"></textarea>
       </div>
@@ -306,24 +306,24 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div style="font-size:13px;opacity:.8;margin-bottom:4px">Age-Out Check-In</div>
         <div class="confirm-name" id="kao-name" style="color:#fff"></div>
       </div>
-      <div class="kao-heading" style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px">Which shifts are you working today?</div>
-      <div class="kao-subtext" style="font-size:13px;color:#667788;margin-bottom:16px">Select all that apply &mdash; the Shift Officer will assign you to a committee for each one.</div>
+      <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px">Which shifts are you working today?</div>
+      <div style="font-size:13px;color:#667788;margin-bottom:16px">Select all that apply &mdash; the Shift Officer will assign you to a committee for each one.</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
-        <label class="kao-shift-label" style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
+        <label style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
           <input type="checkbox" id="kao-shift-8am" style="width:24px;height:24px;accent-color:var(--navy);flex-shrink:0">
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--navy)">8:00am &ndash; 12:00pm</div>
             <div style="font-size:12px;color:#667788">Morning shift</div>
           </div>
         </label>
-        <label class="kao-shift-label" style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
+        <label style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
           <input type="checkbox" id="kao-shift-12pm" style="width:24px;height:24px;accent-color:var(--navy);flex-shrink:0">
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--navy)">12:00pm &ndash; 4:00pm</div>
             <div style="font-size:12px;color:#667788">Afternoon shift</div>
           </div>
         </label>
-        <label class="kao-shift-label" style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
+        <label style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
           <input type="checkbox" id="kao-shift-4pm" style="width:24px;height:24px;accent-color:var(--navy);flex-shrink:0">
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--navy)">4:00pm &ndash; 8:00pm</div>
@@ -797,15 +797,15 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
 
     <div class="section-lbl" style="margin-bottom:10px">Committee Information</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
-      <div style="grid-column:1/-1"><div class="form-lbl">Committee Name *</div><input class="finput" id="rf-name" placeholder="e.g. Mutton Bustin'" autocomplete="organization"></div>
-      <div><div class="form-lbl">Committee Chairman Name *</div><input class="finput" id="rf-chair" type="text" autocomplete="name"></div>
-      <div><div class="form-lbl">Chairman Phone *</div><input class="finput" id="rf-chair-phone" type="tel" placeholder="xxx-xxx-xxxx" autocomplete="tel" oninput="validatePhone(this)">
+      <div style="grid-column:1/-1"><div class="form-lbl">Committee Name *</div><input class="finput" id="rf-name" placeholder="e.g. Mutton Bustin'"></div>
+      <div><div class="form-lbl">Committee Chairman Name *</div><input class="finput" id="rf-chair"></div>
+      <div><div class="form-lbl">Chairman Phone *</div><input class="finput" id="rf-chair-phone" type="tel" placeholder="xxx-xxx-xxxx" oninput="validatePhone(this)">
       <div class="phone-err" id="rf-chair-phone-err">Phone number must be 10 digits</div></div>
-      <div style="grid-column:1/-1"><div class="form-lbl">Chairman Email *</div><input class="finput" id="rf-chair-email" type="email" autocomplete="email"></div>
-      <div><div class="form-lbl">Day of Contact Name *</div><input class="finput" id="rf-liaison" type="text" autocomplete="name"></div>
-      <div><div class="form-lbl">Liaison Phone *</div><input class="finput" id="rf-liaison-phone" type="tel" placeholder="xxx-xxx-xxxx" autocomplete="tel" oninput="validatePhone(this)">
+      <div style="grid-column:1/-1"><div class="form-lbl">Chairman Email *</div><input class="finput" id="rf-chair-email" type="email"></div>
+      <div><div class="form-lbl">Day of Contact Name *</div><input class="finput" id="rf-liaison"></div>
+      <div><div class="form-lbl">Liaison Phone *</div><input class="finput" id="rf-liaison-phone" type="tel" placeholder="xxx-xxx-xxxx" oninput="validatePhone(this)">
       <div class="phone-err" id="rf-liaison-phone-err">Phone number must be 10 digits</div></div>
-      <div style="grid-column:1/-1"><div class="form-lbl">Day of Contact Email *</div><input class="finput" id="rf-liaison-email" type="email" autocomplete="email"></div>
+      <div style="grid-column:1/-1"><div class="form-lbl">Day of Contact Email *</div><input class="finput" id="rf-liaison-email" type="email"></div>
     </div>
 
     <div class="section-lbl" style="margin-bottom:10px">Event Details</div>
@@ -927,9 +927,9 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input class="finput" id="hours-search" placeholder="Search name..." oninput="renderHours()" style="max-width:180px">
           <select class="finput" id="hours-sort" onchange="renderHours()" style="max-width:160px">
-            <option value="hours-desc" selected>Most Hours First</option>
-            <option value="hours-asc">Least Hours First</option>
             <option value="name">Sort by Name</option>
+            <option value="hours-desc">Most Hours First</option>
+            <option value="hours-asc">Least Hours First</option>
           </select>
           <button class="btn" onclick="exportHoursCSV()">&#11015; Export Excel</button>
         </div>
@@ -955,9 +955,9 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input class="finput" id="adult-hours-search" placeholder="Search name..." oninput="renderAdultHours()" style="max-width:180px">
           <select class="finput" id="adult-hours-sort" onchange="renderAdultHours()" style="max-width:160px">
-            <option value="hours-desc" selected>Most Hours First</option>
-            <option value="hours-asc">Least Hours First</option>
             <option value="name">Sort by Name</option>
+            <option value="hours-desc">Most Hours First</option>
+            <option value="hours-asc">Least Hours First</option>
           </select>
         </div>
       </div>
@@ -985,7 +985,7 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
           <div style="font-size:12px;color:#99BBDD" id="rpt-sub"></div>
         </div>
         <div style="display:flex;gap:8px">
-          <button class="btn" style="background:var(--orange);color:var(--orange-ink);border-color:var(--orange-dk)" onclick="printReport()">Print / Save PDF</button>
+          <button class="btn" style="background:var(--orange);color:white;border-color:var(--orange-dk)" onclick="printReport()">Print / Save PDF</button>
           <button class="btn" style="background:rgba(255,255,255,.15);color:white;border-color:rgba(255,255,255,.3)" onclick="closeReport()">Close</button>
         </div>
       </div>
