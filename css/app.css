@@ -1884,3 +1884,40 @@ html[data-theme="light"] .kao-shift-label { background: var(--navy-lt) !importan
 html[data-theme="light"] .kao-shift-label [style*="color:var(--navy)"] { color: var(--navy) !important; }
 html[data-theme="light"] .kao-shift-label [style*="color:#667788"] { color: #667788 !important; }
 html[data-theme="light"] .kao-shift-label:has(input:checked) { background: var(--navy-lt) !important; border-color: var(--navy) !important; }
+
+/* ── Kiosk confirmation screen cards — dark mode ──────────────────────────
+   The "Are you wearing a cowboy hat?" and "Additional information" cards
+   use background:var(--navy-lt) with color:var(--navy) text — light-mode
+   values that render as white-on-white in dark mode.                       */
+
+/* Card backgrounds */
+.kc-card {
+  background: rgba(0,46,93,.5) !important;
+  border-color: rgba(255,255,255,.2) !important;
+}
+/* "Are you wearing a cowboy hat?" and "Additional information" headings */
+.kc-card [style*="color:var(--navy)"] {
+  color: rgba(255,255,255,.92) !important;
+}
+/* Subtext inside cards */
+.kc-card [style*="color:#667788"] {
+  color: rgba(255,255,255,.5) !important;
+}
+/* Textarea inside Additional Info card */
+.kc-card textarea {
+  background: rgba(255,255,255,.08) !important;
+  color: rgba(255,255,255,.88) !important;
+  border-color: rgba(255,255,255,.15) !important;
+}
+.kc-card textarea::placeholder {
+  color: rgba(255,255,255,.35) !important;
+}
+/* "Is this you?" subtext above the cards */
+.kc-subtext { color: rgba(255,255,255,.55) !important; }
+
+/* Light mode: restore */
+html[data-theme="light"] .kc-card { background: var(--navy-lt) !important; border-color: var(--navy) !important; }
+html[data-theme="light"] .kc-card [style*="color:var(--navy)"] { color: var(--navy) !important; }
+html[data-theme="light"] .kc-card [style*="color:#667788"] { color: #667788 !important; }
+html[data-theme="light"] .kc-card textarea { background: var(--white) !important; color: var(--gray-700) !important; border-color: var(--gray-200) !important; }
+html[data-theme="light"] .kc-subtext { color: #667788 !important; }
