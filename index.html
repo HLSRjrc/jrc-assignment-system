@@ -306,24 +306,24 @@ if(window.location.search.indexOf('partner=1') >= 0 ||
         <div style="font-size:13px;opacity:.8;margin-bottom:4px">Age-Out Check-In</div>
         <div class="confirm-name" id="kao-name" style="color:#fff"></div>
       </div>
-      <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px">Which shifts are you working today?</div>
-      <div style="font-size:13px;color:#667788;margin-bottom:16px">Select all that apply &mdash; the Shift Officer will assign you to a committee for each one.</div>
+      <div style="font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px" class="kao-heading">Which shifts are you working today?</div>
+      <div style="font-size:13px;color:#667788;margin-bottom:16px" class="kao-subtext">Select all that apply &mdash; the Shift Officer will assign you to a committee for each one.</div>
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
-        <label style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
+        <label class="kao-shift-label" style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
           <input type="checkbox" id="kao-shift-8am" style="width:24px;height:24px;accent-color:var(--navy);flex-shrink:0">
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--navy)">8:00am &ndash; 12:00pm</div>
             <div style="font-size:12px;color:#667788">Morning shift</div>
           </div>
         </label>
-        <label style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
+        <label class="kao-shift-label" style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
           <input type="checkbox" id="kao-shift-12pm" style="width:24px;height:24px;accent-color:var(--navy);flex-shrink:0">
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--navy)">12:00pm &ndash; 4:00pm</div>
             <div style="font-size:12px;color:#667788">Afternoon shift</div>
           </div>
         </label>
-        <label style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
+        <label class="kao-shift-label" style="display:flex;align-items:center;gap:14px;cursor:pointer;background:var(--navy-lt);border:1.5px solid var(--navy);border-radius:10px;padding:14px 16px">
           <input type="checkbox" id="kao-shift-4pm" style="width:24px;height:24px;accent-color:var(--navy);flex-shrink:0">
           <div>
             <div style="font-size:14px;font-weight:700;color:var(--navy)">4:00pm &ndash; 8:00pm</div>
