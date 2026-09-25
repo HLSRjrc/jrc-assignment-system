@@ -366,7 +366,6 @@ function kClockOut(){
   onShiftJuniors.delete(pendingJr.id);
   onShiftJuniors.delete(String(pendingJr.id));
   pendingJr.checkedIn = false;
-  pendingJr.hasHat = false; // clear hat on clock-out — hat status is per-day, not persistent
   // Keep pendingJr.assignment so they stay in the slot card
   clockedOut[pendingJr.id] = true;
   dirtyJuniors.add(pendingJr.id);
